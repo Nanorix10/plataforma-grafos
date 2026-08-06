@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mestre Ronny — Preparação PASSE · PAS · UnB",
+  title: "Plataforma Grafos — Preparação PASSE · PAS · UnB",
   description: "Resumos interligados para PASSE, PAS UEM e PAS UnB.",
 };
 

@@ -36,8 +36,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-[380px]">
         <div className="flex items-center gap-2.5 font-semibold text-[19px] mb-10 justify-center">
-          <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]">MR</span>
-          Mestre Ronny
+          <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]">PG</span>
+          Plataforma Grafos
         </div>
 
         <div className="flex gap-1 bg-[var(--panel)] rounded-md p-1 mb-8">

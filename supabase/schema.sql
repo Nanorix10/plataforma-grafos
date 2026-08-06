@@ -1,5 +1,5 @@
 -- ============================================
--- Schema da Plataforma Mestre Ronny
+-- Schema da Plataforma Grafos
 -- Rode isso no SQL Editor do seu projeto Supabase
 -- ============================================
 

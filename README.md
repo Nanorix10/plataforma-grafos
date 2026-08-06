@@ -1,4 +1,4 @@
-# Plataforma Mestre Ronny
+# Plataforma Grafos
 
 Site de resumos interligados (estilo Obsidian) para PASSE, PAS UEM e PAS UnB.
 

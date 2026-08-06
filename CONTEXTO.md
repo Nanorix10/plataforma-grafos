@@ -5,7 +5,7 @@ precisar reler tudo. Está ligado ao `CLAUDE.md`, então é carregado automatica
 
 ## O que é
 
-**Plataforma Mestre Ronny** — site de resumos interligados (estilo Obsidian) para
+**Plataforma Grafos** — site de resumos interligados (estilo Obsidian) para
 os vestibulares seriados PASSE (UFMS), PAS UEM e PAS UnB. Alunos assinam um plano
 e leem resumos; os resumos se conectam por `[[wikilinks]]` e formam um grafo.
 
@@ -99,10 +99,13 @@ ou PagBank) deve atualizar essa mesma coluna.
 
 ## Publicação
 
-O site está no ar em **https://plataforma-mestre-ronny.vercel.app**
-(Vercel, time `ae-5672`, projeto `plataforma-mestre-ronny`).
+O site está no ar em **https://plataforma-grafos.vercel.app**
+(Vercel, time `ae-5672`, projeto `plataforma-grafos`).
 
-- Código em **https://github.com/Nanorix10/plataforma-mestre-ronny** (público, branch `main`),
+> A pasta local ainda se chama `plataforma-mestre-ronny` — é só o nome do diretório
+> no disco, não afeta nada. O projeto se chama **Plataforma Grafos**.
+
+- Código em **https://github.com/Nanorix10/plataforma-grafos** (público, branch `main`),
   conectado à Vercel: **todo `git push` na `main` publica sozinho**. Não é preciso
   rodar `vercel deploy` na mão.
 - O repositório é público, mas nenhuma chave vai junto: o `.gitignore` bloqueia

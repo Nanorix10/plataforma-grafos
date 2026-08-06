@@ -88,9 +88,9 @@ export default function Sidebar({
       <div className="px-3 pt-3.5 pb-2.5">
         <Link href="/resumos" className="flex items-center gap-2 font-semibold text-[14.5px] mb-3 px-1">
           <span className="w-[22px] h-[22px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[9px] text-[var(--stamp)]">
-            MR
+            PG
           </span>
-          Mestre Ronny
+          Plataforma Grafos
         </Link>
 
         <input
