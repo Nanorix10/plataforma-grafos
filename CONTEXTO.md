@@ -86,6 +86,14 @@ de volta reintroduz latência em toda navegação.
   Windows. Pare o servidor antes.
 - Se o `tsc` reclamar de caminhos que não existem mais, são tipos gerados velhos:
   `rm -rf .next/types .next/dev/types` e rode o build de novo.
+- **Nunca mande valor pra `vercel env add` por um pipe do PowerShell.** Ele grava um
+  BOM (`﻿`) invisível no começo do valor. A chave anônima vai dentro do cabeçalho
+  HTTP `apikey`, e o navegador exige Latin-1 ali — o login quebra em produção com
+  *"Failed to read the 'headers' property from 'RequestInit': String contains
+  non ISO-8859-1 code point"*, enquanto continua funcionando no localhost.
+  Use bash: `printf '%s' "$VALOR" | vercel env add NOME production`.
+  Pra conferir se uma chave publicada está limpa, baixe o chunk do `/login` e procure
+  por `﻿` antes da URL do Supabase.
 
 ## Estado atual
 
