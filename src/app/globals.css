@@ -1,5 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+
+/* As fontes são carregadas por next/font em src/app/layout.tsx, que expõe
+   --fonte-titulo, --fonte-texto e --fonte-mono. Não voltar pro @import do
+   Google Fonts: ele serializa três viagens de rede antes do primeiro texto. */
 
 :root {
   --paper: #FDFCFA;
@@ -9,20 +12,37 @@
   --line: #E4E0D8;
   --stamp: #8A1224;
   --sel: #EAE6DE; /* item selecionado / hover na barra lateral */
+
+  color-scheme: light;
 }
 
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Work Sans', sans-serif;
+  font-family: var(--fonte-texto), sans-serif;
 }
 
 h1, h2, h3 {
-  font-family: 'Fraunces', serif;
+  font-family: var(--fonte-titulo), serif;
 }
 
 .font-mono-plex {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--fonte-mono), monospace;
+  /* algarismos de mesma largura: os contadores da barra lateral param de
+     "dançar" quando o número muda */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quem pediu menos movimento no sistema não recebe animação nenhuma. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Estilo do corpo do resumo. Usado nos DOIS lugares — dentro do editor

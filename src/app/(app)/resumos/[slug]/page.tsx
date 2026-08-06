@@ -58,25 +58,26 @@ export default async function ResumoPage({
       {/* barra de título da "nota", estilo Obsidian */}
       <div className="sticky top-0 z-10 bg-[var(--paper)]/90 backdrop-blur border-b border-[var(--line)] px-8 py-2.5 flex items-center gap-3">
         <span
+          aria-hidden="true"
           className="w-[8px] h-[8px] rounded-sm shrink-0"
           style={{ background: materia?.cor ?? '#999' }}
         />
-        <span className="font-mono-plex text-[11px] text-[var(--ink-dim)] truncate">
-          {materia?.nome} <span className="opacity-40">/</span>{' '}
+        <span className="font-mono-plex text-[11px] text-[var(--ink-dim)] truncate min-w-0">
+          {materia?.nome} <span aria-hidden="true" className="opacity-40">/</span>{' '}
           <b className="text-[var(--ink)]">{resumo.titulo}</b>
         </span>
-        {isAdmin && (
+        {isAdmin ? (
           <Link
             href={`/admin/editor/${resumo.slug}`}
-            className="ml-auto shrink-0 text-[11.5px] border border-[var(--line)] rounded px-2.5 py-1 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--panel)]"
+            className="ml-auto shrink-0 text-[11.5px] border border-[var(--line)] rounded px-2.5 py-1 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--panel)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
           >
-            ✎ Editar
+            <span aria-hidden="true">✎</span> Editar
           </Link>
-        )}
+        ) : null}
       </div>
 
       <div className="max-w-[820px] mx-auto px-8 py-10">
-      <h1 className="text-[30px] font-semibold mb-8" style={{ color: materia?.cor }}>{resumo.titulo}</h1>
+      <h1 className="text-[30px] font-semibold mb-8 text-balance" style={{ color: materia?.cor }}>{resumo.titulo}</h1>
 
       <div
         className="conteudo-resumo"

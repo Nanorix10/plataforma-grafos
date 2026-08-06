@@ -27,17 +27,29 @@ export default async function ResumosPage() {
               }`}
             >
               <div
+                aria-hidden="true"
                 className="w-[22px] h-1 rounded-sm mb-3"
                 style={{ background: materia?.cor ?? '#999' }}
               />
-              <div className="font-semibold text-[15px] mb-1">{r.titulo}</div>
+              <div className="font-semibold text-[15px] mb-1 text-pretty break-words">{r.titulo}</div>
               <div className="font-mono-plex text-[11.5px] text-[var(--ink-dim)]">
-                {materia?.nome} {!r.liberado && '· 🔒 fora do seu plano'}
+                {materia?.nome}
+                {r.liberado ? null : (
+                  <>
+                    {' · '}
+                    <span aria-hidden="true">🔒 </span>
+                    fora do seu plano
+                  </>
+                )}
               </div>
             </div>
           )
           return r.liberado ? (
-            <Link key={r.slug} href={`/resumos/${r.slug}`}>
+            <Link
+              key={r.slug}
+              href={`/resumos/${r.slug}`}
+              className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)]"
+            >
               {conteudo}
             </Link>
           ) : (

@@ -27,7 +27,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur border-b border-[var(--line)]">
         <div className="max-w-[1120px] mx-auto px-8 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-2.5 font-semibold text-[19px]">
-            <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]">PG</span>
+            <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]" aria-hidden="true">PG</span>
             Plataforma Grafos
           </div>
           <div className="hidden md:flex gap-9 text-[14.5px] text-[var(--ink-dim)]">
@@ -136,7 +136,7 @@ export default function LandingPage() {
 
       <footer className="py-14 border-t border-[var(--line)] max-w-[1120px] mx-auto px-8 flex justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2.5 font-semibold">
-          <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]">PG</span>
+          <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]" aria-hidden="true">PG</span>
           Plataforma Grafos
         </div>
         <p className="text-[13px] text-[var(--ink-dim)]">Material próprio, revisado por edital · Campo Grande — MS</p>

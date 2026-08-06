@@ -1,7 +1,18 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
+// imports granulares de propósito: `import * as d3 from 'd3'` arrasta os 30
+// submódulos (geo, chord, brush, scale…) quando o grafo usa só estes dois
+import { select } from 'd3-selection'
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
+} from 'd3-force'
 import { useRouter } from 'next/navigation'
 
 type No = { id: string; titulo: string; materia: string; cor: string; liberado: boolean }
@@ -17,18 +28,17 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
     const width = svgRef.current.clientWidth || 800
     const height = svgRef.current.clientHeight || 600
 
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
     svg.selectAll('*').remove()
 
     const simNodes = nos.map((n) => ({ ...n }))
     const simLinks = links.map((l) => ({ source: l.origem, target: l.destino }))
 
-    const sim = d3
-      .forceSimulation(simNodes as d3.SimulationNodeDatum[])
-      .force('link', d3.forceLink(simLinks as d3.SimulationLinkDatum<d3.SimulationNodeDatum>[]).id((d) => (d as { id: string }).id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-280))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide(42))
+    const sim = forceSimulation(simNodes as SimulationNodeDatum[])
+      .force('link', forceLink(simLinks as SimulationLinkDatum<SimulationNodeDatum>[]).id((d) => (d as { id: string }).id).distance(120))
+      .force('charge', forceManyBody().strength(-280))
+      .force('center', forceCenter(width / 2, height / 2))
+      .force('collide', forceCollide(42))
 
     const linkSel = svg.append('g').selectAll('line').data(simLinks).enter().append('line')
       .attr('stroke', '#E4E0D8').attr('stroke-width', 1.4)

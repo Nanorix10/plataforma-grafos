@@ -35,7 +35,8 @@ function ItemNav({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2 px-2.5 py-[7px] rounded text-[13px] ${
+      aria-current={ativo ? 'page' : undefined}
+      className={`flex items-center gap-2 px-2.5 py-[7px] rounded text-[13px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
         ativo
           ? 'bg-[var(--sel)] text-[var(--ink)] font-medium'
           : 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
@@ -86,34 +87,43 @@ export default function Sidebar({
     <aside className="w-[262px] shrink-0 h-screen sticky top-0 flex flex-col bg-[var(--panel)] border-r border-[var(--line)]">
       {/* topo */}
       <div className="px-3 pt-3.5 pb-2.5">
-        <Link href="/resumos" className="flex items-center gap-2 font-semibold text-[14.5px] mb-3 px-1">
-          <span className="w-[22px] h-[22px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[9px] text-[var(--stamp)]">
+        <Link
+          href="/resumos"
+          className="flex items-center gap-2 font-semibold text-[14.5px] mb-3 px-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)]"
+        >
+          <span
+            aria-hidden="true"
+            className="w-[22px] h-[22px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[9px] text-[var(--stamp)]"
+          >
             PG
           </span>
           Plataforma Grafos
         </Link>
 
         <input
+          type="search"
+          name="busca"
+          aria-label="Buscar resumo"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar resumo…"
-          className="w-full bg-[var(--paper)] border border-[var(--line)] rounded px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--stamp)]"
+          className="w-full bg-[var(--paper)] border border-[var(--line)] rounded px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
         />
       </div>
 
       {/* navegação fixa */}
       <nav className="px-2 pb-2 flex flex-col gap-0.5">
         <ItemNav href="/resumos" ativo={pathname === '/resumos'}>
-          <span className="w-[15px] text-center opacity-70">▤</span> Todos os resumos
+          <span aria-hidden="true" className="w-[15px] text-center opacity-70">▤</span> Todos os resumos
         </ItemNav>
         <ItemNav href="/mapa" ativo={pathname === '/mapa'}>
-          <span className="w-[15px] text-center opacity-70">◈</span> Mapa de conexões
+          <span aria-hidden="true" className="w-[15px] text-center opacity-70">◈</span> Mapa de conexões
         </ItemNav>
-        {isAdmin && (
+        {isAdmin ? (
           <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin')}>
-            <span className="w-[15px] text-center opacity-70">✎</span> Editor
+            <span aria-hidden="true" className="w-[15px] text-center opacity-70">✎</span> Editor
           </ItemNav>
-        )}
+        ) : null}
       </nav>
 
       <div className="mx-3 border-t border-[var(--line)]" />
@@ -139,10 +149,12 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => alternarGrupo(materia)}
-                className="w-full flex items-center gap-1.5 px-2.5 py-[5px] rounded text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)]"
+                aria-expanded={aberto}
+                className="w-full flex items-center gap-1.5 px-2.5 py-[5px] rounded text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
               >
                 <Chevron aberto={aberto} />
                 <span
+                  aria-hidden="true"
                   className="w-[7px] h-[7px] rounded-sm shrink-0"
                   style={{ background: info?.cor ?? '#999' }}
                 />
@@ -160,7 +172,8 @@ export default function Sidebar({
                         <Link
                           href={href}
                           title={r.liberado ? r.titulo : `${r.titulo} — fora do seu plano`}
-                          className={`block px-2 py-[5px] rounded text-[12.5px] truncate ${
+                          aria-current={ativo ? 'page' : undefined}
+                          className={`block px-2 py-[5px] rounded text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
                             ativo
                               ? 'bg-[var(--sel)] text-[var(--ink)] font-medium'
                               : r.liberado
@@ -168,7 +181,9 @@ export default function Sidebar({
                                 : 'text-[var(--ink-dim)] opacity-50 hover:bg-[var(--sel)]'
                           }`}
                         >
-                          {!r.liberado && <span className="mr-1">🔒</span>}
+                          {/* o cadeado é decorativo: a informação já está no
+                              title, então o leitor de tela não deve lê-lo */}
+                          {r.liberado ? null : <span aria-hidden="true" className="mr-1">🔒</span>}
                           {r.titulo}
                         </Link>
                       </li>
@@ -183,21 +198,21 @@ export default function Sidebar({
 
       {/* rodapé */}
       <div className="border-t border-[var(--line)] px-3 py-2.5 flex flex-col gap-2">
-        {isAdminReal && (
+        {isAdminReal ? (
           <form action={alternarVisao}>
             <button
               type="submit"
-              className={`w-full text-[12px] rounded px-2.5 py-1.5 border text-left flex items-center gap-2 ${
+              className={`w-full text-[12px] rounded px-2.5 py-1.5 border text-left flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
                 vendoComoAluno
                   ? 'border-[var(--stamp)] text-[var(--stamp)] bg-[var(--paper)]'
-                  : 'border-[var(--line)] text-[var(--ink-dim)] hover:bg-[var(--paper)]'
+                  : 'border-[var(--line)] text-[var(--ink-dim)] hover:bg-[var(--paper)] hover:text-[var(--ink)]'
               }`}
             >
-              <span>{vendoComoAluno ? '👁' : '⚙'}</span>
+              <span aria-hidden="true">{vendoComoAluno ? '👁' : '⚙'}</span>
               {vendoComoAluno ? 'Vendo como aluno — voltar' : 'Ver como aluno'}
             </button>
           </form>
-        )}
+        ) : null}
 
         <div className="text-[10.5px] font-mono-plex text-[var(--ink-dim)] px-0.5">
           plano: {plano}
