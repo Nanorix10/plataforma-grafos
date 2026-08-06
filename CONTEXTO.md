@@ -75,6 +75,27 @@ publicada — é o que faz o WYSIWYG bater.
 `getClaims()` valida o JWT localmente; `getUser()` faz ida e volta na rede. Trocar
 de volta reintroduz latência em toda navegação.
 
+**6. `src/proxy.ts` não é opcional — ele é quem mantém o aluno logado.**
+O token do Supabase vence em ~1h. Quem detecta e renova é `getClaims()` →
+`getSession()` → `_callRefreshToken()`. Mas a renovação precisa gravar cookies
+novos, e Server Component não escreve cookie — por isso o `setAll` em
+`lib/supabase/server.ts` vive dentro de um `try/catch` vazio. Sem o `proxy.ts`,
+o token vence e ninguém persiste o substituto: quem deixa a aba aberta volta e
+cai no login. A chamada `await supabase.auth.getClaims()` dentro do proxy parece
+inútil (o retorno é descartado) mas é ela que dispara tudo — **não remover**.
+
+**7. Fontes vêm de `next/font`, não de `@import` no CSS.**
+`@import url(fonts.googleapis...)` encadeia três viagens de rede antes do primeiro
+texto: baixar o CSS, descobrir o import, buscar no Google. O `layout.tsx` carrega
+Fraunces, Work Sans e IBM Plex Mono por `next/font/google` e expõe
+`--fonte-titulo`, `--fonte-texto` e `--fonte-mono`, que o `globals.css` consome.
+Os woff2 são servidos pelo próprio domínio, com preload.
+
+**8. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
+`import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
+pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
+— se voltar, o bundle volta a crescer.
+
 ## Armadilhas do ambiente
 
 - **`npm run dev` é lento de propósito** (~3s por página, recompila sob demanda).
@@ -99,7 +120,10 @@ de volta reintroduz latência em toda navegação.
 
 Feito: landing, login, lista e página de resumo, backlinks, grafo, conexões
 automáticas (trigger), admin/editor com editor rico, alternador admin/aluno,
-sidebar estilo Obsidian, otimizações de performance.
+sidebar estilo Obsidian, otimizações de performance, renovação de sessão
+(`proxy.ts`) e uma passada de acessibilidade (rótulos ligados, `autoComplete`,
+`aria-live` nos erros, `aria-expanded`/`aria-current`, ícones decorativos como
+`aria-hidden`, anéis de foco, `prefers-reduced-motion`).
 
 Falta: **pagamento automático** — hoje `planos_usuarios.ativo` é atualizado na mão
 depois de um Pix pessoal. Quando automatizar, um webhook do gateway (Asaas, Efí Bank
