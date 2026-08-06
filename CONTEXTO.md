@@ -102,8 +102,11 @@ ou PagBank) deve atualizar essa mesma coluna.
 O site está no ar em **https://plataforma-mestre-ronny.vercel.app**
 (Vercel, time `ae-5672`, projeto `plataforma-mestre-ronny`).
 
-- Não há repositório git, então **não existe deploy automático**. Pra publicar uma
-  mudança é preciso rodar `vercel deploy --prod` na mão.
+- Código em **https://github.com/Nanorix10/plataforma-mestre-ronny** (público, branch `main`),
+  conectado à Vercel: **todo `git push` na `main` publica sozinho**. Não é preciso
+  rodar `vercel deploy` na mão.
+- O repositório é público, mas nenhuma chave vai junto: o `.gitignore` bloqueia
+  `.env*`. As chaves vivem só no `.env.local` (local) e no painel da Vercel.
 - As variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` já estão
   cadastradas na Vercel nos três ambientes. Se as chaves do Supabase mudarem, é preciso
   atualizar nos dois lugares: `.env.local` e a Vercel.
