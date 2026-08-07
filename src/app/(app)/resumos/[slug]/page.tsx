@@ -60,52 +60,90 @@ export default async function ResumoPage({
 
   return (
     <>
-      {/* barra de título da "nota", estilo Obsidian */}
-      <div className="sticky top-0 z-10 bg-[var(--paper)]/90 backdrop-blur border-b border-[var(--line)] px-8 py-2.5 flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="w-[8px] h-[8px] rounded-sm shrink-0"
-          style={{ background: materia?.cor ?? '#999' }}
-        />
-        <span className="font-mono-plex text-[11px] text-[var(--ink-dim)] truncate min-w-0">
-          {materia?.nome} <span aria-hidden="true" className="opacity-40">/</span>{' '}
-          <b className="text-[var(--ink)]">{resumo.titulo}</b>
-        </span>
+      {/* Barra fina só com o caminho e a ação. Antes era em fonte de código,
+          o que fazia a página parecer console de desenvolvedor. */}
+      <header className="sticky top-0 z-10 bg-[var(--paper)]/85 backdrop-blur border-b border-[var(--line)] px-6 md:px-10 h-12 flex items-center gap-2">
+        <nav aria-label="Caminho" className="min-w-0 flex items-center gap-2">
+          <Link
+            href="/resumos"
+            className="text-[length:var(--t-peq)] text-[var(--ink-dim)] hover:text-[var(--ink)] shrink-0"
+          >
+            Resumos
+          </Link>
+          <span aria-hidden="true" className="text-[var(--ink-faint)]">
+            /
+          </span>
+          <span className="text-[length:var(--t-peq)] text-[var(--ink)] font-medium truncate">
+            {resumo.titulo}
+          </span>
+        </nav>
+
         {isAdmin ? (
           <Link
             href={`/admin/editor/${resumo.slug}`}
-            className="ml-auto shrink-0 text-[11.5px] border border-[var(--line)] rounded px-2.5 py-1 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--panel)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+            className="botao botao-neutro ml-auto shrink-0 !text-[length:var(--t-peq)] !py-1.5 !px-3"
           >
-            <span aria-hidden="true">✎</span> Editar
+            Editar
           </Link>
         ) : null}
-      </div>
+      </header>
 
-      <div className="max-w-[820px] mx-auto px-8 py-10">
-      <h1 className="text-[30px] font-semibold mb-8 text-balance" style={{ color: materia?.cor }}>{resumo.titulo}</h1>
+      <article className="max-w-[720px] mx-auto px-6 md:px-10 py-10 md:py-14">
+        {/* A matéria vira uma etiqueta discreta. Antes ela pintava o título
+            inteiro, e um título grande em cor saturada domina a página sem
+            acrescentar informação. */}
+        <Link
+          href="/resumos"
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] pl-2 pr-3 py-1 mb-5 hover:bg-[var(--sel)]"
+        >
+          <span
+            aria-hidden="true"
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ background: materia?.cor ?? 'var(--ink-faint)' }}
+          />
+          <span className="text-[length:var(--t-mini)] font-medium text-[var(--ink-dim)]">
+            {materia?.nome}
+          </span>
+        </Link>
 
-      <div
-        className="conteudo-resumo"
-        dangerouslySetInnerHTML={{ __html: corpoHtml }}
-      />
+        <h1 className="text-[length:var(--t-titulo)] font-bold leading-tight text-balance mb-8">
+          {resumo.titulo}
+        </h1>
 
-      <div className="mt-14 pt-6 border-t border-dashed border-[var(--line)]">
-        <div className="font-mono-plex text-[10.5px] text-[var(--ink-dim)] mb-3">RESUMOS RELACIONADOS</div>
-        {backlinks.length === 0 ? (
-          <p className="text-sm text-[var(--ink-dim)]">Nenhum outro resumo cita este ainda.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {backlinks.map((b: { slug: string; titulo: string }) => (
-              <li key={b.slug}>
-                <Link href={`/resumos/${b.slug}`} className="text-sm font-semibold underline underline-offset-2">
-                  {b.titulo}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      </div>
+        <div className="conteudo-resumo" dangerouslySetInnerHTML={{ __html: corpoHtml }} />
+
+        <section className="mt-16 pt-8 border-t border-[var(--line)]">
+          <h2 className="text-[length:var(--t-peq)] font-semibold text-[var(--ink-dim)] mb-4">
+            Resumos que citam este
+          </h2>
+          {backlinks.length === 0 ? (
+            <p className="text-[length:var(--t-peq)] text-[var(--ink-faint)]">
+              Nenhum outro resumo cita este ainda.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {backlinks.map((b: { slug: string; titulo: string }) => (
+                <li key={b.slug}>
+                  <Link
+                    href={`/resumos/${b.slug}`}
+                    className="group flex items-center gap-3 rounded-[var(--raio-peq)] border border-[var(--line)] px-4 py-3 hover:border-[var(--line-forte)] hover:bg-[var(--sel)]"
+                  >
+                    <span className="text-[length:var(--t-base)] font-medium truncate">
+                      {b.titulo}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="ml-auto shrink-0 text-[var(--ink-faint)] group-hover:text-[var(--acento)]"
+                    >
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </article>
     </>
   )
 }

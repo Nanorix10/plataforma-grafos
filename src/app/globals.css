@@ -8,14 +8,60 @@
    --fonte-titulo, --fonte-texto e --fonte-mono. Não voltar pro @import do
    Google Fonts: ele serializa três viagens de rede antes do primeiro texto. */
 
+/* ================================================================
+   SISTEMA VISUAL
+   Antes deste bloco havia 22 tamanhos de texto e 27 cores soltas pelo
+   código, escolhidos no olho a cada tela. Tudo o que for tipografia,
+   cor ou espaçamento sai daqui — se um valor não existir abaixo, ele
+   não deve aparecer num componente.
+   ================================================================ */
+
 :root {
-  --paper: #FDFCFA;
-  --panel: #F7F5F1;
-  --ink: #1D1B18;
-  --ink-dim: #6B665D;
-  --line: #E4E0D8;
-  --stamp: #8A1224;
-  --sel: #EAE6DE; /* item selecionado / hover na barra lateral */
+  /* --- superfícies --- */
+  --paper: #FFFFFF; /* fundo do conteúdo */
+  --panel: #F7F8F9; /* barras laterais e cabeçalhos */
+  --sel: #EEF0F2; /* item selecionado ou sob o cursor */
+
+  /* --- texto --- */
+  --ink: #16181D; /* texto principal */
+  --ink-dim: #626973; /* texto secundário — 5.7:1 sobre branco, passa AA */
+  --ink-faint: #8B929B; /* rótulos e dicas — usar só em 12px ou mais */
+
+  /* --- traços --- */
+  --line: #E3E6EA; /* divisórias */
+  --line-forte: #CBD1D8; /* borda de campo: precisa ser vista */
+
+  /* --- destaque ---
+     Um azul único no lugar do vermelho-carimbo. O vermelho escuro lia
+     como documento oficial; este tom é o que os alunos reconhecem de
+     outros apps, e sobra vermelho só pra erro de verdade. */
+  --acento: #2563EB;
+  --acento-escuro: #1D4ED8;
+  --acento-fraco: #EFF4FF;
+
+  --erro: #C2334D;
+
+  /* Apelido de transição. `--stamp` era o vermelho-carimbo e ainda é citado
+     por telas que não foram redesenhadas. Apontar pro acento novo mantém o
+     site inteiro coerente durante a migração; quando a última referência
+     sumir, esta linha sai junto. */
+  --stamp: var(--acento);
+
+  /* --- escala de tipos ---
+     Seis degraus, e nada entre eles. Diferenças de 0,5px não são
+     percebidas como intenção, só como desleixo. */
+  --t-mini: 0.75rem; /* 12px — rótulos, contadores */
+  --t-peq: 0.8125rem; /* 13px — texto de apoio, itens de menu */
+  --t-base: 0.9375rem; /* 15px — interface */
+  --t-medio: 1.0625rem; /* 17px — corpo do resumo */
+  --t-grande: 1.375rem; /* 22px — título de seção */
+  --t-titulo: 1.75rem; /* 28px — título de página */
+
+  /* --- raio e sombra --- */
+  --raio: 8px;
+  --raio-peq: 6px;
+  --sombra: 0 1px 2px rgba(22, 24, 29, 0.05), 0 1px 3px rgba(22, 24, 29, 0.06);
+  --sombra-alta: 0 4px 12px rgba(22, 24, 29, 0.08), 0 1px 3px rgba(22, 24, 29, 0.06);
 
   color-scheme: light;
 }
@@ -24,17 +70,103 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-base);
 }
 
-h1, h2, h3 {
+/* Títulos em sans, não em serifa. A Fraunces é uma fonte editorial de
+   personalidade forte — bonita, mas ela diz "revista", e o pedido é
+   "app limpo". Ela sobrevive só na marca (.marca). */
+h1, h2, h3, h4 {
+  font-family: var(--fonte-texto), sans-serif;
+  letter-spacing: -0.011em;
+}
+
+.marca {
   font-family: var(--fonte-titulo), serif;
+  letter-spacing: -0.01em;
 }
 
+/* A monoespaçada agora serve só pra CÓDIGO e FÓRMULA. Ela estava em
+   trilhas, rótulos e rodapés, e era o que mais fazia o site parecer
+   ferramenta de programador em vez de material de estudo. */
 .font-mono-plex {
   font-family: var(--fonte-mono), monospace;
-  /* algarismos de mesma largura: os contadores da barra lateral param de
-     "dançar" quando o número muda */
   font-variant-numeric: tabular-nums;
+}
+
+/* Números que mudam (contadores, palavras) sem "dançar" de largura,
+   agora sem precisar recorrer à fonte de código pra isso. */
+.numeros {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- peças repetidas ---- */
+
+.rotulo {
+  font-size: var(--t-mini);
+  font-weight: 500;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+}
+
+.campo {
+  width: 100%;
+  font-size: var(--t-base);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-forte);
+  border-radius: var(--raio-peq);
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.campo::placeholder {
+  color: var(--ink-faint);
+}
+.campo:focus {
+  border-color: var(--acento);
+  /* anel em vez de só trocar a borda: o campo focado precisa se
+     destacar sem a caixa mudar de tamanho */
+  box-shadow: 0 0 0 3px var(--acento-fraco);
+}
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: var(--t-base);
+  font-weight: 600;
+  border-radius: var(--raio-peq);
+  padding: 0.5rem 1rem;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.botao-primario {
+  background: var(--acento);
+  color: #fff;
+}
+.botao-primario:hover {
+  background: var(--acento-escuro);
+}
+.botao-primario:disabled {
+  opacity: 0.5;
+}
+.botao-neutro {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-forte);
+}
+.botao-neutro:hover {
+  background: var(--sel);
+}
+
+.botao:focus-visible,
+.campo:focus-visible,
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
 }
 
 /* Fundo do mapa mental: quadriculado leve de quadro branco. Feito com
@@ -66,8 +198,9 @@ h1, h2, h3 {
   /* Nunito: fonte de leitura do resumo. A Work Sans continua na interface.
      Corpo levemente maior porque a Nunito tem altura-de-x menor. */
   font-family: var(--fonte-resumo), sans-serif;
-  font-size: 1.0625rem;
-  line-height: 1.75;
+  font-size: var(--t-medio);
+  line-height: 1.7;
+  color: #23262C; /* um passo mais claro que o --ink: menos cansativo em texto longo */
 }
 .conteudo-resumo > * + * {
   margin-top: 0.9em;
@@ -131,7 +264,12 @@ h1, h2, h3 {
   border-radius: 3px;
 }
 .conteudo-resumo a {
-  color: var(--stamp);
+  color: var(--acento);
+  text-decoration-color: color-mix(in srgb, var(--acento) 35%, transparent);
+  text-underline-offset: 3px;
+}
+.conteudo-resumo a:hover {
+  text-decoration-color: var(--acento);
 }
 
 .conteudo-resumo h4 {

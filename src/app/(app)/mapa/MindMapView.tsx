@@ -251,9 +251,22 @@ export default function MindMapView({
     const enquadrar = () => {
       const w = svgEl.clientWidth || 800
       const h = svgEl.clientHeight || 600
-      const escala = Math.min(1, (w - 80) / (larguraMapa + LARGURA_CARTAO), (h - 60) / alturaMapa)
+
+      // O cartão da raiz é centrado no ponto zero, então metade dele fica à
+      // ESQUERDA da origem. Sem contar essa metade, translate(40) jogava 88px
+      // do cartão pra fora da tela e o título aparecia cortado.
+      const sobraEsquerda = LARGURA_CARTAO / 2
+      const larguraTotal = sobraEsquerda + larguraMapa + LARGURA_CARTAO
+
+      const margem = 40
+      const escala = Math.min(
+        1,
+        (w - margem * 2) / larguraTotal,
+        (h - 60) / alturaMapa
+      )
+
       const inicial = zoomIdentity
-        .translate(40, (h - alturaMapa * escala) / 2)
+        .translate(margem + sobraEsquerda * escala, (h - alturaMapa * escala) / 2)
         .scale(escala)
       svg.call(comportamentoZoom.transform, inicial)
     }
