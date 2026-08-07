@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Work_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Fraunces, Work_Sans, IBM_Plex_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -29,6 +29,17 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+/**
+ * Fonte do corpo do resumo — o texto que o aluno realmente lê por longos
+ * períodos. Separada da fonte de interface de propósito: a interface pode
+ * mudar de cara sem afetar a leitura, e vice-versa.
+ */
+const nunito = Nunito({
+  subsets: ["latin"],
+  variable: "--fonte-resumo",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Plataforma Grafos — Preparação PASSE · PAS · UnB",
   description: "Resumos interligados para PASSE, PAS UEM e PAS UnB.",
@@ -43,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`h-full antialiased ${fraunces.variable} ${workSans.variable} ${plexMono.variable}`}
+      className={`h-full antialiased ${fraunces.variable} ${workSans.variable} ${plexMono.variable} ${nunito.variable}`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

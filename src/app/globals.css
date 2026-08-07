@@ -49,20 +49,32 @@ h1, h2, h3 {
    (/admin/editor) e na página publicada (/resumos/[slug]) — pra que o que
    o Ronny vê enquanto escreve seja igual ao que o aluno lê. */
 .conteudo-resumo {
+  /* Nunito: fonte de leitura do resumo. A Work Sans continua na interface.
+     Corpo levemente maior porque a Nunito tem altura-de-x menor. */
+  font-family: var(--fonte-resumo), sans-serif;
+  font-size: 1.0625rem;
   line-height: 1.75;
 }
 .conteudo-resumo > * + * {
   margin-top: 0.9em;
 }
+/* Os títulos internos do resumo também vão de Nunito — sem isso eles
+   herdariam a Fraunces da regra global `h1, h2, h3` e o resumo ficaria com
+   duas famílias misturadas. Peso 700 pra compensar a Nunito ser mais leve. */
+.conteudo-resumo h2,
+.conteudo-resumo h3,
+.conteudo-resumo h4 {
+  font-family: var(--fonte-resumo), sans-serif;
+}
 .conteudo-resumo h2 {
   font-size: 1.45rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.8em;
   line-height: 1.3;
 }
 .conteudo-resumo h3 {
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.5em;
   line-height: 1.35;
 }
@@ -110,7 +122,7 @@ h1, h2, h3 {
 
 .conteudo-resumo h4 {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.3em;
 }
 .conteudo-resumo mark {
