@@ -97,7 +97,26 @@ Fraunces, Work Sans e IBM Plex Mono por `next/font/google` e expõe
 `--fonte-titulo`, `--fonte-texto` e `--fonte-mono`, que o `globals.css` consome.
 Os woff2 são servidos pelo próprio domínio, com preload.
 
-**8. O mapa mental tira a hierarquia da matéria, não dos `[[wikilinks]]`.**
+**8. Fórmulas são renderizadas no SERVIDOR, e gravadas em atributo.**
+Matemática e química usam KaTeX + mhchem (`\ce{...}`), um sistema só pros dois.
+Duas decisões que não dá pra adivinhar:
+
+*Onde renderiza.* `lib/matematica.ts` roda no servidor, então o aluno recebe HTML
+pronto e só o CSS do KaTeX. O motor (716 KB) é baixado apenas em
+`/admin/editor/*`. Verificável nos `page_client-reference-manifest.js` do build:
+só as rotas do editor referenciam o chunk. Mover a renderização pro cliente
+jogaria esses 716 KB em cima de todo aluno que abre um resumo.
+
+*Como grava.* O editor grava `<span data-type="inline-math" data-latex="…">` —
+o TeX vai num atributo, não como `$…$` no texto. Isso resolve o problema clássico
+do delimitador: "De R$ 50 para R$ 80" transformaria "50 para R" numa fórmula.
+O caminho `$…$` continua existindo como reserva pra texto colado de fora, com a
+regra do Markdown matemático (`$` de abertura não pode ser seguido de espaço,
+nem o de fechamento precedido de espaço) — é ela que salva o caso dos preços.
+Diferente do wikilink, aqui o atributo é seguro: nenhum trigger do Postgres lê
+fórmula, só `[[...]]`.
+
+**9. O mapa mental tira a hierarquia da matéria, não dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
 de forma toda vez que um resumo novo aparece. A matéria de cada resumo já é uma
@@ -105,7 +124,7 @@ hierarquia real, que o autor mantém e o aluno usa pra estudar. Matéria sem nen
 resumo não vira ramo. `/mapa?visao=mental` e `/mapa?visao=grafo` — o modo vive na
 URL pra poder ser favoritado e compartilhado.
 
-**9. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
+**10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
 — se voltar, o bundle volta a crescer.

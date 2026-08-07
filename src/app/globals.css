@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Estilo das fórmulas. Só o CSS vai pro navegador do aluno — a renderização
+   acontece no servidor (src/lib/matematica.ts), então o motor do KaTeX,
+   que passa de 250 KB, nunca é baixado por quem só está lendo. */
+@import "katex/dist/katex.min.css";
 
 /* As fontes são carregadas por next/font em src/app/layout.tsx, que expõe
    --fonte-titulo, --fonte-texto e --fonte-mono. Não voltar pro @import do
@@ -147,6 +151,51 @@ h1, h2, h3 {
 
 .conteudo-resumo:focus {
   outline: none;
+}
+
+/* ---- fórmulas (KaTeX) ---- */
+
+/* Fórmula em bloco ocupa a linha inteira e rola sozinha no celular: uma
+   equação longa não pode empurrar a página inteira pro lado. */
+.conteudo-resumo .katex-display,
+.conteudo-resumo [data-type='block-math'] {
+  margin: 1.2em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.conteudo-resumo .katex {
+  /* o KaTeX herda o tamanho do texto; 1.05 compensa a Nunito ser pequena */
+  font-size: 1.05em;
+}
+
+/* Fórmula com erro de digitação: fica visível e vermelha, mas não quebra nada */
+.conteudo-resumo .katex-error,
+.conteudo-resumo .formula-erro {
+  color: var(--stamp);
+  font-family: var(--fonte-mono), monospace;
+  font-size: 0.9em;
+  background: #fdf0f2;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* Dentro do editor, a fórmula precisa parecer clicável e mostrar que está
+   selecionada — é assim que o autor sabe que dá pra editar. */
+.conteudo-resumo [data-type='inline-math'],
+.conteudo-resumo [data-type='block-math'] {
+  cursor: pointer;
+  border-radius: 3px;
+}
+.conteudo-resumo [data-type='inline-math']:hover,
+.conteudo-resumo [data-type='block-math']:hover {
+  background: var(--sel);
+}
+.conteudo-resumo [data-type='inline-math'].ProseMirror-selectednode,
+.conteudo-resumo [data-type='block-math'].ProseMirror-selectednode {
+  background: #e4edf7;
+  outline: 1px solid var(--stamp);
 }
 
 /* texto de exemplo do editor vazio (extensão Placeholder) */

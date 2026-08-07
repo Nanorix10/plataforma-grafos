@@ -7,9 +7,38 @@ import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { CharacterCount } from '@tiptap/extension-character-count'
+import { InlineMath, BlockMath } from '@tiptap/extension-mathematics'
+// o mhchem ensina o KaTeX a ler \ce{...}; aqui é pro preview dentro do editor,
+// o mesmo import existe em lib/matematica.ts para a renderização no servidor
+import 'katex/dist/contrib/mhchem.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { salvarCorpoAuto } from './actions'
+
+/** Fórmulas prontas, pra não precisar decorar LaTeX. */
+const MODELOS_MATEMATICA: [string, string][] = [
+  ['Fração', String.raw`\frac{a}{b}`],
+  ['Raiz', String.raw`\sqrt{x}`],
+  ['Potência', String.raw`x^{2}`],
+  ['Índice', String.raw`x_{1}`],
+  ['Bhaskara', String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`],
+  ['Somatório', String.raw`\sum_{i=1}^{n} i`],
+  ['Integral', String.raw`\int_{a}^{b} f(x)\,dx`],
+  ['Limite', String.raw`\lim_{x \to 0} f(x)`],
+  ['Matriz', String.raw`\begin{pmatrix} a & b \\ c & d \end{pmatrix}`],
+  ['Sistema', String.raw`\begin{cases} x + y = 1 \\ x - y = 0 \end{cases}`],
+]
+
+const MODELOS_QUIMICA: [string, string][] = [
+  ['Reação simples', String.raw`\ce{CH4 + 2O2 -> CO2 + 2H2O}`],
+  ['Equilíbrio', String.raw`\ce{N2 + 3H2 <=> 2NH3}`],
+  ['Ionização', String.raw`\ce{H2SO4 -> 2H+ + SO4^2-}`],
+  ['Precipitado', String.raw`\ce{AgNO3 + NaCl -> AgCl v + NaNO3}`],
+  ['Gás liberado', String.raw`\ce{Zn + 2HCl -> ZnCl2 + H2 ^}`],
+  ['Com condição', String.raw`\ce{A ->[\text{calor}] B}`],
+  ['Isótopo', String.raw`\ce{^{227}_{90}Th+}`],
+  ['Estado físico', String.raw`\ce{NaCl(s) -> Na+(aq) + Cl-(aq)}`],
+]
 
 const CORES = ['#1D1B18', '#8A1224', '#185E9E', '#3F7848', '#AC2573', '#BC462F', '#6B665D']
 const MARCAS = ['#FFF3A3', '#C9EFC4', '#BFE0FF', '#FFD1DC']
@@ -47,7 +76,99 @@ function Sep() {
   return <span className="w-px h-[18px] bg-[var(--line)] mx-1 shrink-0" />
 }
 
-function Barra({ editor }: { editor: Editor }) {
+/**
+ * Menu de fórmulas prontas. Insere um nó de matemática já preenchido, que o
+ * autor edita clicando em cima — assim não é preciso decorar LaTeX pra começar.
+ */
+function MenuFormulas({
+  editor,
+  rotulo,
+  titulo,
+  modelos,
+  aberto,
+  aoAlternar,
+}: {
+  editor: Editor
+  rotulo: string
+  titulo: string
+  modelos: [string, string][]
+  aberto: boolean
+  aoAlternar: () => void
+}) {
+  function inserir(latex: string, emBloco: boolean) {
+    const c = editor.chain().focus()
+    if (emBloco) c.insertBlockMath({ latex }).run()
+    else c.insertInlineMath({ latex }).run()
+    aoAlternar()
+  }
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        title={titulo}
+        aria-expanded={aberto}
+        aria-haspopup="menu"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={aoAlternar}
+        className={`px-2 h-[28px] rounded text-[13px] leading-none flex items-center gap-1 ${
+          aberto ? 'bg-[var(--sel)] text-[var(--ink)]' : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
+        }`}
+      >
+        {rotulo}
+        <span aria-hidden="true" className="text-[8px] opacity-60">▾</span>
+      </button>
+
+      {aberto ? (
+        <div
+          role="menu"
+          className="absolute top-[32px] left-0 z-50 bg-white border border-[var(--line)] rounded-md shadow-lg py-1 w-[268px] max-h-[320px] overflow-auto"
+        >
+          <p className="px-3 py-1 text-[10.5px] font-mono-plex text-[var(--ink-dim)]">
+            CLIQUE PARA INSERIR · depois clique na fórmula para editar
+          </p>
+          {modelos.map(([nome, latex]) => (
+            <div key={nome} className="flex items-center gap-1 px-1.5">
+              <button
+                type="button"
+                role="menuitem"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => inserir(latex, false)}
+                className="flex-1 text-left px-1.5 py-1.5 rounded text-[12.5px] hover:bg-[var(--sel)]"
+              >
+                {nome}
+                <code className="block font-mono-plex text-[10.5px] text-[var(--ink-dim)] truncate">
+                  {latex}
+                </code>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                title={`${nome} em bloco (linha própria, centralizada)`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => inserir(latex, true)}
+                className="shrink-0 w-[26px] h-[26px] rounded text-[11px] text-[var(--ink-dim)] hover:bg-[var(--sel)]"
+              >
+                ⊞
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function Barra({
+  editor,
+  telaCheia,
+  aoAlternarTela,
+}: {
+  editor: Editor
+  telaCheia: boolean
+  aoAlternarTela: () => void
+}) {
+  const [menuAberto, setMenuAberto] = useState<'matematica' | 'quimica' | null>(null)
   const estilo = editor.isActive('heading', { level: 2 })
     ? 'h2'
     : editor.isActive('heading', { level: 3 })
@@ -201,6 +322,25 @@ function Barra({ editor }: { editor: Editor }) {
 
       <Sep />
 
+      <MenuFormulas
+        editor={editor}
+        rotulo="∑ Fórmula"
+        titulo="Inserir equação matemática"
+        modelos={MODELOS_MATEMATICA}
+        aberto={menuAberto === 'matematica'}
+        aoAlternar={() => setMenuAberto((a) => (a === 'matematica' ? null : 'matematica'))}
+      />
+      <MenuFormulas
+        editor={editor}
+        rotulo="⚗ Reação"
+        titulo="Inserir reação química"
+        modelos={MODELOS_QUIMICA}
+        aberto={menuAberto === 'quimica'}
+        aoAlternar={() => setMenuAberto((a) => (a === 'quimica' ? null : 'quimica'))}
+      />
+
+      <Sep />
+
       <Bt
         title="Limpar formatação"
         largo
@@ -208,6 +348,17 @@ function Barra({ editor }: { editor: Editor }) {
       >
         ⌫
       </Bt>
+
+      <div className="ml-auto flex items-center gap-0.5">
+        <Bt
+          title={telaCheia ? 'Sair da janela completa (Esc)' : 'Janela completa'}
+          largo
+          ativo={telaCheia}
+          onClick={aoAlternarTela}
+        >
+          {telaCheia ? '⤡ Sair' : '⤢ Janela completa'}
+        </Bt>
+      </div>
     </div>
   )
 }
@@ -226,6 +377,7 @@ export default function EditorCorpo({
   const [indice, setIndice] = useState(0)
   const [status, setStatus] = useState<'parado' | 'salvando' | 'salvo' | 'erro'>('parado')
   const [palavras, setPalavras] = useState(0)
+  const [telaCheia, setTelaCheia] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const aoEstado = useCallback((estado: EstadoSugestao | null) => {
@@ -259,6 +411,22 @@ export default function EditorCorpo({
     }
   }, [])
 
+  // Esc sai da janela completa, e enquanto ela está aberta a página de trás não
+  // rola — senão o fundo desliza junto quando se rola o texto
+  useEffect(() => {
+    if (!telaCheia) return
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === 'Escape') setTelaCheia(false)
+    }
+    const overflowAnterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.body.style.overflow = overflowAnterior
+      window.removeEventListener('keydown', aoTeclar)
+    }
+  }, [telaCheia])
+
   const editor = useEditor({
     // evita erro de hidratação: o editor só monta no cliente
     immediatelyRender: false,
@@ -269,6 +437,15 @@ export default function EditorCorpo({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Comece a escrever o resumo…' }),
       CharacterCount,
+      // fórmulas renderizadas ao vivo enquanto escreve. `throwOnError: false`
+      // pra que uma fórmula pela metade (normal enquanto se digita) apareça em
+      // vermelho em vez de estourar o editor.
+      InlineMath.configure({
+        katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+      }),
+      BlockMath.configure({
+        katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+      }),
       WikilinkSuggestion.configure({
         titulos: () => titulos,
         onEstado: aoEstado,
@@ -298,12 +475,32 @@ export default function EditorCorpo({
   }[status]
 
   return (
-    <div className="border border-[var(--line)] rounded-md overflow-hidden bg-white">
-      {editor && <Barra editor={editor} />}
+    <div
+      className={
+        telaCheia
+          ? 'fixed inset-0 z-40 bg-white flex flex-col'
+          : 'border border-[var(--line)] rounded-md overflow-hidden bg-white'
+      }
+    >
+      {editor && (
+        <Barra
+          editor={editor}
+          telaCheia={telaCheia}
+          aoAlternarTela={() => setTelaCheia((v) => !v)}
+        />
+      )}
 
       {/* área cinza com a "folha" no meio, igual editor de documento */}
-      <div className="bg-[#EDEBE7] px-4 py-6 max-h-[62vh] overflow-y-auto">
-        <div className="mx-auto bg-white shadow-[0_1px_4px_rgba(0,0,0,0.13)] rounded-[2px] max-w-[760px] min-h-[520px] px-[70px] py-[58px]">
+      <div
+        className={`bg-[#EDEBE7] px-4 py-6 overflow-y-auto ${
+          telaCheia ? 'flex-1 min-h-0' : 'max-h-[62vh]'
+        }`}
+      >
+        <div
+          className={`mx-auto bg-white shadow-[0_1px_4px_rgba(0,0,0,0.13)] rounded-[2px] max-w-[760px] px-[70px] py-[58px] ${
+            telaCheia ? 'min-h-full' : 'min-h-[520px]'
+          }`}
+        >
           <EditorContent editor={editor} />
         </div>
       </div>
@@ -314,7 +511,9 @@ export default function EditorCorpo({
         <span className="opacity-40">·</span>
         <span className={status === 'erro' ? 'text-[var(--stamp)]' : undefined}>{rotuloStatus}</span>
         <span className="ml-auto opacity-70">
-          digite <code className="font-mono-plex">[[</code> pra linkar outro resumo
+          <code className="font-mono-plex">[[</code> linka outro resumo ·{' '}
+          <code className="font-mono-plex">$x^2$</code> vira fórmula
+          {telaCheia ? ' · Esc sai da janela completa' : ''}
         </span>
       </div>
 

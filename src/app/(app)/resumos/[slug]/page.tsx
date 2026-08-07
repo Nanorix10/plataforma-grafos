@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
 import { renderizarWikilinks, PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { renderizarMatematica } from '@/lib/matematica'
 import { getSessao } from '@/lib/sessao'
 
 export default async function ResumoPage({
@@ -48,7 +49,11 @@ export default async function ResumoPage({
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
 
   const materia = MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]
-  const corpoHtml = renderizarWikilinks(resumo.corpo, tituloParaSlug)
+  // wikilinks primeiro, fórmulas depois: o KaTeX gera muito HTML, e rodar a
+  // regex simples dos wikilinks sobre ele seria trabalho à toa
+  const corpoHtml = renderizarMatematica(
+    renderizarWikilinks(resumo.corpo, tituloParaSlug)
+  )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const backlinks = (backlinksRaw ?? []).map((c: any) => c.origem).filter(Boolean)
