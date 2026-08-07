@@ -13,32 +13,8 @@ import { InlineMath, BlockMath } from '@tiptap/extension-mathematics'
 import 'katex/dist/contrib/mhchem.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
+import BarraFormula, { type Alvo } from './BarraFormula'
 import { salvarCorpoAuto } from './actions'
-
-/** Fórmulas prontas, pra não precisar decorar LaTeX. */
-const MODELOS_MATEMATICA: [string, string][] = [
-  ['Fração', String.raw`\frac{a}{b}`],
-  ['Raiz', String.raw`\sqrt{x}`],
-  ['Potência', String.raw`x^{2}`],
-  ['Índice', String.raw`x_{1}`],
-  ['Bhaskara', String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`],
-  ['Somatório', String.raw`\sum_{i=1}^{n} i`],
-  ['Integral', String.raw`\int_{a}^{b} f(x)\,dx`],
-  ['Limite', String.raw`\lim_{x \to 0} f(x)`],
-  ['Matriz', String.raw`\begin{pmatrix} a & b \\ c & d \end{pmatrix}`],
-  ['Sistema', String.raw`\begin{cases} x + y = 1 \\ x - y = 0 \end{cases}`],
-]
-
-const MODELOS_QUIMICA: [string, string][] = [
-  ['Reação simples', String.raw`\ce{CH4 + 2O2 -> CO2 + 2H2O}`],
-  ['Equilíbrio', String.raw`\ce{N2 + 3H2 <=> 2NH3}`],
-  ['Ionização', String.raw`\ce{H2SO4 -> 2H+ + SO4^2-}`],
-  ['Precipitado', String.raw`\ce{AgNO3 + NaCl -> AgCl v + NaNO3}`],
-  ['Gás liberado', String.raw`\ce{Zn + 2HCl -> ZnCl2 + H2 ^}`],
-  ['Com condição', String.raw`\ce{A ->[\text{calor}] B}`],
-  ['Isótopo', String.raw`\ce{^{227}_{90}Th+}`],
-  ['Estado físico', String.raw`\ce{NaCl(s) -> Na+(aq) + Cl-(aq)}`],
-]
 
 const CORES = ['#1D1B18', '#8A1224', '#185E9E', '#3F7848', '#AC2573', '#BC462F', '#6B665D']
 const MARCAS = ['#FFF3A3', '#C9EFC4', '#BFE0FF', '#FFD1DC']
@@ -76,99 +52,19 @@ function Sep() {
   return <span className="w-px h-[18px] bg-[var(--line)] mx-1 shrink-0" />
 }
 
-/**
- * Menu de fórmulas prontas. Insere um nó de matemática já preenchido, que o
- * autor edita clicando em cima — assim não é preciso decorar LaTeX pra começar.
- */
-function MenuFormulas({
-  editor,
-  rotulo,
-  titulo,
-  modelos,
-  aberto,
-  aoAlternar,
-}: {
-  editor: Editor
-  rotulo: string
-  titulo: string
-  modelos: [string, string][]
-  aberto: boolean
-  aoAlternar: () => void
-}) {
-  function inserir(latex: string, emBloco: boolean) {
-    const c = editor.chain().focus()
-    if (emBloco) c.insertBlockMath({ latex }).run()
-    else c.insertInlineMath({ latex }).run()
-    aoAlternar()
-  }
-
-  return (
-    <div className="relative shrink-0">
-      <button
-        type="button"
-        title={titulo}
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={aoAlternar}
-        className={`px-2 h-[28px] rounded text-[13px] leading-none flex items-center gap-1 ${
-          aberto ? 'bg-[var(--sel)] text-[var(--ink)]' : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
-        }`}
-      >
-        {rotulo}
-        <span aria-hidden="true" className="text-[8px] opacity-60">▾</span>
-      </button>
-
-      {aberto ? (
-        <div
-          role="menu"
-          className="absolute top-[32px] left-0 z-50 bg-white border border-[var(--line)] rounded-md shadow-lg py-1 w-[268px] max-h-[320px] overflow-auto"
-        >
-          <p className="px-3 py-1 text-[10.5px] font-mono-plex text-[var(--ink-dim)]">
-            CLIQUE PARA INSERIR · depois clique na fórmula para editar
-          </p>
-          {modelos.map(([nome, latex]) => (
-            <div key={nome} className="flex items-center gap-1 px-1.5">
-              <button
-                type="button"
-                role="menuitem"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => inserir(latex, false)}
-                className="flex-1 text-left px-1.5 py-1.5 rounded text-[12.5px] hover:bg-[var(--sel)]"
-              >
-                {nome}
-                <code className="block font-mono-plex text-[10.5px] text-[var(--ink-dim)] truncate">
-                  {latex}
-                </code>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                title={`${nome} em bloco (linha própria, centralizada)`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => inserir(latex, true)}
-                className="shrink-0 w-[26px] h-[26px] rounded text-[11px] text-[var(--ink-dim)] hover:bg-[var(--sel)]"
-              >
-                ⊞
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
 function Barra({
   editor,
   telaCheia,
   aoAlternarTela,
+  aoAbrirFormula,
+  formulaAberta,
 }: {
   editor: Editor
   telaCheia: boolean
   aoAlternarTela: () => void
+  aoAbrirFormula: () => void
+  formulaAberta: boolean
 }) {
-  const [menuAberto, setMenuAberto] = useState<'matematica' | 'quimica' | null>(null)
   const estilo = editor.isActive('heading', { level: 2 })
     ? 'h2'
     : editor.isActive('heading', { level: 3 })
@@ -322,22 +218,14 @@ function Barra({
 
       <Sep />
 
-      <MenuFormulas
-        editor={editor}
-        rotulo="∑ Fórmula"
-        titulo="Inserir equação matemática"
-        modelos={MODELOS_MATEMATICA}
-        aberto={menuAberto === 'matematica'}
-        aoAlternar={() => setMenuAberto((a) => (a === 'matematica' ? null : 'matematica'))}
-      />
-      <MenuFormulas
-        editor={editor}
-        rotulo="⚗ Reação"
-        titulo="Inserir reação química"
-        modelos={MODELOS_QUIMICA}
-        aberto={menuAberto === 'quimica'}
-        aoAlternar={() => setMenuAberto((a) => (a === 'quimica' ? null : 'quimica'))}
-      />
+      <Bt
+        title="Inserir equação ou reação química"
+        largo
+        ativo={formulaAberta}
+        onClick={aoAbrirFormula}
+      >
+        ∑ Equação
+      </Bt>
 
       <Sep />
 
@@ -378,6 +266,7 @@ export default function EditorCorpo({
   const [status, setStatus] = useState<'parado' | 'salvando' | 'salvo' | 'erro'>('parado')
   const [palavras, setPalavras] = useState(0)
   const [telaCheia, setTelaCheia] = useState(false)
+  const [alvoFormula, setAlvoFormula] = useState<Alvo | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const aoEstado = useCallback((estado: EstadoSugestao | null) => {
@@ -440,11 +329,28 @@ export default function EditorCorpo({
       // fórmulas renderizadas ao vivo enquanto escreve. `throwOnError: false`
       // pra que uma fórmula pela metade (normal enquanto se digita) apareça em
       // vermelho em vez de estourar o editor.
+      // clicar numa fórmula do texto abre a barra já preenchida.
+      // `setAlvoFormula` pode ser capturado direto: setters do useState são
+      // estáveis entre renders, então este closure nunca fica velho.
       InlineMath.configure({
         katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+        onClick: (node, pos) =>
+          setAlvoFormula({
+            modo: 'editar',
+            pos,
+            latex: String(node.attrs.latex ?? ''),
+            emBloco: false,
+          }),
       }),
       BlockMath.configure({
         katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+        onClick: (node, pos) =>
+          setAlvoFormula({
+            modo: 'editar',
+            pos,
+            latex: String(node.attrs.latex ?? ''),
+            emBloco: true,
+          }),
       }),
       WikilinkSuggestion.configure({
         titulos: () => titulos,
@@ -467,6 +373,28 @@ export default function EditorCorpo({
     },
   })
 
+  /**
+   * Grava a fórmula. Editar sempre apaga o nó antigo e insere outro, em vez de
+   * usar updateInlineMath: assim trocar entre "em linha" e "linha própria"
+   * funciona pelo mesmo caminho, sem um segundo ramo de código.
+   */
+  function confirmarFormula(latex: string, emBloco: boolean) {
+    if (!editor) return
+    if (alvoFormula?.modo === 'editar') {
+      editor.chain().focus().setNodeSelection(alvoFormula.pos).deleteSelection().run()
+    }
+    const c = editor.chain().focus()
+    if (emBloco) c.insertBlockMath({ latex }).run()
+    else c.insertInlineMath({ latex }).run()
+    setAlvoFormula(null)
+  }
+
+  function removerFormula() {
+    if (!editor || alvoFormula?.modo !== 'editar') return setAlvoFormula(null)
+    editor.chain().focus().setNodeSelection(alvoFormula.pos).deleteSelection().run()
+    setAlvoFormula(null)
+  }
+
   const rotuloStatus = {
     parado: resumoId ? 'Salvamento automático ligado' : 'Salve uma vez pra ligar o automático',
     salvando: 'Salvando…',
@@ -487,8 +415,23 @@ export default function EditorCorpo({
           editor={editor}
           telaCheia={telaCheia}
           aoAlternarTela={() => setTelaCheia((v) => !v)}
+          formulaAberta={alvoFormula !== null}
+          aoAbrirFormula={() =>
+            setAlvoFormula((a) => (a ? null : { modo: 'novo', emBloco: false }))
+          }
         />
       )}
+
+      {alvoFormula ? (
+        <BarraFormula
+          // remonta ao trocar de fórmula, pra o campo carregar o LaTeX certo
+          key={alvoFormula.modo === 'editar' ? `e${alvoFormula.pos}` : 'novo'}
+          alvo={alvoFormula}
+          aoConfirmar={confirmarFormula}
+          aoRemover={removerFormula}
+          aoCancelar={() => setAlvoFormula(null)}
+        />
+      ) : null}
 
       {/* área cinza com a "folha" no meio, igual editor de documento */}
       <div
