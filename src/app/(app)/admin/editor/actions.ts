@@ -20,6 +20,7 @@ export async function salvarResumo(formData: FormData) {
     materia_slug: String(formData.get('materia_slug') ?? ''),
     processo_slug: String(formData.get('processo_slug') ?? ''),
     corpo: String(formData.get('corpo') ?? ''),
+    definicao: String(formData.get('definicao') ?? '').trim(),
   }
 
   if (!dados.slug || !dados.titulo) {

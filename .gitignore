@@ -20,6 +20,10 @@ tsconfig.tsbuildinfo
 # configuração local do Claude Code
 .claude/settings.local.json
 
+# estado local da CLI do Supabase (as migrações em supabase/migrations VÃO pro
+# repositório; só este cache de sessão fica de fora)
+supabase/.temp
+
 # testes e cobertura
 /coverage
 

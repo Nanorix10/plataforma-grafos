@@ -22,7 +22,10 @@ type ResumoExistente = {
   materia_slug: string
   processo_slug: string
   corpo: string
+  definicao: string
 }
+
+const LIMITE_DEFINICAO = 180
 
 export default function ResumoForm({
   resumo,
@@ -34,6 +37,7 @@ export default function ResumoForm({
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
   const [slugEditadoManualmente, setSlugEditadoManualmente] = useState(!!resumo)
+  const [definicao, setDefinicao] = useState(resumo?.definicao ?? '')
 
   return (
     <form action={salvarResumo} className="flex flex-col gap-4">
@@ -67,6 +71,39 @@ export default function ResumoForm({
           }}
           className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm font-mono-plex outline-none focus:border-[var(--stamp)]"
         />
+      </div>
+
+      <div>
+        <label htmlFor="definicao" className="block text-[13px] text-[var(--ink-dim)] mb-1.5">
+          Definição breve
+          <span className="ml-2 opacity-70">
+            aparece ao passar o mouse no mapa
+          </span>
+        </label>
+        <textarea
+          id="definicao"
+          name="definicao"
+          rows={2}
+          maxLength={LIMITE_DEFINICAO}
+          value={definicao}
+          onChange={(e) => setDefinicao(e.target.value)}
+          placeholder="Uma frase explicando o tópico para quem ainda não abriu o resumo…"
+          className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none resize-y focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+        />
+        <div className="flex justify-between mt-1">
+          <span className="text-[11.5px] text-[var(--ink-dim)]">
+            Deixe vazio se não quiser balão para este tópico.
+          </span>
+          <span
+            className={`font-mono-plex text-[11px] ${
+              definicao.length > LIMITE_DEFINICAO - 20
+                ? 'text-[var(--stamp)]'
+                : 'text-[var(--ink-dim)]'
+            }`}
+          >
+            {definicao.length}/{LIMITE_DEFINICAO}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

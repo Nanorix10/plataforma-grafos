@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // imports granulares de propósito: `import * as d3 from 'd3'` arrastaria os 30
 // submódulos (geo, chord, contour…) pra usar quatro
 import { select } from 'd3-selection'
@@ -21,8 +21,18 @@ import {
 } from 'd3-force'
 import { useRouter } from 'next/navigation'
 
-type No = { id: string; titulo: string; materia: string; cor: string; liberado: boolean }
+type No = {
+  id: string
+  titulo: string
+  materia: string
+  cor: string
+  liberado: boolean
+  definicao: string
+}
 type Link = { origem: string; destino: string }
+
+/** O que o balão mostra, e onde. Coordenadas já em pixels da tela. */
+type Balao = { no: No; x: number; y: number }
 
 type NoSim = No & SimulationNodeDatum & { grau: number }
 type LinkSim = SimulationLinkDatum<NoSim>
@@ -34,6 +44,8 @@ function raio(grau: number) {
 
 export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [balao, setBalao] = useState<Balao | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -170,11 +182,39 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
         )
     }
 
+    /**
+     * Ancora o balão no próprio nó, e não no cursor: com a física em movimento
+     * o nó desliza, e um balão preso ao mouse ficaria descolado do que explica.
+     * Mede o elemento na tela, então já vem com zoom e deslocamento aplicados.
+     */
+    function mostrarBalao(elemento: SVGGElement, d: NoSim) {
+      const caixaWrap = wrapRef.current?.getBoundingClientRect()
+      if (!caixaWrap || !d.definicao) return setBalao(null)
+      const caixaNo = elemento.getBoundingClientRect()
+      setBalao({
+        no: d,
+        x: caixaNo.left - caixaWrap.left + caixaNo.width / 2,
+        y: caixaNo.top - caixaWrap.top,
+      })
+    }
+
     noSel
-      .on('mouseenter', (_e, d) => focar(d.id))
-      .on('mouseleave', () => focar(null))
-      .on('focus', (_e, d) => focar(d.id))
-      .on('blur', () => focar(null))
+      .on('mouseenter', function (_e, d) {
+        focar(d.id)
+        mostrarBalao(this, d)
+      })
+      .on('mouseleave', () => {
+        focar(null)
+        setBalao(null)
+      })
+      .on('focus', function (_e, d) {
+        focar(d.id)
+        mostrarBalao(this, d)
+      })
+      .on('blur', () => {
+        focar(null)
+        setBalao(null)
+      })
 
     // ---------- arrastar ----------
     // `arrastou` separa um arrasto de um clique. A checagem vive DENTRO do
@@ -187,6 +227,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
       drag<SVGGElement, NoSim>()
         .on('start', (event, d) => {
           arrastou = false
+          setBalao(null)
           if (!event.active) sim.alphaTarget(0.25).restart()
           d.fx = d.x
           d.fy = d.y
@@ -223,6 +264,8 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
     const comportamentoZoom = zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.25, 4])
       .on('zoom', (event) => {
+        // o balão foi medido na posição antiga; some em vez de ficar torto
+        setBalao(null)
         palco.attr('transform', event.transform.toString())
         // rótulo some quando o mapa está longe: senão vira um borrão de texto
         const k = event.transform.k
@@ -263,8 +306,34 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
   }
 
   return (
-    <div className="relative h-full">
+    <div ref={wrapRef} className="relative h-full overflow-hidden">
       <svg ref={svgRef} className="w-full h-full block touch-none" />
+
+      {balao ? (
+        <div
+          role="tooltip"
+          // -translate-x-1/2 centraliza no nó; o -100% sobe o balão pra
+          // ficar acima dele, sem tapar o que está sendo lido
+          className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full"
+          style={{ left: balao.x, top: balao.y - 12 }}
+        >
+          <div className="w-[248px] max-w-[70vw] bg-[var(--paper)] border border-[var(--line)] rounded-md shadow-lg px-3.5 py-2.5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span
+                aria-hidden="true"
+                className="w-[7px] h-[7px] rounded-sm shrink-0"
+                style={{ background: balao.no.cor }}
+              />
+              <span className="font-semibold text-[12.5px] leading-tight text-balance">
+                {balao.no.titulo}
+              </span>
+            </div>
+            <p className="text-[12px] leading-snug text-[var(--ink-dim)] text-pretty">
+              {balao.no.definicao}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <button
         type="button"

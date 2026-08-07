@@ -9,7 +9,7 @@ export default async function MapaPage() {
   if (!userId) redirect('/login')
 
   const [{ data: resumos }, { data: conexoesRaw }] = await Promise.all([
-    supabase.from('resumos').select('slug, titulo, materia_slug, processo_slug'),
+    supabase.from('resumos').select('slug, titulo, materia_slug, processo_slug, definicao'),
     supabase
       .from('conexoes')
       .select('origem_id, destino_id, resumos!conexoes_origem_id_fkey(slug), destino:resumos!conexoes_destino_id_fkey(slug)'),
@@ -23,6 +23,9 @@ export default async function MapaPage() {
     materia: r.materia_slug,
     cor: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999',
     liberado: processosLiberados.includes(r.processo_slug),
+    // a definição de um tópico fora do plano não vai pro navegador: seria
+    // entregar conteúdo pago pra quem não pagou
+    definicao: processosLiberados.includes(r.processo_slug) ? (r.definicao ?? '') : '',
   }))
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

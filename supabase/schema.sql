@@ -162,3 +162,13 @@ create trigger trg_sync_conexoes_resumo
 -- Pra rodar num banco que já tem resumos cadastrados antes deste trigger
 -- existir, refaz um "update" vazio no corpo pra disparar a sincronização:
 -- update resumos set corpo = corpo;
+
+
+-- ============================================
+-- Definição breve
+-- Frase curta que explica o tópico, escrita à mão no editor.
+-- Aparece ao passar o mouse num nó do mapa, pra dar contexto sem
+-- precisar abrir o resumo. Texto puro de propósito: vai dentro de um
+-- balão pequeno, então formatação atrapalharia.
+-- ============================================
+alter table resumos add column if not exists definicao text not null default '';

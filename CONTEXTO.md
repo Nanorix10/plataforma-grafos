@@ -43,7 +43,13 @@ src/app/
       actions.ts              salvarResumo, excluirResumo, salvarCorpoAuto
 
 supabase/schema.sql           tabelas, RLS e o trigger sync_conexoes_resumo
+supabase/migrations/          histórico versionado (aplicado com `supabase db push`)
 ```
+
+O banco nasceu montado à mão pelo SQL Editor, então o `schema.sql` é a foto do
+estado inicial. A partir de agosto/2026 toda mudança vira arquivo em
+`supabase/migrations/` e é aplicada pela CLI — o `schema.sql` deve ser atualizado
+junto, só pra continuar servindo de leitura.
 
 `(app)` é um **route group** — os parênteses não aparecem na URL.
 
@@ -107,6 +113,14 @@ pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propó
   Windows. Pare o servidor antes.
 - Se o `tsc` reclamar de caminhos que não existem mais, são tipos gerados velhos:
   `rm -rf .next/types .next/dev/types` e rode o build de novo.
+- **A CLI do Supabase está travada na 2.60.0 de propósito.** A 2.112.0 quebra no
+  `supabase link` com `LegacyLinkApiKeysNetworkError` — ela valida o campo
+  `inserted_at` da resposta de api-keys com uma regex que exige `Z` no fim, e a
+  API devolve outro formato. Não é problema de conta nem de rede. Se alguém
+  atualizar e o `link` parar, é isso. A versão no `package.json` é exata (sem `^`).
+- **`npx` não roda no PowerShell deste computador** — a política é `Restricted` e
+  o `npx` é um `.ps1`. Use **`npx.cmd`** num terminal de verdade. Não desative a
+  política; ela é proteção legítima e o `.cmd` resolve.
 - **Nunca mande valor pra `vercel env add` por um pipe do PowerShell.** Ele grava um
   BOM (`﻿`) invisível no começo do valor. A chave anônima vai dentro do cabeçalho
   HTTP `apikey`, e o navegador exige Latin-1 ali — o login quebra em produção com

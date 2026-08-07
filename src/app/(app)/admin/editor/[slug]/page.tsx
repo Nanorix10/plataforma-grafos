@@ -16,7 +16,7 @@ export default async function EditarResumoPage({
   const [{ data: resumo }, { data: todos }] = await Promise.all([
     supabase
       .from('resumos')
-      .select('id, slug, titulo, materia_slug, processo_slug, corpo')
+      .select('id, slug, titulo, materia_slug, processo_slug, corpo, definicao')
       .eq('slug', slug)
       .single(),
     supabase.from('resumos').select('titulo').order('titulo'),
