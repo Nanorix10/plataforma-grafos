@@ -20,6 +20,7 @@ import {
   type SimulationLinkDatum,
 } from 'd3-force'
 import { useRouter } from 'next/navigation'
+import Balao, { type PosicaoBalao } from './Balao'
 
 type No = {
   id: string
@@ -30,9 +31,6 @@ type No = {
   definicao: string
 }
 type Link = { origem: string; destino: string }
-
-/** O que o balão mostra, e onde. Coordenadas já em pixels da tela. */
-type Balao = { no: No; x: number; y: number }
 
 type NoSim = No & SimulationNodeDatum & { grau: number }
 type LinkSim = SimulationLinkDatum<NoSim>
@@ -45,7 +43,7 @@ function raio(grau: number) {
 export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
-  const [balao, setBalao] = useState<Balao | null>(null)
+  const [balao, setBalao] = useState<PosicaoBalao | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -192,7 +190,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
       if (!caixaWrap || !d.definicao) return setBalao(null)
       const caixaNo = elemento.getBoundingClientRect()
       setBalao({
-        no: d,
+        no: { titulo: d.titulo, cor: d.cor, definicao: d.definicao },
         x: caixaNo.left - caixaWrap.left + caixaNo.width / 2,
         y: caixaNo.top - caixaWrap.top,
       })
@@ -309,31 +307,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
     <div ref={wrapRef} className="relative h-full overflow-hidden">
       <svg ref={svgRef} className="w-full h-full block touch-none" />
 
-      {balao ? (
-        <div
-          role="tooltip"
-          // -translate-x-1/2 centraliza no nó; o -100% sobe o balão pra
-          // ficar acima dele, sem tapar o que está sendo lido
-          className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full"
-          style={{ left: balao.x, top: balao.y - 12 }}
-        >
-          <div className="w-[248px] max-w-[70vw] bg-[var(--paper)] border border-[var(--line)] rounded-md shadow-lg px-3.5 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span
-                aria-hidden="true"
-                className="w-[7px] h-[7px] rounded-sm shrink-0"
-                style={{ background: balao.no.cor }}
-              />
-              <span className="font-semibold text-[12.5px] leading-tight text-balance">
-                {balao.no.titulo}
-              </span>
-            </div>
-            <p className="text-[12px] leading-snug text-[var(--ink-dim)] text-pretty">
-              {balao.no.definicao}
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <Balao dados={balao} />
 
       <button
         type="button"

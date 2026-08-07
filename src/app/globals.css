@@ -33,6 +33,16 @@ h1, h2, h3 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Fundo do mapa mental: quadriculado leve de quadro branco. Feito com
+   gradientes em vez de imagem pra não custar requisição nem pixelar no zoom. */
+.quadro-branco {
+  background-color: #fff;
+  background-image:
+    linear-gradient(to right, rgba(29, 27, 24, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(29, 27, 24, 0.045) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
 /* Quem pediu menos movimento no sistema não recebe animação nenhuma. */
 @media (prefers-reduced-motion: reduce) {
   *,

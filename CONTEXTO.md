@@ -97,7 +97,15 @@ Fraunces, Work Sans e IBM Plex Mono por `next/font/google` e expõe
 `--fonte-titulo`, `--fonte-texto` e `--fonte-mono`, que o `globals.css` consome.
 Os woff2 são servidos pelo próprio domínio, com preload.
 
-**8. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
+**8. O mapa mental tira a hierarquia da matéria, não dos `[[wikilinks]]`.**
+Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
+(por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
+de forma toda vez que um resumo novo aparece. A matéria de cada resumo já é uma
+hierarquia real, que o autor mantém e o aluno usa pra estudar. Matéria sem nenhum
+resumo não vira ramo. `/mapa?visao=mental` e `/mapa?visao=grafo` — o modo vive na
+URL pra poder ser favoritado e compartilhado.
+
+**9. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
 — se voltar, o bundle volta a crescer.

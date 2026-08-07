@@ -1,0 +1,301 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { select } from 'd3-selection'
+import { zoom, zoomIdentity } from 'd3-zoom'
+import { hierarchy, tree, type HierarchyPointNode } from 'd3-hierarchy'
+import { linkHorizontal } from 'd3-shape'
+import { useRouter } from 'next/navigation'
+import Balao, { type PosicaoBalao } from './Balao'
+
+type No = {
+  id: string
+  titulo: string
+  materia: string
+  cor: string
+  liberado: boolean
+  definicao: string
+}
+
+/** Um item da árvore: a raiz, uma matéria ou um resumo. */
+type Item = {
+  nome: string
+  tipo: 'raiz' | 'materia' | 'resumo'
+  cor: string
+  no?: No
+  filhos?: Item[]
+}
+
+const LARGURA_CARTAO = 176
+const ALTURA_CARTAO = 30
+
+export default function MindMapView({
+  nos,
+  materias,
+  titulo,
+}: {
+  nos: No[]
+  materias: { slug: string; nome: string; cor: string }[]
+  titulo: string
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [balao, setBalao] = useState<PosicaoBalao | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const svgEl = svgRef.current
+    if (!svgEl) return
+
+    // Sem checagem de prefers-reduced-motion aqui: a árvore é desenhada numa
+    // posição fixa e não anima, ao contrário do grafo de forças.
+
+    // ---------- monta a árvore ----------
+    // A hierarquia vem da matéria de cada resumo, e não das ligações [[wikilink]]:
+    // os wikilinks formam um grafo sem raiz, e forçar uma árvore neles daria um
+    // desenho instável, que muda de forma a cada resumo novo. Matéria é uma
+    // estrutura que o autor já mantém e que o aluno já usa pra estudar.
+    const porMateria = new Map<string, No[]>()
+    for (const n of nos) {
+      const lista = porMateria.get(n.materia)
+      if (lista) lista.push(n)
+      else porMateria.set(n.materia, [n])
+    }
+
+    const raiz: Item = {
+      nome: titulo,
+      tipo: 'raiz',
+      cor: 'var(--stamp)',
+      filhos: materias
+        .filter((m) => porMateria.has(m.slug))
+        .map((m) => ({
+          nome: m.nome,
+          tipo: 'materia' as const,
+          cor: m.cor,
+          filhos: (porMateria.get(m.slug) ?? []).map((n) => ({
+            nome: n.titulo,
+            tipo: 'resumo' as const,
+            cor: m.cor,
+            no: n,
+          })),
+        })),
+    }
+
+    const dados = hierarchy<Item>(raiz, (d) => d.filhos)
+    const folhas = dados.leaves().length
+
+    // altura cresce com o número de folhas: um mapa mental rola verticalmente
+    // em vez de espremer tudo na tela
+    const alturaMapa = Math.max(400, folhas * 42)
+    const larguraMapa = 760
+
+    const layout = tree<Item>().size([alturaMapa, larguraMapa]).separation((a, b) => (a.parent === b.parent ? 1 : 1.4))
+    const arvore = layout(dados)
+
+    // ---------- desenha ----------
+    const svg = select(svgEl)
+    svg.selectAll('*').remove()
+
+    const palco = svg.append('g')
+    const camadaRamos = palco.append('g')
+    const camadaItens = palco.append('g')
+
+    const curva = linkHorizontal<unknown, HierarchyPointNode<Item>>()
+      .x((d) => d.y)
+      .y((d) => d.x)
+
+    camadaRamos
+      .selectAll('path')
+      .data(arvore.links())
+      .join('path')
+      .attr('d', (l) => curva({ source: l.source, target: l.target }))
+      .attr('fill', 'none')
+      .attr('stroke', (l) => (l.target.data.tipo === 'materia' ? l.target.data.cor : 'var(--line)'))
+      .attr('stroke-width', (l) => (l.target.data.tipo === 'materia' ? 2 : 1.4))
+      .attr('stroke-opacity', (l) => (l.target.data.tipo === 'materia' ? 0.55 : 1))
+
+    const itemSel = camadaItens
+      .selectAll<SVGGElement, HierarchyPointNode<Item>>('g')
+      .data(arvore.descendants())
+      .join('g')
+      .attr('transform', (d) => `translate(${d.y},${d.x})`)
+      .attr('cursor', (d) => (d.data.tipo === 'resumo' && d.data.no?.liberado ? 'pointer' : 'default'))
+
+    // cartão
+    itemSel
+      .append('rect')
+      .attr('x', (d) => (d.data.tipo === 'raiz' ? -LARGURA_CARTAO / 2 : -10))
+      .attr('y', -ALTURA_CARTAO / 2)
+      .attr('width', (d) => (d.data.tipo === 'raiz' ? LARGURA_CARTAO : LARGURA_CARTAO))
+      .attr('height', ALTURA_CARTAO)
+      .attr('rx', 6)
+      .attr('fill', (d) =>
+        d.data.tipo === 'resumo' ? 'var(--paper)' : d.data.cor
+      )
+      .attr('fill-opacity', (d) => {
+        if (d.data.tipo === 'resumo') return d.data.no?.liberado ? 1 : 0.45
+        return d.data.tipo === 'raiz' ? 1 : 0.14
+      })
+      .attr('stroke', (d) => (d.data.tipo === 'resumo' ? 'var(--line)' : d.data.cor))
+      .attr('stroke-width', (d) => (d.data.tipo === 'raiz' ? 0 : 1.4))
+      .attr('stroke-dasharray', (d) =>
+        d.data.tipo === 'resumo' && !d.data.no?.liberado ? '3,2' : 'none'
+      )
+
+    // texto
+    itemSel
+      .append('text')
+      .attr('x', (d) => (d.data.tipo === 'raiz' ? 0 : 0))
+      .attr('dy', '0.34em')
+      .attr('text-anchor', (d) => (d.data.tipo === 'raiz' ? 'middle' : 'start'))
+      .attr('font-size', (d) => (d.data.tipo === 'resumo' ? '11.5px' : '12.5px'))
+      .attr('font-weight', (d) => (d.data.tipo === 'resumo' ? 400 : 600))
+      .attr('font-family', 'var(--fonte-texto), sans-serif')
+      .attr('fill', (d) => {
+        if (d.data.tipo === 'raiz') return 'white'
+        if (d.data.tipo === 'materia') return d.data.cor
+        return d.data.no?.liberado ? 'var(--ink)' : 'var(--ink-dim)'
+      })
+      .text((d) => {
+        const limite = 22
+        const t = d.data.nome
+        return t.length > limite ? `${t.slice(0, limite - 1)}…` : t
+      })
+      .append('title')
+      .text((d) => d.data.nome)
+
+    // cadeado nos que estão fora do plano
+    itemSel
+      .filter((d) => d.data.tipo === 'resumo' && !d.data.no?.liberado)
+      .append('text')
+      .attr('x', LARGURA_CARTAO - 26)
+      .attr('dy', '0.34em')
+      .attr('font-size', '11px')
+      .attr('aria-hidden', 'true')
+      .text('🔒')
+
+    // ---------- acessibilidade e interação ----------
+    const resumoSel = itemSel.filter((d) => d.data.tipo === 'resumo')
+
+    resumoSel
+      .attr('tabindex', (d) => (d.data.no?.liberado ? 0 : -1))
+      .attr('role', 'link')
+      .attr('aria-label', (d) =>
+        d.data.no?.liberado ? d.data.nome : `${d.data.nome} — fora do seu plano`
+      )
+
+    function mostrarBalao(elemento: SVGGElement, d: HierarchyPointNode<Item>) {
+      const caixaWrap = wrapRef.current?.getBoundingClientRect()
+      const no = d.data.no
+      if (!caixaWrap || !no?.definicao) return setBalao(null)
+      const caixa = elemento.getBoundingClientRect()
+      setBalao({
+        no: { titulo: no.titulo, cor: no.cor, definicao: no.definicao },
+        x: caixa.left - caixaWrap.left + caixa.width / 2,
+        y: caixa.top - caixaWrap.top,
+      })
+    }
+
+    function realcar(d: HierarchyPointNode<Item> | null) {
+      if (!d) {
+        itemSel.attr('opacity', 1)
+        return
+      }
+      // acende o resumo e a linhagem dele até a raiz
+      const linhagem = new Set(d.ancestors())
+      itemSel.attr('opacity', (o) => (linhagem.has(o) ? 1 : 0.28))
+    }
+
+    resumoSel
+      .on('mouseenter', function (_e, d) {
+        realcar(d)
+        mostrarBalao(this, d)
+      })
+      .on('mouseleave', () => {
+        realcar(null)
+        setBalao(null)
+      })
+      .on('focus', function (_e, d) {
+        realcar(d)
+        mostrarBalao(this, d)
+      })
+      .on('blur', () => {
+        realcar(null)
+        setBalao(null)
+      })
+
+    function abrir(d: HierarchyPointNode<Item>) {
+      if (d.data.no?.liberado) router.push(`/resumos/${d.data.no.id}`)
+    }
+    resumoSel.on('click', (_e, d) => abrir(d))
+    resumoSel.on('keydown', (e: KeyboardEvent, d) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        abrir(d)
+      }
+    })
+
+    // ---------- zoom ----------
+    const comportamentoZoom = zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.2, 2.5])
+      .on('zoom', (event) => {
+        setBalao(null)
+        palco.attr('transform', event.transform.toString())
+      })
+
+    svg.call(comportamentoZoom).on('dblclick.zoom', null)
+
+    // enquadra o mapa inteiro na abertura, com uma margem.
+    // arrow function e não `function`: declarações de função são içadas, e o
+    // TypeScript descarta o estreitamento de `svgEl` dentro delas
+    const enquadrar = () => {
+      const w = svgEl.clientWidth || 800
+      const h = svgEl.clientHeight || 600
+      const escala = Math.min(1, (w - 80) / (larguraMapa + LARGURA_CARTAO), (h - 60) / alturaMapa)
+      const inicial = zoomIdentity
+        .translate(40, (h - alturaMapa * escala) / 2)
+        .scale(escala)
+      svg.call(comportamentoZoom.transform, inicial)
+    }
+    enquadrar()
+
+
+    ;(svgEl as SVGSVGElement & { __reset?: () => void }).__reset = enquadrar
+
+    const observer = new ResizeObserver(() => enquadrar())
+    observer.observe(svgEl)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [nos, materias, titulo, router])
+
+  if (nos.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center px-8">
+        <p className="text-sm text-[var(--ink-dim)] text-center">
+          Nenhum resumo publicado ainda. O mapa mental se organiza por matéria
+          assim que existirem resumos.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={wrapRef} className="relative h-full overflow-hidden bg-white quadro-branco">
+      <svg ref={svgRef} className="w-full h-full block touch-none" />
+
+      <Balao dados={balao} />
+
+      <button
+        type="button"
+        onClick={() =>
+          (svgRef.current as (SVGSVGElement & { __reset?: () => void }) | null)?.__reset?.()
+        }
+        className="absolute bottom-4 right-4 text-[11.5px] bg-white/90 backdrop-blur border border-[var(--line)] rounded px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+      >
+        Enquadrar
+      </button>
+    </div>
+  )
+}
