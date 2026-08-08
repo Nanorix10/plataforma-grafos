@@ -19,6 +19,7 @@ import { Superscript } from '@tiptap/extension-superscript'
 import 'katex/dist/contrib/mhchem.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
+import { TermoNegrito } from './termoNegrito'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import { salvarCorpoAuto } from './actions'
 
@@ -512,6 +513,8 @@ export default function EditorCorpo({
       // o tamanho do texto em volta.
       Subscript,
       Superscript,
+      // negrita o termo antes do `:`, no padrão em que os resumos são escritos
+      TermoNegrito,
       // `resizable` deixa arrastar a divisa entre colunas: uma linha do tempo
       // quer a coluna do ano estreita, e um glossário quer o termo estreito.
       TableKit.configure({ table: { resizable: true } }),
