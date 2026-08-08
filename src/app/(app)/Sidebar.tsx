@@ -224,7 +224,9 @@ export default function Sidebar({
     })
   }
 
-  const total = grupos.reduce((n, g) => n + g.itens.length, 0)
+  // conta MATÉRIAS, que é o que o rótulo promete. Antes somava os resumos de
+  // todos os grupos: a barra dizia "Matérias (3)" com duas matérias na tela.
+  const totalMaterias = grupos.length
 
   return (
     <>
@@ -325,7 +327,7 @@ export default function Sidebar({
       {/* árvore de matérias */}
       <div className="flex-1 overflow-y-auto px-2 py-2">
         <div className="rotulo-secao text-[10px] px-2.5 pb-2">
-          Matérias ({total})
+          Matérias ({totalMaterias})
         </div>
 
         {filtrados.length === 0 && (
