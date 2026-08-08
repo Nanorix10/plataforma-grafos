@@ -287,6 +287,19 @@ Dois cuidados que a migration precisa ter:
   link que aponta para um irmão inserido depois não acha destino e é descartado
   em silêncio. O update vazio dispara o trigger de novo com todos já no banco.
 
+**Transportar não é reescrever.** O texto do resumo é do autor, e é ele que
+responde por aquilo na frente dos alunos — "ficou melhor assim" não é régua de
+quem está migrando. Isso já deu errado uma vez: a primeira versão da migration
+da Dinâmica acrescentou quinze frases explicativas que não existiam no
+documento, cortou as definições dos termos das fórmulas, renomeou itens,
+inventou títulos de seção e apagou em silêncio uma linha julgada errada
+("depende do meio onde os corpos estão"). A `20260808210000` desfez tudo isso.
+
+Se algo no material parecer errado ou incompleto, a saída é **mostrar e
+perguntar**, nunca corrigir de passagem. Vale inclusive para deslize de
+digitação: o original tem "A molas podem ser associadas em…" e "1º Lei de
+Kepler" com ordinal masculino, e os dois continuam lá.
+
 Um documento do Docs vira **vários** resumos ligados por `pai_id`, não um só —
 é o que faz o mapa ter nós de verdade. O pai não linka os filhos em `[[…]]`:
 conter e citar são os dois eixos da decisão 9, e linkar quem já está pendurado
