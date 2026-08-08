@@ -285,6 +285,15 @@ button:focus-visible,
   margin-top: 1.5em;
   line-height: 1.35;
 }
+/* ---- listas ----
+   A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
+   são tópicos que se desdobram em subtópicos por 4 ou 5 níveis, no padrão
+   "**Termo:** definição;" — o texto corrido é a exceção.
+
+   Por isso o marcador MUDA a cada nível, como no editor de documentos onde
+   esses resumos nasceram. Com um disco igual em toda profundidade, quem lê
+   (e quem escreve) perde a conta de onde está: o recuo sozinho não basta
+   quando a linha quebra ou quando a tela é estreita. */
 .conteudo-resumo ul,
 .conteudo-resumo ol {
   padding-left: 1.5em;
@@ -292,9 +301,37 @@ button:focus-visible,
 .conteudo-resumo ul {
   list-style: disc;
 }
+.conteudo-resumo ul ul {
+  list-style: circle;
+}
+.conteudo-resumo ul ul ul {
+  list-style: square;
+}
+/* do quarto nível em diante o ciclo recomeça — são só três marcadores
+   distinguíveis de relance, e inventar um quarto símbolo confundiria mais */
+.conteudo-resumo ul ul ul ul {
+  list-style: disc;
+}
+.conteudo-resumo ul ul ul ul ul {
+  list-style: circle;
+}
+
 .conteudo-resumo ol {
   list-style: decimal;
 }
+.conteudo-resumo ol ol {
+  list-style: lower-alpha;
+}
+.conteudo-resumo ol ol ol {
+  list-style: lower-roman;
+}
+
+/* O marcador acompanha o texto em cor, mas um passo mais apagado: ele orienta,
+   não compete com o conteúdo. */
+.conteudo-resumo li::marker {
+  color: var(--ink-faint);
+}
+
 .conteudo-resumo li + li {
   margin-top: 0.3em;
 }

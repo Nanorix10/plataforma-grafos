@@ -338,6 +338,22 @@ function Barra({
       <Bt title="Lista numerada" ativo={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
         1.
       </Bt>
+      {/* Recuo por botão, além do Tab. O corpo do resumo é uma árvore de
+          tópicos de 4 ou 5 níveis, e nessa profundidade o Tab exige que o
+          cursor esteja no lugar certo do item — o botão funciona de qualquer
+          posição da linha, como no editor de documentos de origem. */}
+      <Bt
+        title="Diminuir recuo (Shift+Tab)"
+        onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+      >
+        ⇤
+      </Bt>
+      <Bt
+        title="Aumentar recuo (Tab)"
+        onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+      >
+        ⇥
+      </Bt>
       <Bt title="Citação" ativo={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
         &rdquo;
       </Bt>
