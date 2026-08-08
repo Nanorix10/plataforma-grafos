@@ -320,10 +320,16 @@ export default function Sidebar({
         <ItemNav href="/mapa" ativo={pathname === '/mapa'}>
           <Ponto ativo={pathname === '/mapa'} /> Mapa de conexões
         </ItemNav>
+        <ItemNav href="/linha-do-tempo" ativo={pathname === '/linha-do-tempo'}>
+          <Ponto ativo={pathname === '/linha-do-tempo'} /> Linha do tempo
+        </ItemNav>
         {isAdmin ? (
           <>
             <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin/editor')}>
               <Ponto ativo={pathname.startsWith('/admin/editor')} /> Editor
+            </ItemNav>
+            <ItemNav href="/admin/eventos" ativo={pathname.startsWith('/admin/eventos')}>
+              <Ponto ativo={pathname.startsWith('/admin/eventos')} /> Eventos
             </ItemNav>
             <ItemNav href="/admin/pessoas" ativo={pathname.startsWith('/admin/pessoas')}>
               <Ponto ativo={pathname.startsWith('/admin/pessoas')} /> Pessoas

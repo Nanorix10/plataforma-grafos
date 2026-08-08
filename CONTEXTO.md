@@ -359,6 +359,56 @@ Um documento do Docs vira **vários** resumos ligados por `pai_id`, não um só 
 conter e citar são os dois eixos da decisão 9, e linkar quem já está pendurado
 desenharia a mesma relação duas vezes.
 
+**9d. A linha do tempo é o terceiro eixo, e tem tabela própria.**
+`/linha-do-tempo` situa eventos históricos num eixo único, com chip por matéria.
+Nasceu para as humanidades (História, Filosofia, Literatura, Arte, Sociologia),
+mas **nada no banco restringe a matéria** — um `check` só criaria migration no
+dia em que história da ciência entrar em Física. O chip aparece para a matéria
+que TEM evento, então o recorte acontece pelos dados.
+
+Já são três eixos, e o novo não substitui nenhum: `pai_id` é "contém",
+`conexoes` é "cita", e `eventos.ano_inicio` é "quando".
+
+**Por que tabela nova e não um campo de ano em `resumos`.** Um resumo cobre
+vários eventos (1789, 1791, 1793 e 1799 estão todos dentro de "Revolução
+Francesa"), e o autor precisa marcar evento que ainda NÃO tem resumo — o pedido
+foi situar tudo o que ele quiser. O vínculo existe e é opcional (`resumo_id`,
+`on delete set null`: apagar o texto não apaga o fato).
+
+**Por que ano é inteiro e não `date`.** O material traz "séc. V a.C." ao lado
+de "14/07/1789". `date` resolve o segundo e estraga o primeiro, obrigando a
+inventar mês e dia — e o a.C. do Postgres não sobrevive bem à viagem até o
+JavaScript. Então os papéis são separados: `ano_inicio`/`ano_fim` (inteiros,
+negativo = a.C.) POSICIONAM; `rotulo_data` (texto livre) é o que o aluno LÊ.
+Vazio, o rótulo é derivado dos anos. `ano_fim` nulo = evento pontual;
+preenchido = período, e vira barra cuja largura no eixo é a informação.
+
+**A escala é linear, e isso é a decisão.** Um ano vale sempre o mesmo tanto de
+pixel — é o que ensina que a Idade Média são mil anos e a Revolução Francesa é
+uma década. O preço (Antiguidade vazia, século XX espremido) é pago pelos
+botões de era, que dão zoom no trecho em vez de deformar o eixo.
+
+**`lib/tempo.ts` × `lib/eventos.ts` é a mesma divisão de `arvore.ts` ×
+`resumos.ts`**, e pela mesma razão: o eixo e a tela de cadastro são componentes
+de cliente, e `eventos.ts` importa `getSessao` → `next/headers`. O tipo
+`Evento` e as contas de data ficam no lado puro. Isto já quebrou o build uma
+vez antes de separar.
+
+Três detalhes do eixo que parecem exagero e não são:
+
+- **A roda do mouse precisa de listener nativo não-passivo.** O `onWheel` do
+  React é registrado como passivo, onde `preventDefault` é ignorado — e sem ele
+  a página rola junto do zoom.
+- **`touch-action: pan-y`**, não `none`. O dedo continua rolando a lista de
+  faixas na vertical, e só o movimento horizontal vira deslocamento no tempo.
+- **O arrasto marca que arrastou.** Soltar o dedo em cima de um evento dispara
+  um `click`; sem a marca (engolida no `onClickCapture`), empurrar o eixo
+  abriria o detalhe de um evento por acidente.
+
+O filtro de matéria **não** vive na URL, ao contrário do `visao` do mapa: lá a
+URL troca a tela inteira e vale ser favoritada, aqui cada clique num chip
+dispararia uma volta ao servidor para recarregar todos os eventos.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
@@ -412,6 +462,10 @@ de números da landing é nova.
 Feito em agosto/2026: **gestão de pessoas** em `/admin/pessoas` — lista quem se
 cadastrou, libera ou bloqueia o acesso por plano, e dá ou tira o selo de admin.
 Antes disso, tudo isso exigia o SQL Editor do Supabase.
+
+Feito em agosto/2026: **linha do tempo** em `/linha-do-tempo`, com cadastro em
+`/admin/eventos`. Ver a decisão 9d. Nasce vazia — o banco ainda não tem conteúdo
+de humanidades, e é o cadastro que a preenche.
 
 Falta: **pagamento automático** — `planos_usuarios.ativo` continua sendo virado à
 mão depois de um Pix pessoal, só que agora por um botão e não por SQL. Quando

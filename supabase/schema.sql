@@ -169,6 +169,54 @@ create trigger trg_sync_conexoes_resumo
 
 
 -- ============================================
+-- Linha do tempo (migration 20260808230000)
+-- Eventos históricos situados num eixo único, filtrável por matéria.
+--
+-- Tabela própria, e não um campo de ano em `resumos`, porque um resumo cobre
+-- vários eventos e porque o autor precisa marcar evento que ainda não virou
+-- resumo. O vínculo `resumo_id` é opcional e `on delete set null`: apagar o
+-- texto não apaga o fato.
+--
+-- Ano é INTEIRO (negativo = a.C.) e não `date`: o material tem "séc. V a.C."
+-- ao lado de "14/07/1789", e `date` obrigaria a inventar mês e dia para o
+-- primeiro. Os inteiros POSICIONAM no eixo; `rotulo_data` é o texto que o
+-- aluno LÊ. `ano_fim` nulo = evento pontual; preenchido = período, vira barra.
+-- ============================================
+create table if not exists eventos (
+  id uuid primary key default gen_random_uuid(),
+  titulo text not null,
+  ano_inicio integer not null,
+  ano_fim integer,
+  rotulo_data text not null default '',
+  materia_slug text not null references materias(slug),
+  resumo_id uuid references resumos(id) on delete set null,
+  descricao text not null default '',
+  criado_em timestamptz default now(),
+  atualizado_em timestamptz default now(),
+  constraint eventos_periodo_valido
+    check (ano_fim is null or ano_fim >= ano_inicio)
+);
+
+create index if not exists eventos_ano_inicio_idx on eventos (ano_inicio);
+create index if not exists eventos_resumo_id_idx on eventos (resumo_id);
+
+alter table eventos enable row level security;
+
+-- Ler: qualquer autenticado. Evento NÃO é gateado por plano de propósito — o
+-- conteúdo gateado é o resumo, e a página dele já barra quem não tem acesso.
+create policy "usuarios autenticados podem ler eventos"
+  on eventos for select to authenticated using (true);
+
+-- Escrever: só admin, pela mesma `eh_admin()` da gestão de pessoas.
+create policy "admin insere eventos"
+  on eventos for insert to authenticated with check (eh_admin());
+create policy "admin edita eventos"
+  on eventos for update to authenticated using (eh_admin()) with check (eh_admin());
+create policy "admin exclui eventos"
+  on eventos for delete to authenticated using (eh_admin());
+
+
+-- ============================================
 -- Definição breve
 -- Frase curta que explica o tópico, escrita à mão no editor.
 -- Aparece ao passar o mouse num nó do mapa, pra dar contexto sem
