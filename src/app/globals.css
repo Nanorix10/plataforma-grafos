@@ -401,6 +401,87 @@ button:focus-visible,
   border-top: 1px dashed var(--line);
   margin: 2em 0;
 }
+
+/* ---- questão resolvida ----
+   O bloco existe pra separar o que é EXERCÍCIO do que é resumo: no meio de uma
+   página de tópicos, uma questão sem moldura se lê como mais um parágrafo, e o
+   aluno passa por ela sem tentar responder. */
+.conteudo-resumo .questao {
+  display: block;
+  background: var(--raised);
+  border: 1px solid var(--line-forte);
+  border-radius: 10px;
+  padding: 1.15em 1.3em;
+  margin-top: 1.6em;
+}
+/* `.conteudo-resumo > * + *` só alcança os filhos diretos do resumo; dentro da
+   moldura o espaçamento precisa ser dito de novo. */
+.conteudo-resumo .questao > * + * {
+  margin-top: 0.7em;
+}
+.conteudo-resumo .questao::before {
+  content: 'Questão resolvida';
+  display: block;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-mini);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.7em;
+}
+
+/* A gaveta. `<details>` na leitura, `<div>` no editor — as duas formas caem
+   nesta mesma regra de espaçamento, e só o `<details>` ganha o marcador. */
+.conteudo-resumo .resolucao {
+  margin-top: 1em;
+  padding-top: 0.85em;
+  border-top: 1px solid var(--line);
+}
+
+.conteudo-resumo details.resolucao > summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  font-weight: 600;
+  color: var(--acento);
+  /* o triângulo padrão do navegador é grande e desalinhado com o texto; o
+     nosso é o `▸` do ::before, que gira ao abrir */
+  list-style: none;
+}
+.conteudo-resumo details.resolucao > summary::-webkit-details-marker {
+  display: none;
+}
+.conteudo-resumo details.resolucao > summary::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.conteudo-resumo details.resolucao[open] > summary::before {
+  transform: rotate(90deg);
+}
+.conteudo-resumo details.resolucao > summary:hover {
+  text-decoration: underline;
+}
+.conteudo-resumo details.resolucao > *:not(summary) {
+  margin-top: 0.8em;
+}
+
+/* No editor a resolução está sempre aberta (é `<div>`, não `<details>`), então
+   ela precisa dizer que na página do aluno estará escondida — senão o autor
+   escreve achando que ficará à vista. */
+.conteudo-resumo div.resolucao::before {
+  content: '▾ Resolução — escondida até o aluno clicar';
+  display: block;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  font-weight: 600;
+  color: var(--acento);
+  margin-bottom: 0.6em;
+}
 .conteudo-resumo strong {
   font-weight: 600;
 }
