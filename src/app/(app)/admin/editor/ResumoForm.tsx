@@ -40,6 +40,12 @@ const LIMITE_DEFINICAO = 180
  * Lista de possíveis pais, indentada pela profundidade e já sem as opções
  * inválidas.
  *
+ * A lista atravessa matérias de propósito: um assunto pode ser
+ * interdisciplinar — "Energia" segurando tópicos de Física e de Química é uma
+ * árvore legítima. Por isso cada opção mostra a matéria a que pertence, senão
+ * dois resumos de nome parecido em disciplinas diferentes ficariam
+ * indistinguíveis no `<select>`.
+ *
  * O que sai da lista: o próprio resumo e TODA a subárvore dele. Oferecer um
  * descendente como pai criaria um ciclo — "Atrito dentro de Dinâmica, Dinâmica
  * dentro de Atrito" — e a árvore deixaria de ter raiz. O trigger no banco
@@ -48,14 +54,8 @@ const LIMITE_DEFINICAO = 180
  */
 function opcoesPai(
   candidatos: CandidatoPai[],
-  idAtual: string | undefined,
-  materia: string
+  idAtual: string | undefined
 ): { id: string; rotulo: string }[] {
-  // um resumo só pode morar dentro de outro da mesma matéria: ela é o
-  // guarda-chuva, e misturar matérias na mesma árvore quebraria a barra
-  // lateral, que agrupa por matéria antes de mostrar a hierarquia
-  const daMateria = candidatos.filter((c) => c.materia_slug === materia)
-
   const proibidos = new Set<string>()
   if (idAtual) {
     proibidos.add(idAtual)
@@ -64,7 +64,7 @@ function opcoesPai(
     let cresceu = true
     while (cresceu) {
       cresceu = false
-      for (const c of daMateria) {
+      for (const c of candidatos) {
         if (c.pai_id && proibidos.has(c.pai_id) && !proibidos.has(c.id)) {
           proibidos.add(c.id)
           cresceu = true
@@ -74,7 +74,7 @@ function opcoesPai(
   }
 
   const filhosDe = new Map<string | null, CandidatoPai[]>()
-  for (const c of daMateria) {
+  for (const c of candidatos) {
     if (proibidos.has(c.id)) continue
     const chave = c.pai_id && !proibidos.has(c.pai_id) ? c.pai_id : null
     filhosDe.set(chave, [...(filhosDe.get(chave) ?? []), c])
@@ -86,7 +86,11 @@ function opcoesPai(
       a.titulo.localeCompare(b.titulo, 'pt-BR')
     )
     for (const f of filhos) {
-      saida.push({ id: f.id, rotulo: `${'  '.repeat(nivel)}${nivel ? '└ ' : ''}${f.titulo}` })
+      const materia = MATERIAS[f.materia_slug as keyof typeof MATERIAS]?.nome ?? f.materia_slug
+      saida.push({
+        id: f.id,
+        rotulo: `${'  '.repeat(nivel)}${nivel ? '└ ' : ''}${f.titulo}  ·  ${materia}`,
+      })
       descer(f.id, nivel + 1)
     }
   }
@@ -112,9 +116,11 @@ export default function ResumoForm({
   const [materia, setMateria] = useState(resumo?.materia_slug ?? '')
   const [paiId, setPaiId] = useState(resumo?.pai_id ?? '')
 
+  // não depende da matéria escolhida: um assunto pode segurar tópicos de
+  // disciplinas diferentes
   const pais = useMemo(
-    () => opcoesPai(candidatosPai, resumo?.id, materia),
-    [candidatosPai, resumo?.id, materia]
+    () => opcoesPai(candidatosPai, resumo?.id),
+    [candidatosPai, resumo?.id]
   )
 
   return (
@@ -191,12 +197,7 @@ export default function ResumoForm({
             name="materia_slug"
             required
             value={materia}
-            onChange={(e) => {
-              setMateria(e.target.value)
-              // o pai antigo é de outra matéria e deixaria a árvore
-              // atravessando disciplinas — volta pra raiz
-              setPaiId('')
-            }}
+            onChange={(e) => setMateria(e.target.value)}
             className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
           >
             <option value="" disabled>Selecione…</option>
@@ -232,12 +233,9 @@ export default function ResumoForm({
           name="pai_id"
           value={paiId}
           onChange={(e) => setPaiId(e.target.value)}
-          disabled={!materia}
-          className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)] disabled:opacity-50"
+          className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
         >
-          <option value="">
-            {materia ? '— nenhum (assunto principal da matéria) —' : 'Escolha a matéria primeiro'}
-          </option>
+          <option value="">— nenhum (assunto principal) —</option>
           {pais.map((p) => (
             <option key={p.id} value={p.id}>
               {p.rotulo}
@@ -245,8 +243,9 @@ export default function ResumoForm({
           ))}
         </select>
         <span className="block text-[11.5px] text-[var(--ink-dim)] mt-1">
-          Deixe vazio para começar um assunto novo. A lista só mostra resumos da
-          mesma matéria, sem os que estão dentro deste.
+          Deixe vazio para começar um assunto novo. Um assunto pode segurar
+          tópicos de matérias diferentes — a lista mostra a matéria de cada um, e
+          esconde os que já estão dentro deste.
         </span>
       </div>
       </div>

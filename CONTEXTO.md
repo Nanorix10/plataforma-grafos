@@ -171,10 +171,21 @@ São **dois eixos independentes**, e confundir os dois quebra os dois:
 | contém | `resumos.pai_id` | estrutura, escrita à mão | linha cheia |
 | cita | tabela `conexoes` | referência, extraída do `[[…]]` | linha tracejada |
 
-A matéria segue sendo o guarda-chuva: a árvore começa dentro dela, e um resumo
-só pode ter pai da mesma matéria (o `<select>` do editor já filtra assim) —
-senão a barra lateral, que agrupa por matéria antes de mostrar a hierarquia,
-ficaria com um ramo atravessando disciplinas. Matéria sem resumo não vira ramo.
+**A árvore pode atravessar matérias.** Um assunto interdisciplinar — "Energia"
+segurando tópicos de Física e de Química — é uma estrutura legítima, e o
+`<select>` do editor oferece resumos de qualquer disciplina (com o nome dela ao
+lado, senão dois títulos parecidos ficariam indistinguíveis).
+
+Isso obriga `agruparPorMateria` a montar a árvore **uma vez, com tudo**, e só
+depois distribuir as RAÍZES entre as matérias. Montar uma árvore por matéria
+faria o filho de outra disciplina não achar o pai dentro do grupo e reaparecer
+solto na raiz — a hierarquia sumiria justo onde ela é mais interessante.
+Consequência: um resumo aparece **onde o autor o pendurou**, não sob a própria
+matéria; a barra lateral marca esses casos com um ponto na cor da matéria de
+origem, e o contador do grupo segue contando todos os da disciplina.
+
+A matéria continua sendo o guarda-chuva dos assuntos principais e um nó no
+grafo. Matéria sem resumo não vira ramo.
 
 No grafo (`/mapa?visao=grafo`) a matéria também é um nó, e cada assunto com
 filhos ganha um selo com o número deles: clicar no selo abre e fecha o ramo **no

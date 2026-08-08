@@ -79,15 +79,23 @@ function ItemArvore({
   no,
   pathname,
   nivel,
+  materiaDoGrupo,
 }: {
   no: NoResumo
   pathname: string
   nivel: number
+  /** matéria do bloco onde esta árvore está sendo desenhada */
+  materiaDoGrupo: string
 }) {
   const [aberto, setAberto] = useState(true)
   const href = `/resumos/${no.slug}`
   const ativo = pathname === href
   const temFilhos = no.filhos.length > 0
+  // um assunto pode segurar tópicos de outras disciplinas; quando isso
+  // acontece, o ponto na cor da matéria de origem evita a leitura errada de
+  // que o resumo pertence à matéria do bloco
+  const deOutraMateria = no.materia_slug !== materiaDoGrupo
+  const corOutra = MATERIAS[no.materia_slug as keyof typeof MATERIAS]?.cor
 
   return (
     <li>
@@ -121,6 +129,13 @@ function ItemArvore({
           }`}
         >
           {no.liberado ? null : <span aria-hidden="true" className="mr-1">🔒</span>}
+          {deOutraMateria && corOutra ? (
+            <span
+              aria-hidden="true"
+              className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+              style={{ background: corOutra }}
+            />
+          ) : null}
           {no.titulo}
         </Link>
 
@@ -137,7 +152,7 @@ function ItemArvore({
           style={{ marginLeft: nivel * 10 + 7 }}
         >
           {no.filhos.map((f) => (
-            <ItemArvore key={f.slug} no={f} pathname={pathname} nivel={0} />
+            <ItemArvore key={f.slug} no={f} pathname={pathname} nivel={0} materiaDoGrupo={materiaDoGrupo} />
           ))}
         </ul>
       ) : null}
@@ -269,7 +284,7 @@ export default function Sidebar({
               {aberto && (
                 <ul className="list-none m-0 ml-[13px] border-l border-[var(--line)] pl-0.5 p-0">
                   {arvore.map((no) => (
-                    <ItemArvore key={no.slug} no={no} pathname={pathname} nivel={0} />
+                    <ItemArvore key={no.slug} no={no} pathname={pathname} nivel={0} materiaDoGrupo={materia} />
                   ))}
                 </ul>
               )}

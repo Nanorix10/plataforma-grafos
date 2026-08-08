@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { getSessao } from '@/lib/sessao'
 import { MATERIAS } from '@/lib/materias'
 import { PLANO_PROCESSOS } from '@/lib/wikilinks'
-import { montarArvore, type ResumoItem } from '@/lib/arvore'
+import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 
 // A montagem da árvore mora em `lib/arvore.ts`, sem nada de servidor, porque a
 // barra lateral (componente de cliente) também precisa dela. Reexportado aqui
@@ -27,25 +27,38 @@ export const getResumos = cache(async (): Promise<ResumoItem[]> => {
   }))
 })
 
-// Agrupa por matéria, na ordem em que as matérias estão definidas. Dentro de
-// cada matéria os resumos vêm em árvore, não em lista: a matéria é o
-// guarda-chuva, e a hierarquia de assuntos começa dentro dela.
+/**
+ * Agrupa por matéria, na ordem em que as matérias estão definidas.
+ *
+ * A árvore é montada **uma vez, com tudo**, e só depois as RAÍZES são
+ * distribuídas entre as matérias. Montar uma árvore por matéria quebraria os
+ * assuntos interdisciplinares: um tópico de Química pendurado em "Energia", de
+ * Física, não acharia o pai dentro do próprio grupo e voltaria a aparecer solto
+ * na raiz de Química — a hierarquia sumiria justamente onde ela é mais
+ * interessante.
+ *
+ * Consequência: um resumo aparece **onde o autor o pendurou**, e não
+ * necessariamente sob a própria matéria. `itens` segue contando todos os da
+ * disciplina, que é o número que interessa no cabeçalho do grupo.
+ */
 export function agruparPorMateria(resumos: ResumoItem[]) {
-  const grupos = new Map<string, ResumoItem[]>()
+  const raizes = montarArvore(resumos)
 
-  for (const slug of Object.keys(MATERIAS)) {
-    const doGrupo = resumos.filter((r) => r.materia_slug === slug)
-    if (doGrupo.length > 0) grupos.set(slug, doGrupo)
+  const conhecidas = new Set(Object.keys(MATERIAS))
+  const materiaDe = (slug: string) => (conhecidas.has(slug) ? slug : 'outros')
+
+  const ordem = [...Object.keys(MATERIAS), 'outros']
+  const grupos: { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }[] = []
+
+  for (const slug of ordem) {
+    const itens = resumos.filter((r) => materiaDe(r.materia_slug) === slug)
+    if (itens.length === 0) continue
+    grupos.push({
+      materia: slug,
+      itens,
+      arvore: raizes.filter((r) => materiaDe(r.materia_slug) === slug),
+    })
   }
 
-  // matérias que não estão em MATERIAS (segurança contra dados inesperados)
-  const conhecidas = new Set(Object.keys(MATERIAS))
-  const orfaos = resumos.filter((r) => !conhecidas.has(r.materia_slug))
-  if (orfaos.length > 0) grupos.set('outros', orfaos)
-
-  return [...grupos.entries()].map(([materia, itens]) => ({
-    materia,
-    itens,
-    arvore: montarArvore(itens),
-  }))
+  return grupos
 }
