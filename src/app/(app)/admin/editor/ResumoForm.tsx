@@ -256,6 +256,9 @@ export default function ResumoForm({
           conteudoInicial={resumo?.corpo ?? ''}
           titulos={titulos}
           resumoId={resumo?.id}
+          /* `materia` é estado, não `resumo.materia_slug`: trocar a matéria no
+             `<select>` acima recolore a folha na hora, sem salvar antes. */
+          corMateria={MATERIAS[materia as keyof typeof MATERIAS]?.cor}
         />
       </div>
 

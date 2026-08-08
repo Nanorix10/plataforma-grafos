@@ -482,8 +482,38 @@ button:focus-visible,
   color: var(--acento);
   margin-bottom: 0.6em;
 }
+/* ---- a cor da matéria dentro do resumo ----
+   Nos documentos de origem cada matéria tinha uma cor, e o resumo INTEIRO era
+   escrito nela — Língua Portuguesa em vermelho, História em roxo, Biologia em
+   verde. É de lá que saíram as cores de `lib/materias.ts` (Biologia é o mesmo
+   `#3F7848` até hoje).
+
+   Aqui a cor entra só nos títulos de seção e nos termos em negrito, não no
+   texto corrido. O documento era papel branco; o site tem tema escuro e
+   parágrafos longos, e uma página inteira em `#C2334D` cansa a vista num jeito
+   que a folha do Docs não cansava. Título e termo-chave são justamente o que o
+   olho procura ao varrer o resumo, então é onde a cor rende — e o corpo segue
+   no tom de leitura, que é o único que passa em contraste nos dois temas.
+
+   Quem fornece o valor é a página do resumo (e o editor), gravando
+   `--cor-materia` no próprio elemento a partir do `MATERIAS`. O `inherit` de
+   reserva é o que mantém o resumo sem matéria conhecida exatamente como era. */
+.conteudo-resumo :where(h2, h3, h4) {
+  color: var(--cor-materia, inherit);
+}
+
 .conteudo-resumo strong {
   font-weight: 600;
+  color: var(--cor-materia, inherit);
+}
+
+/* Duas exceções, onde a cor da matéria atrapalharia em vez de ajudar:
+   o grifo já força texto escuro sobre pastel claro, e o wikilink já é lilás.
+   Sem isto, um termo em negrito dentro de qualquer um dos dois trocaria a cor
+   do fundo/link por baixo e voltaria a ficar ilegível. */
+.conteudo-resumo mark strong,
+.conteudo-resumo a strong {
+  color: inherit;
 }
 .conteudo-resumo code {
   font-family: var(--fonte-mono), monospace;
