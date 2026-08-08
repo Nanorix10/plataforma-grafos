@@ -273,6 +273,23 @@ button:focus-visible,
 .conteudo-resumo h4 {
   font-family: var(--fonte-resumo), sans-serif;
 }
+/* Títulos de seção saem em "Primeira maiúscula, resto minúsculo".
+   Nos documentos de origem eles eram digitados em caixa alta inteira
+   (`**FUTURISMO (Itália, 1909)**`), herança de quando eram só parágrafos em
+   negrito. Aqui são títulos de verdade (h2/h3/h4), então o HTML segue sabendo
+   que são seções — o que sustenta sumário, âncora e leitor de tela — e só a
+   exibição é normalizada. O texto digitado não é alterado.
+
+   Cuidado conhecido: `lowercase` não distingue nome próprio. "CUBISMO (França)"
+   aparece como "Cubismo (frança)". Digitando o título já em caixa normal, o
+   efeito não acontece. */
+.conteudo-resumo :where(h2, h3, h4) {
+  text-transform: lowercase;
+}
+.conteudo-resumo :where(h2, h3, h4)::first-letter {
+  text-transform: uppercase;
+}
+
 .conteudo-resumo h2 {
   font-size: 1.45rem;
   font-weight: 700;
