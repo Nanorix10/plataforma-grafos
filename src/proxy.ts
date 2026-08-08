@@ -48,10 +48,24 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   /**
-   * Roda em tudo, menos arquivos estáticos e imagens. Sem `matcher` o proxy
-   * rodaria até em `_next/static`, gastando tempo à toa em cada CSS e JS.
+   * Roda em tudo, menos:
+   *
+   * - arquivos estáticos e imagens — sem isso o proxy rodaria até em
+   *   `_next/static`, gastando tempo à toa em cada CSS e JS;
+   * - a landing (`/`) e o `/login`, que é o ponto principal aqui. As duas são
+   *   páginas estáticas e PÚBLICAS: ninguém tem sessão pra renovar nelas. Com
+   *   o proxy ligado, toda visita à landing virava uma execução de função —
+   *   instanciar o cliente do Supabase e chamar `getClaims()` — em vez de ser
+   *   servida direto do CDN. É o primeiro contato de todo aluno novo, e era
+   *   justamente o mais lento.
+   *
+   * Quem já está logado e entra pela landing não perde nada: a renovação
+   * acontece na primeira rota do app que ele abrir, que é onde a sessão
+   * realmente é usada.
    */
+  /* O `$` solto na alternância é o que exclui a própria raiz: nela o trecho
+     depois da barra é vazio, então só um `$` casa ali. */
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login$|$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

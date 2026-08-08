@@ -1,8 +1,11 @@
 @import "tailwindcss";
-/* Estilo das fórmulas. Só o CSS vai pro navegador do aluno — a renderização
-   acontece no servidor (src/lib/matematica.ts), então o motor do KaTeX,
-   que passa de 250 KB, nunca é baixado por quem só está lendo. */
-@import "katex/dist/katex.min.css";
+
+/* O CSS do KaTeX NÃO entra aqui. Ele é importado pelas duas rotas que exibem
+   fórmula — `(app)/resumos/[slug]` e `(app)/admin/editor/*` — porque neste
+   arquivo ele viajava junto de toda página, inclusive a landing e o login,
+   que não têm uma equação sequer.
+   A renderização continua no servidor (src/lib/matematica.ts): o motor do
+   KaTeX, que passa de 250 KB, nunca é baixado por quem só está lendo. */
 
 /* As fontes são carregadas por next/font em src/app/layout.tsx, que expõe
    --fonte-titulo, --fonte-texto e --fonte-mono. Não voltar pro @import do

@@ -21,11 +21,25 @@ const inter = Inter({
   display: "swap",
 });
 
+/**
+ * `preload: false` nas duas fontes abaixo — e a razão vale pra qualquer fonte
+ * que entrar aqui depois.
+ *
+ * As três famílias são declaradas neste layout, que embrulha o site inteiro,
+ * então o Next emitia `<link rel="preload">` das TRÊS em toda página. A landing
+ * puxava 105 KB de fonte com prioridade alta e usava 47 KB: a Nunito só aparece
+ * dentro de `.conteudo-resumo` e a Plex Mono só no editor, mas as duas
+ * competiam com o CSS e o JS críticos de quem nunca vai abrir um resumo.
+ *
+ * Sem preload elas continuam declaradas e são baixadas assim que um elemento
+ * pede a família — só que aí é numa página que de fato usa a fonte.
+ */
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--fonte-mono",
   display: "swap",
+  preload: false,
 });
 
 /**
@@ -37,6 +51,7 @@ const nunito = Nunito({
   subsets: ["latin"],
   variable: "--fonte-resumo",
   display: "swap",
+  preload: false, // ver a nota em plexMono
 });
 
 export const metadata: Metadata = {

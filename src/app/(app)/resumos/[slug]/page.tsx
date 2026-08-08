@@ -1,3 +1,6 @@
+// Só as rotas que exibem fórmula carregam o CSS do KaTeX (~3 KB gzip). No
+// globals.css ele ia junto da landing e do login, que não têm equação.
+import 'katex/dist/katex.min.css'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'

@@ -1,5 +1,8 @@
 'use client'
 
+// idem à página do resumo: o CSS do KaTeX é carregado por quem mostra fórmula,
+// e não pelo globals.css, que embarca em toda página do site
+import 'katex/dist/katex.min.css'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyleKit } from '@tiptap/extension-text-style'
