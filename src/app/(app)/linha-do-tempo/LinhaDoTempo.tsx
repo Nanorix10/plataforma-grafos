@@ -5,7 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
 // de `lib/tempo` e não de `lib/eventos`: este é um componente de cliente, e
 // `eventos.ts` importa `getSessao`, que depende de `next/headers`
-import { anoFinal, formatarAno, rotuloDoEvento, type Evento } from '@/lib/tempo'
+import {
+  anoFinal,
+  coresDoEvento,
+  corDoRotulo,
+  formatarAno,
+  fundoDoMarcador,
+  rotuloDoEvento,
+  type Evento,
+} from '@/lib/tempo'
 
 /**
  * Eras da divisão escolar brasileira. Não são filtro — são atalhos de zoom.
@@ -29,11 +37,18 @@ const JANELA_MINIMA = 5
    passo, e sem limite um afastamento insistente monta uma lista de milhares de
    marcas invisíveis a cada quadro. */
 const JANELA_MAXIMA = 20000
-const ALTURA_FAIXA = 30
-const ALTURA_EIXO = 34
+
+const ALTURA_FAIXA = 26
+/* Folga entre o eixo e a primeira faixa de cada lado. Embaixo é maior porque é
+   ali que moram os anos escritos — sem a diferença, o primeiro evento de baixo
+   sentaria em cima do "1453". */
+const FOLGA_CIMA = 14
+const FOLGA_BAIXO = 26
+const PADDING_V = 22
 const FOLGA = 12
 
 type Janela = { de: number; ate: number }
+type Lado = 'cima' | 'baixo'
 
 /** Largura aproximada do rótulo, em px, para o empacotamento não sobrepor. */
 function larguraRotulo(titulo: string) {
@@ -64,7 +79,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
      banco ainda não tem esse conteúdo) e esconderia um evento de Física no dia
      em que a história da ciência entrar. Quem manda são os dados. */
   const materiasComEvento = useMemo(() => {
-    const vistas = new Set(eventos.map((e) => e.materia_slug))
+    const vistas = new Set(eventos.flatMap((e) => e.materia_slugs))
     return Object.keys(MATERIAS).filter((m) => vistas.has(m))
   }, [eventos])
 
@@ -73,9 +88,13 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   /* O filtro NÃO vive na URL, ao contrário do `visao` do mapa. Lá a URL troca
      a tela inteira e vale ser favoritada; aqui cada clique num chip dispararia
      uma volta ao servidor, que recarregaria todos os eventos para mudar o que
-     é uma decisão puramente visual. */
+     é uma decisão puramente visual.
+
+     `some` e não `every`: o Renascimento continua na tela enquanto QUALQUER
+     uma das suas matérias estiver ligada. Exigir todas o faria sumir ao
+     desligar Filosofia, que não é o que "filtrar por Arte" quer dizer. */
   const visiveis = useMemo(
-    () => eventos.filter((e) => !desligadas.has(e.materia_slug)),
+    () => eventos.filter((e) => e.materia_slugs.some((m) => !desligadas.has(m))),
     [eventos, desligadas]
   )
 
@@ -171,34 +190,68 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   }
 
   /**
-   * Empacota os eventos em faixas, do jeito guloso: cada um desce para a
-   * primeira faixa onde não encosta em quem já está lá.
+   * Distribui os eventos dos DOIS lados do eixo central.
    *
-   * Refeito a cada zoom porque a conta é em PIXEL, não em ano — o rótulo tem
+   * O lado alterna a cada evento, em ordem cronológica: é o que faz o desenho
+   * abrir em leque a partir da linha, em vez de empilhar tudo para baixo. Se o
+   * lado da vez estiver ocupado naquele trecho, o evento desce uma faixa
+   * daquele mesmo lado — trocar de lado quebraria a alternância e, com ela, a
+   * leitura de "um acima, um abaixo" que orienta o olho.
+   *
+   * Refeito a cada zoom porque a conta é em PIXEL, não em ano: o rótulo tem
    * largura fixa na tela, então dois eventos que se sobrepõem afastados podem
    * caber lado a lado de perto.
    */
-  const { colocados, faixas } = useMemo(() => {
-    if (largura === 0) return { colocados: [], faixas: 0 }
-    const fimDaFaixa: number[] = []
-    const saida: { e: Evento; x1: number; x2: number; faixa: number }[] = []
+  const { colocados, faixasCima, faixasBaixo } = useMemo(() => {
+    if (largura === 0) return { colocados: [], faixasCima: 1, faixasBaixo: 1 }
+
+    const fim: Record<Lado, number[]> = { cima: [], baixo: [] }
+    const saida: {
+      e: Evento
+      x1: number
+      x2: number
+      xRotulo: number
+      lado: Lado
+      faixa: number
+    }[] = []
+    let lado: Lado = 'cima'
 
     for (const e of visiveis) {
       const x1 = escala(e.ano_inicio)
-      const xFim = e.ano_fim === null ? x1 : escala(e.ano_fim)
-      const extensao = Math.max(xFim, x1 + larguraRotulo(e.titulo))
+      const periodo = e.ano_fim !== null
+      const x2 = periodo ? escala(e.ano_fim as number) : x1
 
+      /* Período que atravessa a tela inteira teria o rótulo ancorado fora dela,
+         à esquerda — o aluno estaria DENTRO da Idade Média sem ler o nome dela.
+         Aqui o rótulo encosta na borda e continua visível enquanto a barra
+         estiver passando. O conector acompanha, e segue caindo sobre a barra. */
+      const xRotulo =
+        periodo && x1 < 4 && x2 > 4 ? Math.min(4, x2 - larguraRotulo(e.titulo)) : x1
+
+      const extensao = Math.max(x2, xRotulo + larguraRotulo(e.titulo))
       // fora da tela não é desenhado nem ocupa faixa: com zoom fundo, isso é a
       // diferença entre desenhar 20 eventos e desenhar todos os do banco
-      if (extensao < -FOLGA || x1 > largura + FOLGA) continue
+      if (extensao < -FOLGA || Math.min(x1, xRotulo) > largura + FOLGA) continue
 
-      let faixa = fimDaFaixa.findIndex((fim) => x1 > fim + FOLGA)
-      if (faixa === -1) faixa = fimDaFaixa.length
-      fimDaFaixa[faixa] = extensao
-      saida.push({ e, x1, x2: xFim, faixa })
+      const inicio = Math.min(x1, xRotulo)
+      let faixa = fim[lado].findIndex((f) => inicio > f + FOLGA)
+      if (faixa === -1) faixa = fim[lado].length
+      fim[lado][faixa] = extensao
+
+      saida.push({ e, x1, x2, xRotulo, lado, faixa })
+      lado = lado === 'cima' ? 'baixo' : 'cima'
     }
-    return { colocados: saida, faixas: Math.max(1, fimDaFaixa.length) }
+
+    return {
+      colocados: saida,
+      faixasCima: Math.max(1, fim.cima.length),
+      faixasBaixo: Math.max(1, fim.baixo.length),
+    }
   }, [visiveis, escala, largura])
+
+  /** Onde o eixo central mora, em px do topo da área desenhável. */
+  const centro = PADDING_V + faixasCima * ALTURA_FAIXA + FOLGA_CIMA
+  const alturaConteudo = centro + FOLGA_BAIXO + faixasBaixo * ALTURA_FAIXA + PADDING_V
 
   /** Marcas do eixo, em anos redondos dentro da janela visível. */
   const marcas = useMemo(() => {
@@ -219,7 +272,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
     })
   }
 
-  const alturaConteudo = faixas * ALTURA_FAIXA + 16
+  const coresSelecionado = selecionado ? coresDoEvento(selecionado.materia_slugs) : []
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -245,7 +298,10 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
               <span
                 aria-hidden="true"
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: ligada ? m.cor : 'transparent', boxShadow: ligada ? undefined : 'inset 0 0 0 1px var(--ink-faint)' }}
+                style={{
+                  background: ligada ? m.cor : 'transparent',
+                  boxShadow: ligada ? undefined : 'inset 0 0 0 1px var(--ink-faint)',
+                }}
               />
               {m.nome}
             </button>
@@ -312,26 +368,8 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         style={{ touchAction: 'pan-y' }}
         className="quadro relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden select-none cursor-grab active:cursor-grabbing"
       >
-        {/* régua fixa no topo da área que rola */}
-        <div
-          className="sticky top-0 z-10 bg-[var(--canvas)]/90 backdrop-blur border-b border-[var(--line)]"
-          style={{ height: ALTURA_EIXO }}
-        >
-          {marcas.map((ano) => (
-            <div
-              key={ano}
-              className="absolute top-0 h-full flex items-end pb-1"
-              style={{ left: escala(ano), transform: 'translateX(-50%)' }}
-            >
-              <span className="text-[10.5px] text-[var(--ink-faint)] tabular-nums whitespace-nowrap">
-                {formatarAno(ano)}
-              </span>
-            </div>
-          ))}
-        </div>
-
         <div className="relative" style={{ height: alturaConteudo }}>
-          {/* linhas verticais das marcas, atrás dos eventos */}
+          {/* linhas verticais dos anos, atrás de tudo */}
           {marcas.map((ano) => (
             <div
               key={ano}
@@ -341,54 +379,113 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
             />
           ))}
 
-          {colocados.map(({ e, x1, x2, faixa }) => {
-            const cor = MATERIAS[e.materia_slug as keyof typeof MATERIAS]?.cor ?? 'var(--ink)'
+          {/* ---- o eixo central ----
+              É dele que os eventos se abrem, para cima e para baixo. Os anos
+              ficam logo abaixo da linha, e é por isso que a folga de baixo é
+              maior que a de cima. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 h-[2px] bg-[var(--line-forte)]"
+            style={{ top: centro }}
+          />
+          {marcas.map((ano) => (
+            <div
+              key={`marca-${ano}`}
+              aria-hidden="true"
+              className="absolute flex flex-col items-center"
+              style={{ left: escala(ano), top: centro, transform: 'translateX(-50%)' }}
+            >
+              <span className="w-px h-[5px] bg-[var(--line-forte)]" />
+              <span className="text-[10.5px] text-[var(--ink-faint)] tabular-nums whitespace-nowrap mt-0.5">
+                {formatarAno(ano)}
+              </span>
+            </div>
+          ))}
+
+          {colocados.map(({ e, x1, x2, xRotulo, lado, faixa }) => {
+            const cores = coresDoEvento(e.materia_slugs)
             const periodo = e.ano_fim !== null
-            const largoBarra = Math.max(3, x2 - x1)
             const aberto = selecionado?.id === e.id
+            const alturaCaixa = ALTURA_FAIXA - 6
+
+            const topoCaixa =
+              lado === 'cima'
+                ? centro - FOLGA_CIMA - (faixa + 1) * ALTURA_FAIXA
+                : centro + FOLGA_BAIXO + faixa * ALTURA_FAIXA
+
+            // o conector sai da borda da caixa que olha para o eixo
+            const bordaProxima = lado === 'cima' ? topoCaixa + alturaCaixa : topoCaixa
+            const topoConector = lado === 'cima' ? bordaProxima : centro
+            const alturaConector = Math.max(0, Math.abs(centro - bordaProxima))
 
             return (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => setSelecionado(aberto ? null : e)}
-                aria-pressed={aberto}
-                title={`${e.titulo} — ${rotuloDoEvento(e)}`}
-                className="absolute flex items-center gap-1.5 rounded pr-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
-                style={{
-                  left: x1,
-                  top: faixa * ALTURA_FAIXA + 8,
-                  height: ALTURA_FAIXA - 8,
-                  background: aberto ? 'var(--acento-fraco)' : undefined,
-                }}
-              >
+              <div key={e.id}>
+                {/* haste ligando o evento à sua data no eixo */}
+                <div
+                  aria-hidden="true"
+                  className="absolute w-px"
+                  style={{
+                    left: xRotulo,
+                    top: topoConector,
+                    height: alturaConector,
+                    background: aberto ? 'var(--acento)' : 'var(--line-forte)',
+                  }}
+                />
+
+                {/* marcador na própria linha: ponto para data única, barra
+                    para período — e a largura da barra É a duração */}
                 {periodo ? (
-                  // período é barra: a largura NO EIXO é a informação, então
-                  // ela não pode ser um enfeite de tamanho fixo
-                  <span
+                  <div
                     aria-hidden="true"
-                    className="h-[6px] rounded-full shrink-0"
-                    style={{ width: largoBarra, background: cor }}
+                    className="absolute h-[7px] rounded-full"
+                    style={{
+                      left: x1,
+                      width: Math.max(3, x2 - x1),
+                      top: centro - 2.5,
+                      background: fundoDoMarcador(cores),
+                    }}
                   />
                 ) : (
-                  <span
+                  <div
                     aria-hidden="true"
-                    className="w-[7px] h-[7px] rounded-full shrink-0"
-                    style={{ background: cor }}
+                    className="absolute w-[9px] h-[9px] rounded-full overflow-hidden"
+                    style={{
+                      left: x1 - 4.5,
+                      top: centro - 3.5,
+                      background: fundoDoMarcador(cores),
+                    }}
                   />
                 )}
-                <span
-                  className="text-[11.5px] whitespace-nowrap"
-                  style={{ color: cor }}
+
+                <button
+                  type="button"
+                  onClick={() => setSelecionado(aberto ? null : e)}
+                  aria-pressed={aberto}
+                  title={`${e.titulo} — ${rotuloDoEvento(e)}`}
+                  className="absolute flex items-center rounded px-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+                  style={{
+                    left: xRotulo,
+                    top: topoCaixa,
+                    height: alturaCaixa,
+                    background: aberto ? 'var(--acento-fraco)' : undefined,
+                  }}
                 >
-                  {e.titulo}
-                </span>
-              </button>
+                  <span
+                    className="text-[11.5px] whitespace-nowrap"
+                    style={{ color: corDoRotulo(cores) }}
+                  >
+                    {e.titulo}
+                  </span>
+                </button>
+              </div>
             )
           })}
 
           {visiveis.length === 0 ? (
-            <p className="absolute inset-x-0 top-8 text-center text-[13px] text-[var(--ink-faint)]">
+            <p
+              className="absolute inset-x-0 text-center text-[13px] text-[var(--ink-faint)]"
+              style={{ top: centro + FOLGA_BAIXO + 18 }}
+            >
               {eventos.length === 0
                 ? 'Nenhum evento cadastrado ainda.'
                 : 'Nenhuma matéria ligada.'}
@@ -406,21 +503,14 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 sm:px-6 py-3 flex items-start gap-3">
           <span
             aria-hidden="true"
-            className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-            style={{
-              background:
-                MATERIAS[selecionado.materia_slug as keyof typeof MATERIAS]?.cor ?? 'var(--ink)',
-            }}
+            className="w-2.5 h-2.5 rounded-full shrink-0 mt-1.5"
+            style={{ background: fundoDoMarcador(coresSelecionado) }}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2.5">
               <span
                 className="font-medium text-[14px]"
-                style={{
-                  color:
-                    MATERIAS[selecionado.materia_slug as keyof typeof MATERIAS]?.cor ??
-                    'var(--ink)',
-                }}
+                style={{ color: corDoRotulo(coresSelecionado) }}
               >
                 {selecionado.titulo}
               </span>
@@ -428,8 +518,28 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
                 {rotuloDoEvento(selecionado)}
               </span>
             </div>
+
+            {/* As matérias por extenso. É aqui que o evento de várias delas
+                deixa de depender das listras do marcador, que dizem "são
+                três" mas não dizem quais. */}
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {selecionado.materia_slugs.map((slug) => {
+                const m = MATERIAS[slug as keyof typeof MATERIAS]
+                if (!m) return null
+                return (
+                  <span
+                    key={slug}
+                    className="text-[11px] rounded-full border px-1.5 py-0.5"
+                    style={{ borderColor: m.cor, color: m.cor }}
+                  >
+                    {m.nome}
+                  </span>
+                )
+              })}
+            </div>
+
             {selecionado.descricao ? (
-              <p className="text-[12.5px] leading-snug text-[var(--ink-dim)] mt-1 text-pretty">
+              <p className="text-[12.5px] leading-snug text-[var(--ink-dim)] mt-1.5 text-pretty">
                 {selecionado.descricao}
               </p>
             ) : null}

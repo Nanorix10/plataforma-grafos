@@ -23,7 +23,7 @@ export async function getEventos(): Promise<Evento[]> {
   const { data } = await supabase
     .from('eventos')
     .select(
-      'id, titulo, ano_inicio, ano_fim, rotulo_data, materia_slug, resumo_id, descricao, resumo:resumos(slug)'
+      'id, titulo, ano_inicio, ano_fim, rotulo_data, materia_slugs, resumo_id, descricao, resumo:resumos(slug)'
     )
     .order('ano_inicio', { ascending: true })
 

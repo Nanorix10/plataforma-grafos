@@ -3,24 +3,39 @@
 import { useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
 // idem à linha do tempo: `lib/tempo` é o lado puro, seguro para o cliente
-import { rotuloDoEvento, type Evento } from '@/lib/tempo'
+import {
+  coresDoEvento,
+  corDoRotulo,
+  fundoDoMarcador,
+  rotuloDoEvento,
+  type Evento,
+} from '@/lib/tempo'
 import { salvarEvento, excluirEvento } from './actions'
 
 type ResumoOpcao = { id: string; titulo: string; materia_slug: string }
 
 /** Campos vazios = formulário de evento novo. */
-const VAZIO = {
+type Rascunho = {
+  id: string
+  titulo: string
+  ano_inicio: string
+  ano_fim: string
+  rotulo_data: string
+  materia_slugs: string[]
+  resumo_id: string
+  descricao: string
+}
+
+const VAZIO: Rascunho = {
   id: '',
   titulo: '',
   ano_inicio: '',
   ano_fim: '',
   rotulo_data: '',
-  materia_slug: '',
+  materia_slugs: [],
   resumo_id: '',
   descricao: '',
 }
-
-type Rascunho = typeof VAZIO
 
 function paraRascunho(e: Evento): Rascunho {
   return {
@@ -29,7 +44,7 @@ function paraRascunho(e: Evento): Rascunho {
     ano_inicio: String(e.ano_inicio),
     ano_fim: e.ano_fim === null ? '' : String(e.ano_fim),
     rotulo_data: e.rotulo_data,
-    materia_slug: e.materia_slug,
+    materia_slugs: e.materia_slugs,
     resumo_id: e.resumo_id ?? '',
     descricao: e.descricao,
   }
@@ -152,28 +167,62 @@ export default function GerenciarEventos({
           </p>
         </div>
 
-        <div>
-          <label htmlFor="ev-materia" className="rotulo block mb-1.5">
-            Matéria
-          </label>
-          <select
-            id="ev-materia"
-            name="materia_slug"
-            required
-            value={rascunho.materia_slug}
-            onChange={(e) => campo('materia_slug', e.target.value)}
-            className="campo"
-          >
-            <option value="" disabled>
-              Selecione…
-            </option>
-            {Object.entries(MATERIAS).map(([slug, m]) => (
-              <option key={slug} value={slug}>
-                {m.nome}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Matérias: caixas de seleção, não um `<select multiple>`.
+            O evento costuma ser de mais de uma — o Renascimento é História,
+            Arte, Literatura e Filosofia —, e num `select multiple` isso exige
+            segurar Ctrl e mirar, sem mostrar o que já está marcado quando a
+            lista rola. Aqui as escolhidas ficam à vista, na cor da matéria. */}
+        <fieldset>
+          <legend className="rotulo mb-1.5">Matérias</legend>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(MATERIAS).map(([slug, m]) => {
+              const marcada = rascunho.materia_slugs.includes(slug)
+              return (
+                <label
+                  key={slug}
+                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] cursor-pointer focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[var(--acento)]"
+                  style={{
+                    borderColor: marcada ? m.cor : 'var(--line-forte)',
+                    color: marcada ? m.cor : 'var(--ink-dim)',
+                    background: marcada ? 'var(--acento-fraco)' : undefined,
+                  }}
+                >
+                  {/* a caixa nativa fica invisível mas continua no formulário e
+                      acessível pelo teclado — é ela que o `getAll` lê */}
+                  <input
+                    type="checkbox"
+                    name="materia_slugs"
+                    value={slug}
+                    checked={marcada}
+                    onChange={(ev) =>
+                      campo(
+                        'materia_slugs',
+                        ev.target.checked
+                          ? [...rascunho.materia_slugs, slug]
+                          : rascunho.materia_slugs.filter((s) => s !== slug)
+                      )
+                    }
+                    className="sr-only"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{
+                      background: marcada ? m.cor : 'transparent',
+                      boxShadow: marcada ? undefined : 'inset 0 0 0 1px var(--ink-faint)',
+                    }}
+                  />
+                  {m.nome}
+                </label>
+              )
+            })}
+          </div>
+          <p className="text-[11.5px] text-[var(--ink-faint)] mt-1.5">
+            Marque quantas quiser. O evento aparece na linha enquanto qualquer
+            uma delas estiver ligada, e o marcador sai listrado com as cores de
+            todas.
+          </p>
+        </fieldset>
 
         <div>
           <label htmlFor="ev-resumo" className="rotulo block mb-1.5">
@@ -262,7 +311,7 @@ export default function GerenciarEventos({
         ) : (
           <ul className="flex flex-col gap-1.5">
             {eventos.map((e) => {
-              const m = MATERIAS[e.materia_slug as keyof typeof MATERIAS]
+              const cores = coresDoEvento(e.materia_slugs)
               const emEdicao = rascunho.id === e.id
               return (
                 <li
@@ -271,17 +320,19 @@ export default function GerenciarEventos({
                     emEdicao ? 'bg-[var(--acento-fraco)]' : 'bg-[var(--raised)]'
                   }`}
                 >
+                  {/* listrado quando o evento é de várias matérias — o mesmo
+                      marcador que aparece no eixo */}
                   <span
                     aria-hidden="true"
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: m?.cor ?? 'var(--ink-faint)' }}
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: fundoDoMarcador(cores) }}
                   />
                   <span className="text-[12px] text-[var(--ink-dim)] tabular-nums shrink-0 w-[104px]">
                     {rotuloDoEvento(e)}
                   </span>
                   <span
                     className="text-[13px] font-medium truncate flex-1 min-w-0"
-                    style={{ color: m?.cor }}
+                    style={{ color: corDoRotulo(cores) }}
                   >
                     {e.titulo}
                   </span>

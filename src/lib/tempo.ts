@@ -1,3 +1,5 @@
+import { MATERIAS } from './materias'
+
 /**
  * O evento da linha do tempo e as contas de data — funções puras, sem nada de
  * servidor.
@@ -24,7 +26,13 @@ export type Evento = {
   ano_inicio: number
   ano_fim: number | null
   rotulo_data: string
-  materia_slug: string
+  /**
+   * Um evento pode ser de VÁRIAS matérias — o Renascimento é História, Arte,
+   * Literatura e Filosofia ao mesmo tempo. Nunca vazio: o banco recusa
+   * (`eventos_tem_materia`), porque evento sem matéria não teria chip que o
+   * mostrasse e sumiria da tela sem sumir do banco.
+   */
+  materia_slugs: string[]
   resumo_id: string | null
   descricao: string
   /** slug do resumo ligado, quando há — resolvido na consulta, para o link */
@@ -62,4 +70,41 @@ export function rotuloDoEvento(e: {
 /** O ano em que o evento termina — o próprio início, se for pontual. */
 export function anoFinal(e: { ano_inicio: number; ano_fim: number | null }): number {
   return e.ano_fim ?? e.ano_inicio
+}
+
+/** As cores das matérias do evento, na ordem em que ele as lista. */
+export function coresDoEvento(materiaSlugs: string[]): string[] {
+  return materiaSlugs
+    .map((s) => MATERIAS[s as keyof typeof MATERIAS]?.cor)
+    .filter((c): c is string => Boolean(c))
+}
+
+/**
+ * Fundo do marcador no eixo: uma cor só, ou faixas de parada dura quando o
+ * evento é de mais de uma matéria.
+ *
+ * Parada dura (`c 20% 40%`) e não degradê: degradê inventaria cores
+ * intermediárias que não são de matéria nenhuma, e num ponto de 9px o
+ * resultado vira uma mancha marrom. Assim as duas ou três cores continuam
+ * reconhecíveis.
+ */
+export function fundoDoMarcador(cores: string[]): string {
+  if (cores.length === 0) return 'var(--ink-faint)'
+  if (cores.length === 1) return cores[0]
+  const paradas = cores.map(
+    (c, i) => `${c} ${(i / cores.length) * 100}% ${((i + 1) / cores.length) * 100}%`
+  )
+  return `linear-gradient(90deg, ${paradas.join(', ')})`
+}
+
+/**
+ * Cor do título do evento no eixo.
+ *
+ * Com uma matéria, a cor dela — é a regra do site inteiro (decisão 4c). Com
+ * mais de uma, NEUTRO: escolher a primeira faria o Renascimento parecer só de
+ * História, que é exatamente a mentira que o evento multimatéria veio desfazer.
+ * Quem conta quais são é o marcador listrado ao lado, e o painel de detalhe.
+ */
+export function corDoRotulo(cores: string[]): string {
+  return cores.length === 1 ? cores[0] : 'var(--ink)'
 }

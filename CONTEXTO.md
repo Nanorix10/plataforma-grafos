@@ -388,6 +388,36 @@ pixel — é o que ensina que a Idade Média são mil anos e a Revolução Franc
 uma década. O preço (Antiguidade vazia, século XX espremido) é pago pelos
 botões de era, que dão zoom no trecho em vez de deformar o eixo.
 
+**O desenho é um eixo central, e os eventos se abrem dele.** Uma linha
+horizontal no meio carrega as marcas de ano e os marcadores; cada evento sobe
+ou desce por uma haste até seu rótulo, alternando de lado a cada evento em
+ordem cronológica. Quando o lado da vez já está ocupado naquele trecho, o
+evento desce uma faixa **do mesmo lado** — trocar de lado quebraria a
+alternância e, com ela, a leitura de "um acima, um abaixo" que orienta o olho.
+Data única é ponto sobre a linha; período é barra, e a largura dela É a
+duração. Período que atravessa a tela inteira tem o rótulo encostado na borda,
+senão o aluno estaria dentro da Idade Média sem conseguir ler o nome dela.
+
+**Um evento pode ser de VÁRIAS matérias** (`materia_slugs`, array). O
+Renascimento é História, Arte, Literatura e Filosofia; com uma matéria só, o
+autor teria de escolher uma e mentir, ou cadastrar quatro cópias — e aí
+desligar um chip esconderia três e deixaria uma. O filtro usa `some`, não
+`every`: o evento fica na tela enquanto qualquer uma das suas matérias estiver
+ligada.
+
+Array e não tabela de junção porque a linha do tempo carrega todos os eventos
+de uma vez e filtra no navegador — não existe consulta "eventos da matéria X"
+para um índice servir, e a junção custaria uma tabela, três policies e um join
+em toda leitura. O que o array não dá é a chave estrangeira, e quem devolve é o
+trigger `trg_checar_materias_do_evento`.
+
+Consequência visual: o marcador de evento multimatéria sai **listrado** com
+paradas duras (degradê inventaria cores que não são de matéria nenhuma, e num
+ponto de 9px viraria mancha). E o rótulo de evento multimatéria vai em cor
+NEUTRA, não na primeira da lista — pintá-lo de roxo faria o Renascimento
+parecer só de História, que é exatamente a mentira que o array veio desfazer.
+Quais são elas, quem diz é o painel de detalhe.
+
 **`lib/tempo.ts` × `lib/eventos.ts` é a mesma divisão de `arvore.ts` ×
 `resumos.ts`**, e pela mesma razão: o eixo e a tela de cadastro são componentes
 de cliente, e `eventos.ts` importa `getSessao` → `next/headers`. O tipo
