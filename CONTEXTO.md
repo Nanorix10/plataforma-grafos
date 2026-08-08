@@ -136,6 +136,32 @@ usam `light-dark()`, porque ficam gravadas no conteúdo e precisam ler bem nos
 dois temas. A exceção deliberada é a **faixa de números** da landing, que fica
 azul-marinho sempre: clareá-la tiraria o respiro de cor que ela existe para dar.
 
+**4c. A cor da matéria entra no resumo, mas só no título e no termo em negrito.**
+Nos documentos de origem cada matéria tinha uma cor e o resumo INTEIRO era
+escrito nela: Língua Portuguesa `#FD0032`, História Global `#6C0B6A`, Geografia
+`#BC462F`, Física `#007473`, Biologia `#3F7848`. É de lá que saíram as cores de
+`lib/materias.ts` — Biologia é o mesmo hex até hoje. (Conferido exportando
+"Resumo para PASSE 2° etapa 2026" e "Resumo para PAS UEM 2° etapa" como HTML: a
+seção de cada matéria é monocromática na cor dela.)
+
+Copiar isso ao pé da letra não dá. O Docs é papel branco e o site tem tema
+escuro; uma página inteira em `#C2334D` cansa a vista de um jeito que a folha do
+Docs não cansava, e os tons crus do Docs não passam de contraste sobre `--page`.
+Por isso a cor pinta só `h2/h3/h4` e `<strong>` — que é justamente o que o olho
+procura ao varrer o resumo —, e o texto corrido segue no tom de leitura.
+
+O valor desce por `--cor-materia`, gravada no elemento pela página do resumo e
+pela folha do editor (a partir do `MATERIAS`, que já traz o par claro/escuro).
+Quem não tem matéria conhecida cai no `inherit` de reserva e continua como era.
+Duas exceções no `globals.css`: negrito dentro de `<mark>` e de `<a>` mantém a
+cor de quem o cerca — senão o termo troca a cor por cima do grifo pastel ou do
+wikilink lilás e volta a ficar ilegível.
+
+No editor a variável fica na "folha", não no elemento do TipTap: aquele é criado
+pelo ProseMirror e só aceita atributos via `editorProps`, que não reage à troca
+de matéria no `<select>`. Variável de CSS herda, então dá no mesmo — e o autor vê
+a cor mudar na hora.
+
 **5. `getClaims()`, não `getUser()`.**
 `getClaims()` valida o JWT localmente; `getUser()` faz ida e volta na rede. Trocar
 de volta reintroduz latência em toda navegação.

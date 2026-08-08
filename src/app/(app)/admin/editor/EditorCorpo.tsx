@@ -17,7 +17,7 @@ import { Superscript } from '@tiptap/extension-superscript'
 // o mhchem ensina o KaTeX a ler \ce{...}; aqui é pro preview dentro do editor,
 // o mesmo import existe em lib/matematica.ts para a renderização no servidor
 import 'katex/dist/contrib/mhchem.mjs'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
@@ -500,10 +500,16 @@ export default function EditorCorpo({
   conteudoInicial,
   titulos,
   resumoId,
+  corMateria,
 }: {
   conteudoInicial: string
   titulos: string[]
   resumoId?: string
+  /* Cor da matéria escolhida no formulário, repassada à folha como
+     `--cor-materia`. Vem de fora (e não do `MATERIAS` aqui dentro) porque o
+     `<select>` ainda pode mudar depois de o editor montar: quem segura esse
+     estado é o ResumoForm, e assim a folha se recolore junto. */
+  corMateria?: string
 }) {
   const [html, setHtml] = useState(conteudoInicial)
   const [sugestao, setSugestao] = useState<EstadoSugestao | null>(null)
@@ -708,6 +714,11 @@ export default function EditorCorpo({
           className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[760px] px-6 py-8 sm:px-[70px] sm:py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
+          /* A variável fica na folha, não no `.conteudo-resumo` do TipTap:
+             aquele elemento é criado pelo ProseMirror e só aceita atributos
+             pelo `editorProps`, que não reage a troca de matéria. Como
+             variável de CSS herda, o efeito é o mesmo. */
+          style={{ '--cor-materia': corMateria } as CSSProperties}
         >
           <EditorContent editor={editor} />
         </div>

@@ -1,6 +1,7 @@
 // Só as rotas que exibem fórmula carregam o CSS do KaTeX (~3 KB gzip). No
 // globals.css ele ia junto da landing e do login, que não têm equação.
 import 'katex/dist/katex.min.css'
+import type { CSSProperties } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
@@ -118,7 +119,14 @@ export default async function ResumoPage({
           {resumo.titulo}
         </h1>
 
-        <div className="conteudo-resumo" dangerouslySetInnerHTML={{ __html: corpoHtml }} />
+        {/* A cor da matéria desce por variável, e o CSS decide onde ela pinta
+            (hoje: títulos de seção e termos em negrito). Resumo de matéria
+            desconhecida não recebe a variável e cai no `inherit` de reserva. */}
+        <div
+          className="conteudo-resumo"
+          style={{ '--cor-materia': materia?.cor } as CSSProperties}
+          dangerouslySetInnerHTML={{ __html: corpoHtml }}
+        />
 
         <section className="mt-16 pt-7 border-t border-[var(--line)]">
           <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
