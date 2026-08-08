@@ -98,6 +98,15 @@ function ItemArvore({
   const deOutraMateria = no.materia_slug !== materiaDoGrupo
   const corOutra = MATERIAS[no.materia_slug as keyof typeof MATERIAS]?.cor
 
+  /* O título vai na cor da matéria dele — só o liberado. O bloqueado fica em
+     `--ink-faint` pela classe, porque cor cheia o faria parecer disponível e
+     desmentiria o cadeado ao lado.
+
+     O ponto de "outra matéria" acima CONTINUA, mesmo agora que a cor do título
+     diz a mesma coisa: cor é reforço, nunca a única pista — é a regra do
+     `lib/materias.ts`, e quem não distingue os matizes ainda precisa do ponto. */
+  const corDoTitulo = no.liberado ? corOutra : undefined
+
   return (
     <li>
       <div className="flex items-center gap-0.5" style={{ paddingLeft: nivel * 10 }}>
@@ -121,6 +130,7 @@ function ItemArvore({
           href={href}
           title={no.liberado ? no.titulo : `${no.titulo} — fora do seu plano`}
           aria-current={ativo ? 'page' : undefined}
+          style={corDoTitulo ? { color: corDoTitulo } : undefined}
           className={`flex-1 min-w-0 block px-1.5 py-[5px] rounded-md text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
             ativo
               ? 'shadow-[inset_0_0_0_1px_var(--line-forte)] text-[var(--ink)]'
@@ -354,7 +364,9 @@ export default function Sidebar({
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: info?.cor ?? 'var(--ink-faint)' }}
                 />
-                <span className="truncate">{info?.nome ?? materia}</span>
+                <span className="truncate" style={{ color: info?.cor }}>
+                  {info?.nome ?? materia}
+                </span>
                 <span className="ml-auto text-[10.5px] opacity-60">{itens.length}</span>
               </button>
 
