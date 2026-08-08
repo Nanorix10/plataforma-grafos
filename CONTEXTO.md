@@ -368,6 +368,34 @@ essa mesma coluna, e a tela de pessoas segue valendo para os casos manuais.
 > Providers → Email), não do código. Com ela ligada, quem se cadastra só entra
 > depois de clicar no link recebido; desligada, entra na hora.
 
+## Próximo passo combinado: suporte a imagem
+
+O site **não exibe imagem nenhuma** hoje, e isso não é lacuna de conteúdo — é
+ausência de infraestrutura. Não há `@tiptap/extension-image`, botão no editor,
+bucket no Storage, regra de CSS para `img` nem `remotePatterns` no
+`next.config.ts`.
+
+Armadilha a saber: colar uma imagem no editor hoje **não dá erro** — o
+ProseMirror valida o conteúdo contra o esquema e descarta em silêncio o que não
+reconhece. Quem colar vai ver a imagem sumir sem nenhuma mensagem.
+
+Consequência imediata: a questão de colisão em `quantidade-de-movimento` diz "a
+situação ilustrada a seguir" e a ilustração não tem para onde ir. Não adianta
+tentar recolocar pelo editor.
+
+O que falta construir, de uma vez:
+
+1. `@tiptap/extension-image` + botão na barra do `EditorCorpo`
+2. Bucket no Supabase Storage, com RLS deixando só admin subir e todos lerem
+3. Server action de upload em `admin/editor/actions.ts`
+4. Regra de `img` em `.conteudo-resumo` (largura máxima, cantos, legenda)
+
+Para tirar as imagens do Google Docs, o atalho é que **`.docx` é um zip**:
+baixando o documento como Word, as imagens ficam todas em `word/media/`, já
+separadas. Não precisa salvar uma a uma, e não vale baixar pelo MCP do Drive —
+o conteúdo vem em base64 para dentro da conversa, o que é inviável para o
+documento mestre de 13 MB.
+
 ## Publicação
 
 O site está no ar em **https://plataforma-grafos.vercel.app**
