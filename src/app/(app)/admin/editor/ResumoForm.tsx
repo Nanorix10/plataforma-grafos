@@ -151,7 +151,7 @@ export default function ResumoForm({
       <div className="flex gap-3 mt-2">
         <button
           type="submit"
-          className="bg-[var(--stamp)] text-white font-semibold py-2.5 px-6 rounded-md text-sm"
+          className="botao botao-primario !rounded-lg py-2.5 px-6 text-sm"
         >
           Salvar
         </button>

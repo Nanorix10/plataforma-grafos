@@ -87,7 +87,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
       .selectAll('line')
       .data(simLinks)
       .join('line')
-      .attr('stroke', 'var(--line)')
+      .attr('stroke', 'var(--line-forte)')
       .attr('stroke-width', 1.3)
       .attr('stroke-linecap', 'round')
 
@@ -102,7 +102,9 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
       .attr('r', (d) => raio(d.grau))
       .attr('fill', (d) => d.cor)
       .attr('fill-opacity', (d) => (d.liberado ? 0.9 : 0.18))
-      .attr('stroke', (d) => (d.liberado ? 'var(--paper)' : 'var(--ink-dim)'))
+      // o anel em volta do nó é o fundo do próprio mapa: ele "recorta" o nó
+      // das arestas que passam por trás
+      .attr('stroke', (d) => (d.liberado ? 'var(--canvas)' : 'var(--ink-faint)'))
       .attr('stroke-width', (d) => (d.liberado ? 2 : 1))
       .attr('stroke-dasharray', (d) => (d.liberado ? 'none' : '3,2'))
 
@@ -112,9 +114,9 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
       .attr('dy', (d) => raio(d.grau) + 14)
       .attr('font-size', '11px')
       .attr('font-family', 'var(--fonte-texto), sans-serif')
-      .attr('fill', (d) => (d.liberado ? 'var(--ink)' : 'var(--ink-dim)'))
+      .attr('fill', (d) => (d.liberado ? 'var(--ink)' : 'var(--ink-faint)'))
       .attr('paint-order', 'stroke')
-      .attr('stroke', 'var(--paper)')
+      .attr('stroke', 'var(--canvas)')
       .attr('stroke-width', 3.5)
       .attr('stroke-linejoin', 'round')
       .text((d) => d.titulo)
@@ -161,7 +163,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
     function focar(id: string | null) {
       if (!id) {
         noSel.attr('opacity', 1)
-        linkSel.attr('stroke', 'var(--line)').attr('stroke-opacity', 1).attr('stroke-width', 1.3)
+        linkSel.attr('stroke', 'var(--line-forte)').attr('stroke-opacity', 1).attr('stroke-width', 1.3)
         return
       }
       const perto = vizinhos.get(id) ?? new Set([id])
@@ -172,8 +174,8 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
         )
         .attr('stroke', (l) =>
           (l.source as NoSim).id === id || (l.target as NoSim).id === id
-            ? 'var(--stamp)'
-            : 'var(--line)'
+            ? 'var(--acento)'
+            : 'var(--line-forte)'
         )
         .attr('stroke-width', (l) =>
           (l.source as NoSim).id === id || (l.target as NoSim).id === id ? 2 : 1.3
@@ -304,7 +306,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
   }
 
   return (
-    <div ref={wrapRef} className="relative h-full overflow-hidden">
+    <div ref={wrapRef} className="relative h-full overflow-hidden quadro">
       <svg ref={svgRef} className="w-full h-full block touch-none" />
 
       <Balao dados={balao} />
@@ -314,7 +316,7 @@ export default function GraphView({ nos, links }: { nos: No[]; links: Link[] }) 
         onClick={() =>
           (svgRef.current as (SVGSVGElement & { __reset?: () => void }) | null)?.__reset?.()
         }
-        className="absolute bottom-4 right-4 text-[11.5px] bg-[var(--paper)]/90 backdrop-blur border border-[var(--line)] rounded px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--paper)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+        className="absolute bottom-4 right-4 text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
       >
         Centralizar
       </button>

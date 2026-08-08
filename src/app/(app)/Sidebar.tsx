@@ -23,6 +23,23 @@ function Chevron({ aberto }: { aberto: boolean }) {
   )
 }
 
+/**
+ * Marcador dos itens fixos do menu. Substitui os glifos ▤ ◈ ✎, que eram
+ * caracteres tipográficos — desenhavam diferente em cada sistema e não
+ * significavam nada pra quem não conhece o símbolo. Um ponto que acende
+ * quando o item está aberto diz a mesma coisa sem depender da fonte.
+ */
+function Ponto({ ativo }: { ativo: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+        ativo ? 'bg-[var(--acento)]' : 'border border-[var(--ink-faint)]'
+      }`}
+    />
+  )
+}
+
 function ItemNav({
   href,
   ativo,
@@ -36,9 +53,9 @@ function ItemNav({
     <Link
       href={href}
       aria-current={ativo ? 'page' : undefined}
-      className={`flex items-center gap-2 px-2.5 py-[7px] rounded text-[13px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
+      className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
         ativo
-          ? 'bg-[var(--sel)] text-[var(--ink)] font-medium'
+          ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento-claro)]'
           : 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
       }`}
     >
@@ -89,14 +106,8 @@ export default function Sidebar({
       <div className="px-3 pt-3.5 pb-2.5">
         <Link
           href="/resumos"
-          className="flex items-center gap-2 font-semibold text-[14.5px] mb-3 px-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)]"
+          className="marca block font-medium text-[14px] mb-3.5 px-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
         >
-          <span
-            aria-hidden="true"
-            className="w-[22px] h-[22px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[9px] text-[var(--stamp)]"
-          >
-            PG
-          </span>
           Plataforma Grafos
         </Link>
 
@@ -107,21 +118,21 @@ export default function Sidebar({
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar resumo…"
-          className="w-full bg-[var(--paper)] border border-[var(--line)] rounded px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+          className="campo text-[12.5px] !py-1.5"
         />
       </div>
 
       {/* navegação fixa */}
       <nav className="px-2 pb-2 flex flex-col gap-0.5">
         <ItemNav href="/resumos" ativo={pathname === '/resumos'}>
-          <span aria-hidden="true" className="w-[15px] text-center opacity-70">▤</span> Todos os resumos
+          <Ponto ativo={pathname === '/resumos'} /> Todos os resumos
         </ItemNav>
         <ItemNav href="/mapa" ativo={pathname === '/mapa'}>
-          <span aria-hidden="true" className="w-[15px] text-center opacity-70">◈</span> Mapa de conexões
+          <Ponto ativo={pathname === '/mapa'} /> Mapa de conexões
         </ItemNav>
         {isAdmin ? (
           <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin')}>
-            <span aria-hidden="true" className="w-[15px] text-center opacity-70">✎</span> Editor
+            <Ponto ativo={pathname.startsWith('/admin')} /> Editor
           </ItemNav>
         ) : null}
       </nav>
@@ -130,8 +141,8 @@ export default function Sidebar({
 
       {/* árvore de matérias */}
       <div className="flex-1 overflow-y-auto px-2 py-2">
-        <div className="font-mono-plex text-[9.5px] tracking-wide text-[var(--ink-dim)] px-2.5 pb-1.5">
-          MATÉRIAS ({total})
+        <div className="rotulo-secao text-[10px] px-2.5 pb-2">
+          Matérias ({total})
         </div>
 
         {filtrados.length === 0 && (
@@ -150,13 +161,13 @@ export default function Sidebar({
                 type="button"
                 onClick={() => alternarGrupo(materia)}
                 aria-expanded={aberto}
-                className="w-full flex items-center gap-1.5 px-2.5 py-[5px] rounded text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+                className="w-full flex items-center gap-2 px-2.5 py-[5px] rounded-md text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
               >
                 <Chevron aberto={aberto} />
                 <span
                   aria-hidden="true"
-                  className="w-[7px] h-[7px] rounded-sm shrink-0"
-                  style={{ background: info?.cor ?? '#999' }}
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: info?.cor ?? 'var(--ink-faint)' }}
                 />
                 <span className="truncate">{info?.nome ?? materia}</span>
                 <span className="ml-auto text-[10.5px] opacity-60">{itens.length}</span>
@@ -173,12 +184,12 @@ export default function Sidebar({
                           href={href}
                           title={r.liberado ? r.titulo : `${r.titulo} — fora do seu plano`}
                           aria-current={ativo ? 'page' : undefined}
-                          className={`block px-2 py-[5px] rounded text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
+                          className={`block px-2 py-[5px] rounded-md text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
                             ativo
-                              ? 'bg-[var(--sel)] text-[var(--ink)] font-medium'
+                              ? 'shadow-[inset_0_0_0_1px_var(--line-forte)] text-[var(--ink)]'
                               : r.liberado
                                 ? 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
-                                : 'text-[var(--ink-dim)] opacity-50 hover:bg-[var(--sel)]'
+                                : 'text-[var(--ink-faint)] hover:bg-[var(--sel)]'
                           }`}
                         >
                           {/* o cadeado é decorativo: a informação já está no
@@ -202,10 +213,10 @@ export default function Sidebar({
           <form action={alternarVisao}>
             <button
               type="submit"
-              className={`w-full text-[12px] rounded px-2.5 py-1.5 border text-left flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
+              className={`w-full text-[12px] rounded-lg px-2.5 py-1.5 border text-left flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
                 vendoComoAluno
-                  ? 'border-[var(--stamp)] text-[var(--stamp)] bg-[var(--paper)]'
-                  : 'border-[var(--line)] text-[var(--ink-dim)] hover:bg-[var(--paper)] hover:text-[var(--ink)]'
+                  ? 'border-[var(--acento)] text-[var(--acento)] hover:bg-[var(--acento-fraco)]'
+                  : 'border-[var(--line-forte)] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
               }`}
             >
               <span aria-hidden="true">{vendoComoAluno ? '👁' : '⚙'}</span>
@@ -214,7 +225,7 @@ export default function Sidebar({
           </form>
         ) : null}
 
-        <div className="text-[10.5px] font-mono-plex text-[var(--ink-dim)] px-0.5">
+        <div className="text-[10.5px] text-[var(--ink-faint)] px-0.5">
           plano: {plano}
           {isAdmin && ' · admin'}
         </div>

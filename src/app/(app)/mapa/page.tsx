@@ -58,9 +58,9 @@ export default async function MapaPage({
 
   return (
     <div className="h-screen flex flex-col">
-      <div className="border-b border-[var(--line)] px-8 py-2.5 flex items-center gap-4 shrink-0">
-        <span className="font-mono-plex text-[11px] text-[var(--ink-dim)]">
-          <b className="text-[var(--ink)]">
+      <div className="border-b border-[var(--line)] px-10 py-3 flex items-center gap-4 shrink-0">
+        <span className="text-xs text-[var(--ink-faint)]">
+          <b className="text-[var(--ink)] font-medium">
             {visao === 'grafo' ? 'Mapa de conexões' : 'Mapa mental'}
           </b>{' '}
           · {nos.length} tópicos ·{' '}
@@ -69,7 +69,8 @@ export default async function MapaPage({
             : `${new Set(nos.map((n) => n.materia)).size} matérias`}
         </span>
 
-        <div role="tablist" className="ml-auto flex gap-1 bg-[var(--panel)] rounded-md p-1">
+        {/* divide-x põe a linha entre as abas sem depender de qual está ativa */}
+        <div role="tablist" className="ml-auto inline-flex divide-x divide-[var(--line-forte)] overflow-hidden rounded-lg border border-[var(--line-forte)]">
           <Alternador href="/mapa?visao=grafo" ativo={visao === 'grafo'}>
             Grafo
           </Alternador>
@@ -104,9 +105,9 @@ function Alternador({
       href={href}
       role="tab"
       aria-selected={ativo}
-      className={`px-3 py-1 rounded text-[12px] font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)] ${
+      className={`px-3.5 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
         ativo
-          ? 'bg-[var(--paper)] shadow-sm text-[var(--ink)]'
+          ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]'
           : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'
       }`}
     >

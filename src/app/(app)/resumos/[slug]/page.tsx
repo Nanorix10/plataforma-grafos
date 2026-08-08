@@ -27,11 +27,11 @@ export default async function ResumoPage({
   if (!liberado) {
     return (
       <div className="max-w-[640px] mx-auto px-7 py-24 text-center">
-        <h1 className="text-2xl font-semibold mb-3">Esse resumo faz parte de outro plano</h1>
+        <h1 className="text-2xl font-medium mb-3">Esse resumo faz parte de outro plano</h1>
         <p className="text-[var(--ink-dim)] mb-8">
           &quot;{resumo.titulo}&quot; está disponível no Acesso Completo.
         </p>
-        <Link href="/#planos" className="inline-block bg-[var(--stamp)] text-white px-6 py-3 rounded-md font-semibold text-sm">
+        <Link href="/#planos" className="botao botao-primario !rounded-lg px-6 py-2.5 text-sm">
           Ver planos
         </Link>
       </div>
@@ -92,28 +92,29 @@ export default async function ResumoPage({
         {/* A matéria vira uma etiqueta discreta. Antes ela pintava o título
             inteiro, e um título grande em cor saturada domina a página sem
             acrescentar informação. */}
+        {/* A etiqueta é contornada na cor da matéria, e o texto vai na mesma
+            cor. É a única peça colorida da página — o título fica neutro. */}
         <Link
           href="/resumos"
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] pl-2 pr-3 py-1 mb-5 hover:bg-[var(--sel)]"
+          className="inline-flex items-center rounded-md border px-2.5 py-1 mb-5 hover:bg-[var(--sel)]"
+          style={{ borderColor: materia?.cor ?? 'var(--line-forte)' }}
         >
           <span
-            aria-hidden="true"
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ background: materia?.cor ?? 'var(--ink-faint)' }}
-          />
-          <span className="text-[length:var(--t-mini)] font-medium text-[var(--ink-dim)]">
+            className="text-[11px] font-medium"
+            style={{ color: materia?.cor ?? 'var(--ink-dim)' }}
+          >
             {materia?.nome}
           </span>
         </Link>
 
-        <h1 className="text-[length:var(--t-titulo)] font-bold leading-tight text-balance mb-8">
+        <h1 className="text-[30px] font-medium leading-tight text-balance mb-8">
           {resumo.titulo}
         </h1>
 
         <div className="conteudo-resumo" dangerouslySetInnerHTML={{ __html: corpoHtml }} />
 
-        <section className="mt-16 pt-8 border-t border-[var(--line)]">
-          <h2 className="text-[length:var(--t-peq)] font-semibold text-[var(--ink-dim)] mb-4">
+        <section className="mt-16 pt-7 border-t border-[var(--line)]">
+          <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
             Resumos que citam este
           </h2>
           {backlinks.length === 0 ? (
@@ -126,14 +127,14 @@ export default async function ResumoPage({
                 <li key={b.slug}>
                   <Link
                     href={`/resumos/${b.slug}`}
-                    className="group flex items-center gap-3 rounded-[var(--raio-peq)] border border-[var(--line)] px-4 py-3 hover:border-[var(--line-forte)] hover:bg-[var(--sel)]"
+                    className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[#2A2D3C]"
                   >
-                    <span className="text-[length:var(--t-base)] font-medium truncate">
+                    <span className="text-sm font-medium truncate">
                       {b.titulo}
                     </span>
                     <span
                       aria-hidden="true"
-                      className="ml-auto shrink-0 text-[var(--ink-faint)] group-hover:text-[var(--acento)]"
+                      className="ml-auto shrink-0 text-[var(--acento)] transition-transform group-hover:translate-x-0.5"
                     >
                       →
                     </span>

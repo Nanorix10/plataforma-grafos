@@ -406,8 +406,8 @@ export default function EditorCorpo({
     <div
       className={
         telaCheia
-          ? 'fixed inset-0 z-40 bg-white flex flex-col'
-          : 'border border-[var(--line)] rounded-md overflow-hidden bg-white'
+          ? 'fixed inset-0 z-40 bg-[var(--paper)] flex flex-col'
+          : 'border border-[var(--line-forte)] rounded-lg overflow-hidden bg-[var(--paper)]'
       }
     >
       {editor && (
@@ -433,14 +433,17 @@ export default function EditorCorpo({
         />
       ) : null}
 
-      {/* área cinza com a "folha" no meio, igual editor de documento */}
+      {/* Mesa e "folha" no meio, igual editor de documento. A folha é escura
+          porque `.conteudo-resumo` agora escreve em texto claro: uma folha
+          branca aqui deixaria o autor digitando cinza-claro sobre branco, e
+          quebraria o WYSIWYG que faz o editor valer a pena. */}
       <div
-        className={`bg-[#EDEBE7] px-4 py-6 overflow-y-auto ${
+        className={`bg-[var(--page)] px-4 py-6 overflow-y-auto ${
           telaCheia ? 'flex-1 min-h-0' : 'max-h-[62vh]'
         }`}
       >
         <div
-          className={`mx-auto bg-white shadow-[0_1px_4px_rgba(0,0,0,0.13)] rounded-[2px] max-w-[760px] px-[70px] py-[58px] ${
+          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[760px] px-[70px] py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
         >
@@ -465,7 +468,7 @@ export default function EditorCorpo({
 
       {sugestao && sugestao.itens.length > 0 && sugestao.rect && (
         <ul
-          className="fixed z-50 bg-white border border-[var(--line)] rounded-md shadow-lg py-1 min-w-[220px] max-h-[240px] overflow-auto"
+          className="fixed z-50 bg-[var(--raised)] border border-[var(--line-forte)] rounded-lg shadow-[0_16px_40px_rgba(0,0,0,0.5)] py-1 min-w-[220px] max-h-[240px] overflow-auto"
           style={{ top: sugestao.rect.bottom + 6, left: sugestao.rect.left }}
         >
           {sugestao.itens.map((titulo, i) => (

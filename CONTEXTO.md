@@ -77,6 +77,19 @@ Classes `prose` são inertes. A formatação do conteúdo vem da classe
 `.conteudo-resumo` em `globals.css`, usada tanto no editor quanto na página
 publicada — é o que faz o WYSIWYG bater.
 
+Corolário do tema escuro: a "folha" do editor (`EditorCorpo.tsx`) é escura, e
+não branca como num editor de texto comum. Não é enfeite — `.conteudo-resumo`
+escreve em `#CFD3E5`, então uma folha branca deixaria o Ronny digitando
+cinza-claro sobre branco. Se alguém clarear a folha, tem que clarear o texto
+junto, e aí o editor deixa de mostrar o que o aluno vê.
+
+**4b. O site tem UM tema, escuro, e ele não segue o sistema operacional.**
+Não há `@media (prefers-color-scheme)` nem alternador. Os tokens de
+`globals.css` são a única fonte de cor: se um componente precisa de um tom que
+não está lá, o tom entra no `:root` primeiro. Foi assim que a virada de claro
+pra escuro saiu quase toda no CSS, sem varrer arquivo por arquivo — e é o que
+mantém isso verdade na próxima vez.
+
 **5. `getClaims()`, não `getUser()`.**
 `getClaims()` valida o JWT localmente; `getUser()` faz ida e volta na rede. Trocar
 de volta reintroduz latência em toda navegação.
@@ -93,9 +106,17 @@ inútil (o retorno é descartado) mas é ela que dispara tudo — **não remover
 **7. Fontes vêm de `next/font`, não de `@import` no CSS.**
 `@import url(fonts.googleapis...)` encadeia três viagens de rede antes do primeiro
 texto: baixar o CSS, descobrir o import, buscar no Google. O `layout.tsx` carrega
-Fraunces, Work Sans e IBM Plex Mono por `next/font/google` e expõe
-`--fonte-titulo`, `--fonte-texto` e `--fonte-mono`, que o `globals.css` consome.
-Os woff2 são servidos pelo próprio domínio, com preload.
+Inter, Nunito e IBM Plex Mono por `next/font/google` e expõe `--fonte-texto`,
+`--fonte-resumo` e `--fonte-mono`, que o `globals.css` consome. Os woff2 são
+servidos pelo próprio domínio, com preload.
+
+A Fraunces saiu no redesenho escuro: era a única serifa, valia só pra `.marca`
+e pros títulos, e puxava o site pra "revista" quando o pedido é material de
+estudo. A Work Sans saiu junto — Inter faz o papel das duas. Sobraram três
+famílias com papéis que não se cruzam: **Inter** na interface, **Nunito** no
+corpo do resumo (texto longo, escolha separada de propósito) e **IBM Plex Mono**
+só em código e fórmula. `--fonte-titulo` não existe mais; se aparecer alguma
+referência a ela, é resto.
 
 **8. Fórmulas são renderizadas no SERVIDOR, e gravadas em atributo.**
 Matemática e química usam KaTeX + mhchem (`\ce{...}`), um sistema só pros dois.
@@ -165,6 +186,14 @@ sidebar estilo Obsidian, otimizações de performance, renovação de sessão
 (`proxy.ts`) e uma passada de acessibilidade (rótulos ligados, `autoComplete`,
 `aria-live` nos erros, `aria-expanded`/`aria-current`, ícones decorativos como
 `aria-hidden`, anéis de foco, `prefers-reduced-motion`).
+
+Feito em agosto/2026: **redesenho para tema escuro**, a partir do arquivo de
+design "Plataforma Grafos — Redesign". Mudou a paleta inteira (lilás `#9184D9`
+no lugar do azul), a tipografia (Inter única na interface), as cores das
+matérias em `lib/materias.ts` (clareadas pro fundo escuro, mesmo matiz de
+antes), os botões (contornados em vez de preenchidos) e o fundo do mapa
+(quadriculado escuro, classe `.quadro` — chamava-se `.quadro-branco`). A faixa
+de números da landing é nova.
 
 Falta: **pagamento automático** — hoje `planos_usuarios.ativo` é atualizado na mão
 depois de um Pix pessoal. Quando automatizar, um webhook do gateway (Asaas, Efí Bank

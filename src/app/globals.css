@@ -17,29 +17,46 @@
    ================================================================ */
 
 :root {
-  /* --- superfícies --- */
-  --paper: #FFFFFF; /* fundo do conteúdo */
-  --panel: #F7F8F9; /* barras laterais e cabeçalhos */
-  --sel: #EEF0F2; /* item selecionado ou sob o cursor */
+  /* --- superfícies ---
+     O site é escuro por decisão de projeto, não por preferência do sistema:
+     um tema só, igual pra todo mundo, é o que mantém o material de estudo
+     com a mesma cara no computador da escola e no celular do aluno. */
+  --page: #0E0F18; /* fundo atrás de tudo — o mais escuro da escala */
+  --paper: #161826; /* fundo do conteúdo */
+  --panel: #1A1C29; /* barras laterais e cabeçalhos */
+  --sel: #232532; /* item selecionado ou sob o cursor */
+  --raised: #232532; /* cartão sobre o conteúdo (mesmo tom do --sel, de propósito) */
+  --canvas: #12131E; /* área do mapa, mais funda que o conteúdo */
 
   /* --- texto --- */
-  --ink: #16181D; /* texto principal */
-  --ink-dim: #626973; /* texto secundário — 5.7:1 sobre branco, passa AA */
-  --ink-faint: #8B929B; /* rótulos e dicas — usar só em 12px ou mais */
+  --ink: #E9E9ED; /* texto principal — 14,8:1 sobre --paper */
+  --ink-dim: #B2B6CA; /* texto secundário — 9,4:1, passa AAA */
+  --ink-faint: #75798C; /* rótulos e dicas — 4,6:1, usar só em 12px ou mais */
 
   /* --- traços --- */
-  --line: #E3E6EA; /* divisórias */
-  --line-forte: #CBD1D8; /* borda de campo: precisa ser vista */
+  --line: #292B31; /* divisórias */
+  --line-forte: #3F424D; /* borda de campo e de cartão: precisa ser vista */
 
   /* --- destaque ---
-     Um azul único no lugar do vermelho-carimbo. O vermelho escuro lia
-     como documento oficial; este tom é o que os alunos reconhecem de
-     outros apps, e sobra vermelho só pra erro de verdade. */
-  --acento: #2563EB;
-  --acento-escuro: #1D4ED8;
-  --acento-fraco: #EFF4FF;
+     Um lilás no lugar do azul. Sobre fundo escuro o azul de link padrão
+     fica pesado e some no roxo do plano de fundo; este tom mantém 7:1 de
+     contraste e ainda lê como "clicável". */
+  --acento: #9184D9;
+  --acento-claro: #D2CEFD; /* texto de destaque sobre superfície escura */
+  --acento-fraco: rgba(145, 132, 217, 0.14); /* preenchimento de hover e foco */
 
-  --erro: #C2334D;
+  /* Apelido mantido pra não quebrar quem ainda chama --acento-escuro. No tema
+     escuro "mais escuro" não serve de hover — o realce tem que CLAREAR. */
+  --acento-escuro: var(--acento-claro);
+
+  /* --- faixa de números ---
+     A única superfície saturada do sistema. Existe pra dar um respiro de cor
+     na landing sem espalhar azul-marinho pelo resto do site. */
+  --faixa: #262A60;
+  --faixa-ink: #F3F5FE;
+  --faixa-dim: #C7C8F0;
+
+  --erro: #C9767E;
 
   /* Apelido de transição. `--stamp` era o vermelho-carimbo e ainda é citado
      por telas que não foram redesenhadas. Apontar pro acento novo mantém o
@@ -60,10 +77,12 @@
   /* --- raio e sombra --- */
   --raio: 8px;
   --raio-peq: 6px;
-  --sombra: 0 1px 2px rgba(22, 24, 29, 0.05), 0 1px 3px rgba(22, 24, 29, 0.06);
-  --sombra-alta: 0 4px 12px rgba(22, 24, 29, 0.08), 0 1px 3px rgba(22, 24, 29, 0.06);
+  /* No escuro a sombra sozinha não separa camadas — o que separa é a linha de
+     1px. Por isso toda elevação aqui é "anel + sombra", nunca só sombra. */
+  --sombra: 0 0 0 1px var(--line-forte);
+  --sombra-alta: 0 0 0 1px var(--line-forte), 0 16px 40px rgba(0, 0, 0, 0.5);
 
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
@@ -73,17 +92,30 @@ body {
   font-size: var(--t-base);
 }
 
-/* Títulos em sans, não em serifa. A Fraunces é uma fonte editorial de
-   personalidade forte — bonita, mas ela diz "revista", e o pedido é
-   "app limpo". Ela sobrevive só na marca (.marca). */
+/* Títulos em peso médio, não em negrito. Sobre fundo escuro o texto parece
+   mais grosso do que é (o claro "vaza" sobre o escuro), então 600 vira bloco.
+   500 com tracking negativo devolve a firmeza sem o peso. */
 h1, h2, h3, h4 {
   font-family: var(--fonte-texto), sans-serif;
-  letter-spacing: -0.011em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
+/* A marca acompanha a interface. A Fraunces saiu do projeto: era a única
+   serifa e puxava o site pra "revista" — o pedido é material de estudo. */
 .marca {
-  font-family: var(--fonte-titulo), serif;
-  letter-spacing: -0.01em;
+  font-family: var(--fonte-texto), sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* Rótulo de seção: maiúsculas espaçadas, no lugar da fonte de código que
+   fazia esses textos parecerem saída de terminal. */
+.rotulo-secao {
+  font-size: var(--t-mini);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
 /* A monoespaçada agora serve só pra CÓDIGO e FÓRMULA. Ela estava em
@@ -113,7 +145,10 @@ h1, h2, h3, h4 {
   width: 100%;
   font-size: var(--t-base);
   color: var(--ink);
-  background: var(--paper);
+  /* O campo é mais CLARO que o fundo, não mais escuro. No tema escuro um
+     "buraco" preto lê como área desabilitada; a superfície levantada é o
+     que diz "dá pra digitar aqui". */
+  background: var(--raised);
   border: 1px solid var(--line-forte);
   border-radius: var(--raio-peq);
   padding: 0.5rem 0.75rem;
@@ -122,6 +157,18 @@ h1, h2, h3, h4 {
 }
 .campo::placeholder {
   color: var(--ink-faint);
+}
+/* O Chrome pinta o campo autopreenchido com um azul-claro dele, que ignora
+   `background` e destoa no escuro. A única forma de vencer isso é cobrir o
+   campo com uma sombra interna sólida e adiar a transição por tempo demais
+   pra ela chegar a rodar. */
+.campo:-webkit-autofill,
+.campo:-webkit-autofill:hover,
+.campo:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--raised) inset;
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  transition: background-color 9999s ease-in-out 0s;
 }
 .campo:focus {
   border-color: var(--acento);
@@ -141,18 +188,24 @@ h1, h2, h3, h4 {
   padding: 0.5rem 1rem;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
+/* O botão principal é contornado, não preenchido. Um bloco lilás sólido é a
+   coisa mais clara da tela e rouba a atenção do texto que o aluno veio ler;
+   o contorno mantém a hierarquia e ainda é o único elemento colorido da área. */
 .botao-primario {
-  background: var(--acento);
-  color: #fff;
+  background: transparent;
+  color: var(--acento);
+  border: 1px solid var(--acento);
 }
 .botao-primario:hover {
-  background: var(--acento-escuro);
+  background: var(--acento-fraco);
+  color: var(--acento-claro);
+  border-color: var(--acento-claro);
 }
 .botao-primario:disabled {
   opacity: 0.5;
 }
 .botao-neutro {
-  background: var(--paper);
+  background: transparent;
   color: var(--ink);
   border: 1px solid var(--line-forte);
 }
@@ -169,13 +222,14 @@ button:focus-visible,
   outline-offset: 2px;
 }
 
-/* Fundo do mapa mental: quadriculado leve de quadro branco. Feito com
-   gradientes em vez de imagem pra não custar requisição nem pixelar no zoom. */
-.quadro-branco {
-  background-color: #fff;
+/* Fundo do mapa: quadriculado leve, agora riscado em claro sobre o escuro.
+   Feito com gradientes em vez de imagem pra não custar requisição nem
+   pixelar no zoom. (Chamava-se `.quadro-branco` enquanto o site era claro.) */
+.quadro {
+  background-color: var(--canvas);
   background-image:
-    linear-gradient(to right, rgba(29, 27, 24, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(29, 27, 24, 0.045) 1px, transparent 1px);
+    linear-gradient(to right, rgba(233, 233, 237, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(233, 233, 237, 0.04) 1px, transparent 1px);
   background-size: 26px 26px;
 }
 
@@ -200,7 +254,10 @@ button:focus-visible,
   font-family: var(--fonte-resumo), sans-serif;
   font-size: var(--t-medio);
   line-height: 1.7;
-  color: #23262C; /* um passo mais claro que o --ink: menos cansativo em texto longo */
+  /* Um passo mais SUAVE que o --ink. No claro isso era escurecer; no escuro é
+     tirar brilho: branco puro em texto longo sobre fundo escuro cansa a vista
+     e faz as letras "vibrarem". */
+  color: #CFD3E5;
 }
 .conteudo-resumo > * + * {
   margin-top: 0.9em;
@@ -257,9 +314,9 @@ button:focus-visible,
   font-weight: 600;
 }
 .conteudo-resumo code {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--fonte-mono), monospace;
   font-size: 0.9em;
-  background: var(--panel);
+  background: var(--raised);
   padding: 0.12em 0.35em;
   border-radius: 3px;
 }
@@ -277,8 +334,12 @@ button:focus-visible,
   font-weight: 700;
   margin-top: 1.3em;
 }
+/* Os grifos continuam sendo pastéis claros (o editor grava a cor no próprio
+   elemento), então o texto DENTRO deles precisa voltar a ser escuro — sem
+   isso vira texto quase branco sobre amarelo-claro, ilegível. */
 .conteudo-resumo mark {
-  background: #fff3a3;
+  background: #FFF3A3;
+  color: #16181D;
   padding: 0.05em 0.15em;
   border-radius: 2px;
 }
@@ -311,10 +372,10 @@ button:focus-visible,
 /* Fórmula com erro de digitação: fica visível e vermelha, mas não quebra nada */
 .conteudo-resumo .katex-error,
 .conteudo-resumo .formula-erro {
-  color: var(--stamp);
+  color: var(--erro);
   font-family: var(--fonte-mono), monospace;
   font-size: 0.9em;
-  background: #fdf0f2;
+  background: rgba(201, 118, 126, 0.14);
   padding: 0.1em 0.3em;
   border-radius: 3px;
 }
@@ -332,8 +393,8 @@ button:focus-visible,
 }
 .conteudo-resumo [data-type='inline-math'].ProseMirror-selectednode,
 .conteudo-resumo [data-type='block-math'].ProseMirror-selectednode {
-  background: #e4edf7;
-  outline: 1px solid var(--stamp);
+  background: var(--acento-fraco);
+  outline: 1px solid var(--acento);
 }
 
 /* texto de exemplo do editor vazio (extensão Placeholder) */

@@ -148,7 +148,7 @@ export default function BarraFormula({
             onClick={() => setPaleta(p.id)}
             className={`px-2.5 py-1 rounded text-[12px] ${
               paleta === p.id
-                ? 'bg-white shadow-sm font-medium text-[var(--ink)]'
+                ? 'bg-[var(--sel)] font-medium text-[var(--ink)]'
                 : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
             }`}
           >
@@ -197,13 +197,13 @@ export default function BarraFormula({
             }}
             placeholder="Clique nos símbolos acima ou digite LaTeX…"
             spellCheck={false}
-            className="w-full font-mono-plex text-[12.5px] border border-[var(--line)] rounded px-2.5 py-2 outline-none resize-y bg-white focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+            className="w-full font-mono-plex text-[12.5px] border border-[var(--line)] rounded px-2.5 py-2 outline-none resize-y bg-[var(--raised)] focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
           />
         </div>
 
         <div className="flex-1 min-w-[220px]">
           <span className="block text-[11px] text-[var(--ink-dim)] mb-1">Prévia</span>
-          <div className="min-h-[52px] border border-[var(--line)] rounded bg-white px-3 py-2 flex items-center overflow-x-auto">
+          <div className="min-h-[52px] border border-[var(--line)] rounded bg-[var(--raised)] px-3 py-2 flex items-center overflow-x-auto">
             {erro ? (
               <span className="text-[11.5px] text-[var(--stamp)] font-mono-plex">{erro}</span>
             ) : html ? (
@@ -224,7 +224,7 @@ export default function BarraFormula({
           onChange={(e) => {
             if (e.target.value) setLatex(e.target.value)
           }}
-          className="h-[28px] text-[12px] bg-white border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
+          className="h-[28px] text-[12px] bg-[var(--raised)] border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
         >
           <option value="">Começar de um exemplo…</option>
           {EXEMPLOS.map((ex) => (
@@ -247,7 +247,7 @@ export default function BarraFormula({
           <button
             type="button"
             onClick={aoCancelar}
-            className="text-[12px] px-3 py-1.5 rounded border border-[var(--line)] text-[var(--ink-dim)] hover:bg-white"
+            className="text-[12px] px-3 py-1.5 rounded border border-[var(--line)] text-[var(--ink-dim)] hover:bg-[var(--sel)]"
           >
             Cancelar
           </button>
@@ -255,7 +255,7 @@ export default function BarraFormula({
             type="button"
             onClick={confirmar}
             disabled={!latex.trim() || !!erro}
-            className="text-[12px] font-semibold px-4 py-1.5 rounded bg-[var(--stamp)] text-white disabled:opacity-45"
+            className="text-[12px] font-semibold px-4 py-1.5 rounded botao-primario disabled:opacity-45"
           >
             {alvo.modo === 'editar' ? 'Atualizar' : 'Inserir'}
           </button>

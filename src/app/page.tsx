@@ -21,55 +21,79 @@ const materiasGrid: { slug: keyof typeof MATERIAS; processos: string }[] = [
   { slug: 'arte', processos: 'PASSE · PAS UEM' },
 ]
 
+/**
+ * A faixa de números é a única superfície saturada do site inteiro. Ela existe
+ * pra quebrar a sequência de seções escuras iguais no meio da rolagem — sem
+ * ela a landing lê como uma parede só.
+ */
+const numeros = [
+  { valor: '24', label: 'matérias cobertas' },
+  { valor: '3', label: 'processos seletivos' },
+  { valor: '180+', label: 'resumos interligados' },
+  { valor: 'Campo Grande', label: 'MS, material próprio' },
+]
+
 export default function LandingPage() {
   return (
     <div>
-      <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur border-b border-[var(--line)]">
-        <div className="max-w-[1120px] mx-auto px-8 h-[72px] flex items-center justify-between">
-          <div className="flex items-center gap-2.5 font-semibold text-[19px]">
-            <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]" aria-hidden="true">PG</span>
-            Plataforma Grafos
-          </div>
-          <div className="hidden md:flex gap-9 text-[14.5px] text-[var(--ink-dim)]">
+      <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur">
+        <div className="max-w-[1120px] mx-auto px-8 h-[68px] flex items-center justify-between gap-6">
+          <div className="marca font-medium text-[18px]">Plataforma Grafos</div>
+          <div className="hidden md:flex gap-8 text-sm text-[var(--ink-dim)] ml-auto">
             <a href="#materias" className="hover:text-[var(--ink)]">Matérias</a>
             <a href="#planos" className="hover:text-[var(--ink)]">Planos</a>
           </div>
-          <Link href="/login" className="px-5 py-2.5 rounded bg-[var(--stamp)] text-white font-semibold text-sm">Entrar</Link>
+          <Link
+            href="/login"
+            className="px-3 py-1.5 rounded-lg border border-[var(--acento)] text-[var(--acento)] font-medium text-sm hover:bg-[var(--acento-fraco)] hover:text-[var(--acento-claro)]"
+          >
+            Entrar
+          </Link>
         </div>
       </nav>
 
-      <header className="py-22 max-w-[1120px] mx-auto px-8 grid md:grid-cols-[1.15fr_0.85fr] gap-14 items-center">
+      <header className="pt-24 pb-22 max-w-[1120px] mx-auto px-8 grid md:grid-cols-[1.2fr_0.8fr] gap-12 items-end">
         <div>
-          <div className="font-mono-plex text-[12.5px] tracking-widest uppercase text-[var(--stamp)] mb-5 flex items-center gap-2.5">
-            <span className="w-[22px] h-px bg-[var(--stamp)]" /> Preparação PASSE · PAS-UEM · PAS-UnB
+          <div className="text-xs tracking-[0.08em] uppercase text-[var(--acento-claro)] mb-4.5">
+            Preparação PASSE · PAS-UEM · PAS-UnB
           </div>
-          <h1 className="text-[44px] md:text-[50px] leading-[1.08] font-semibold mb-5">
-            Estude com quem já <em className="italic text-[var(--stamp)] font-medium">corrigiu</em> a prova mil vezes.
+          <h1 className="text-[38px] md:text-[48px] leading-[1.1] font-medium tracking-[-0.02em] mb-5 max-w-[640px]">
+            Estude com quem já corrigiu a prova mil vezes.
           </h1>
-          <p className="text-[17px] text-[var(--ink-dim)] max-w-[480px] mb-8">
+          <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[460px] mb-8">
             Resumos organizados por matéria e por processo seletivo, interligados entre si — liberados assim que você assina, direto no site.
           </p>
-          <div className="flex items-center gap-6 flex-wrap">
-            <a href="#planos" className="px-7 py-4 rounded bg-[var(--stamp)] text-white font-bold text-[15px]">Ver planos de acesso</a>
-            <a href="#materias" className="text-[14.5px] underline underline-offset-4 decoration-[var(--ink-dim)]">Ver matérias disponíveis</a>
+          <div className="flex items-center gap-5 flex-wrap">
+            <a
+              href="#planos"
+              className="px-4.5 py-2.5 rounded-lg border border-[var(--acento)] text-[var(--acento)] font-medium text-sm hover:bg-[var(--acento-fraco)] hover:text-[var(--acento-claro)]"
+            >
+              Ver planos de acesso
+            </a>
+            <a
+              href="#materias"
+              className="text-sm underline underline-offset-[3px] decoration-[var(--ink-faint)] hover:decoration-[var(--ink)]"
+            >
+              Ver matérias disponíveis
+            </a>
           </div>
         </div>
 
-        <div className="bg-white border border-[var(--line)] rounded-md p-6 shadow-sm">
-          <div className="font-mono-plex text-[10.5px] tracking-widest text-[var(--ink-dim)] mb-4">CARTÃO-RESPOSTA</div>
+        <div className="bg-[var(--raised)] rounded-2xl p-5.5 shadow-[var(--sombra)]">
+          <div className="rotulo-secao text-[10px] mb-3.5">Cartão-resposta</div>
           {cartaoResposta.map((row) => (
-            <div key={row.num} className="flex items-center gap-3.5 py-2.5 border-b border-dashed border-[var(--line)] last:border-none">
-              <span className="font-mono-plex text-xs text-[var(--ink-dim)] w-5">{row.num}</span>
-              <span className="text-[13.5px] flex-1">{row.label}</span>
+            <div key={row.num} className="flex items-center gap-3 py-2.5">
+              <span className="text-xs text-[var(--ink-faint)] w-[18px]">{row.num}</span>
+              <span className="text-[13px] flex-1 text-[#CFD3E5]">{row.label}</span>
               <div className="flex gap-1.5">
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="w-[17px] h-[17px] rounded-full border-[1.4px]"
+                    className="w-3.5 h-3.5 rounded-full border"
                     style={
                       i === row.filled
                         ? { background: row.cor, borderColor: 'transparent' }
-                        : { borderColor: 'var(--line)' }
+                        : { borderColor: 'var(--line-forte)' }
                     }
                   />
                 ))}
@@ -79,31 +103,46 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <section id="materias" className="py-24 max-w-[1120px] mx-auto px-8">
-        <div className="max-w-[560px] mb-14">
-          <div className="font-mono-plex text-xs tracking-widest uppercase text-[var(--ink-dim)] mb-3.5">Acervo</div>
-          <h2 className="text-[34px] font-semibold mb-3.5">Uma pasta por matéria, dentro de cada processo seletivo.</h2>
-          <p className="text-[15.5px] text-[var(--ink-dim)]">Filtre por disciplina e pelo vestibular que você está estudando.</p>
+      <section className="bg-[var(--faixa)] py-14">
+        <div className="max-w-[1120px] mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {numeros.map((n) => (
+            <div key={n.label}>
+              <div className="text-[32px] font-medium text-[var(--faixa-ink)]">{n.valor}</div>
+              <div className="text-[13px] text-[var(--faixa-dim)] mt-1">{n.label}</div>
+            </div>
+          ))}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)] rounded-md overflow-hidden">
+      </section>
+
+      <section id="materias" className="py-20 max-w-[1120px] mx-auto px-8">
+        <div className="max-w-[520px] mb-11">
+          <div className="rotulo-secao text-[11px] mb-3">Acervo</div>
+          <h2 className="text-[30px] font-medium mb-3">Uma pasta por matéria, dentro de cada processo seletivo.</h2>
+          <p className="text-sm text-[var(--ink-dim)]">Filtre por disciplina e pelo vestibular que você está estudando.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line-forte)] rounded-lg overflow-hidden">
           {materiasGrid.map((m) => (
-            <div key={m.slug} className="bg-white p-6 min-h-[150px] flex flex-col justify-between">
-              <div className="w-[26px] h-1 rounded-sm mb-4" style={{ background: MATERIAS[m.slug].cor }} />
+            <div key={m.slug} className="bg-[#1C1F2C] p-5.5 min-h-[140px] flex flex-col justify-between">
+              <span
+                aria-hidden="true"
+                className="w-2 h-2 rounded-full"
+                style={{ background: MATERIAS[m.slug].cor }}
+              />
               <div>
-                <h3 className="font-semibold text-[16px] mb-1.5">{MATERIAS[m.slug].nome}</h3>
-                <span className="font-mono-plex text-[12.5px] text-[var(--ink-dim)]">{m.processos}</span>
+                <h3 className="font-medium text-[15px] mb-1.5">{MATERIAS[m.slug].nome}</h3>
+                <span className="text-[11.5px] text-[var(--ink-faint)]">{m.processos}</span>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="planos" className="py-24 max-w-[1120px] mx-auto px-8">
-        <div className="max-w-[560px] mb-14">
-          <div className="font-mono-plex text-xs tracking-widest uppercase text-[var(--ink-dim)] mb-3.5">Planos</div>
-          <h2 className="text-[34px] font-semibold">Escolha o acesso pelo processo seletivo que você está fazendo.</h2>
+      <section id="planos" className="pb-22 max-w-[1120px] mx-auto px-8">
+        <div className="max-w-[520px] mb-11">
+          <div className="rotulo-secao text-[11px] mb-3">Planos</div>
+          <h2 className="text-[30px] font-medium">Escolha o acesso pelo processo seletivo que você está fazendo.</h2>
         </div>
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-3 gap-4">
           {[
             { nome: 'Acesso PASSE', proc: 'UFMS', destaque: false },
             { nome: 'Acesso Completo', proc: 'PASSE + PAS UEM + PAS UnB', destaque: true },
@@ -111,21 +150,31 @@ export default function LandingPage() {
           ].map((p) => (
             <div
               key={p.nome}
-              className={`relative bg-white border rounded-md p-8 flex flex-col gap-5 ${p.destaque ? 'border-[var(--stamp)]' : 'border-[var(--line)]'}`}
+              className={`bg-[var(--raised)] rounded-2xl p-7 flex flex-col gap-4.5 ${
+                p.destaque
+                  ? 'shadow-[0_0_0_1px_var(--acento),0_16px_40px_rgba(0,0,0,0.5)]'
+                  : 'shadow-[var(--sombra)]'
+              }`}
             >
               {p.destaque && (
-                <span className="absolute -top-2.5 left-6 bg-[var(--stamp)] text-white font-mono-plex text-[10px] px-2.5 py-1 rounded font-semibold tracking-wide">
-                  MAIS ESCOLHIDO
+                <span className="self-start text-[10px] tracking-[0.08em] uppercase text-[var(--acento)] border border-[var(--acento)] rounded-md px-2 py-0.5">
+                  Mais escolhido
                 </span>
               )}
               <div>
-                <div className="font-semibold text-[19px]">{p.nome}</div>
-                <div className="font-mono-plex text-[11.5px] text-[var(--ink-dim)]">{p.proc}</div>
+                <div className="font-medium text-[17px]">{p.nome}</div>
+                <div className="text-[11.5px] text-[var(--ink-faint)] mt-0.5">{p.proc}</div>
               </div>
-              <div className="text-[34px] font-semibold">R$ 00<span className="text-sm text-[var(--ink-dim)] font-normal">/mês</span></div>
+              <div className="text-[30px] font-medium">
+                R$ 00<span className="text-[13px] text-[var(--ink-faint)] font-normal">/mês</span>
+              </div>
               <Link
                 href="/login"
-                className={`mt-auto text-center py-3 rounded text-sm font-semibold ${p.destaque ? 'bg-[var(--stamp)] text-white' : 'border border-[var(--line)]'}`}
+                className={`mt-auto text-center py-2.5 rounded-lg text-[13px] font-medium ${
+                  p.destaque
+                    ? 'border border-[var(--acento)] text-[var(--acento)] hover:bg-[var(--acento-fraco)]'
+                    : 'border border-[var(--line-forte)] hover:bg-[var(--sel)]'
+                }`}
               >
                 Assinar
               </Link>
@@ -134,12 +183,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="py-14 border-t border-[var(--line)] max-w-[1120px] mx-auto px-8 flex justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2.5 font-semibold">
-          <span className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]" aria-hidden="true">PG</span>
-          Plataforma Grafos
-        </div>
-        <p className="text-[13px] text-[var(--ink-dim)]">Material próprio, revisado por edital · Campo Grande — MS</p>
+      <footer className="py-9 max-w-[1120px] mx-auto px-8 flex justify-between flex-wrap gap-3 shadow-[inset_0_1px_0_var(--line)]">
+        <div className="marca font-medium text-[15px]">Plataforma Grafos</div>
+        <p className="text-[12.5px] text-[var(--ink-faint)]">Material próprio, revisado por edital · Campo Grande — MS</p>
       </footer>
     </div>
   )

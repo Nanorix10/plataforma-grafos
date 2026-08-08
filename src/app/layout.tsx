@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Work_Sans, IBM_Plex_Mono, Nunito } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -10,13 +10,12 @@ import "./globals.css";
  * Aqui os arquivos são servidos pelo próprio domínio, com `display: swap`
  * (texto aparece na hora, na fonte de sistema, e troca quando a real chega).
  */
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--fonte-titulo",
-  display: "swap",
-});
-
-const workSans = Work_Sans({
+/**
+ * Uma única fonte de interface. Antes eram duas — Fraunces (serifa) na marca
+ * e nos títulos, Work Sans no resto. A serifa dava ao site um ar editorial
+ * que competia com o conteúdo; a Inter some e deixa o texto do resumo falar.
+ */
+const inter = Inter({
   subsets: ["latin"],
   variable: "--fonte-texto",
   display: "swap",
@@ -46,15 +45,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FDFCFA",
-  colorScheme: "light",
+  themeColor: "#161826",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`h-full antialiased ${fraunces.variable} ${workSans.variable} ${plexMono.variable} ${nunito.variable}`}
+      className={`h-full antialiased ${inter.variable} ${plexMono.variable} ${nunito.variable}`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

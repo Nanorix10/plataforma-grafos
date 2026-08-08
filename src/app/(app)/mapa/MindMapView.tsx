@@ -65,7 +65,7 @@ export default function MindMapView({
     const raiz: Item = {
       nome: titulo,
       tipo: 'raiz',
-      cor: 'var(--stamp)',
+      cor: 'var(--acento)',
       filhos: materias
         .filter((m) => porMateria.has(m.slug))
         .map((m) => ({
@@ -110,7 +110,7 @@ export default function MindMapView({
       .join('path')
       .attr('d', (l) => curva({ source: l.source, target: l.target }))
       .attr('fill', 'none')
-      .attr('stroke', (l) => (l.target.data.tipo === 'materia' ? l.target.data.cor : 'var(--line)'))
+      .attr('stroke', (l) => (l.target.data.tipo === 'materia' ? l.target.data.cor : 'var(--line-forte)'))
       .attr('stroke-width', (l) => (l.target.data.tipo === 'materia' ? 2 : 1.4))
       .attr('stroke-opacity', (l) => (l.target.data.tipo === 'materia' ? 0.55 : 1))
 
@@ -130,13 +130,13 @@ export default function MindMapView({
       .attr('height', ALTURA_CARTAO)
       .attr('rx', 6)
       .attr('fill', (d) =>
-        d.data.tipo === 'resumo' ? 'var(--paper)' : d.data.cor
+        d.data.tipo === 'resumo' ? 'var(--raised)' : d.data.cor
       )
       .attr('fill-opacity', (d) => {
         if (d.data.tipo === 'resumo') return d.data.no?.liberado ? 1 : 0.45
         return d.data.tipo === 'raiz' ? 1 : 0.14
       })
-      .attr('stroke', (d) => (d.data.tipo === 'resumo' ? 'var(--line)' : d.data.cor))
+      .attr('stroke', (d) => (d.data.tipo === 'resumo' ? 'var(--line-forte)' : d.data.cor))
       .attr('stroke-width', (d) => (d.data.tipo === 'raiz' ? 0 : 1.4))
       .attr('stroke-dasharray', (d) =>
         d.data.tipo === 'resumo' && !d.data.no?.liberado ? '3,2' : 'none'
@@ -152,9 +152,11 @@ export default function MindMapView({
       .attr('font-weight', (d) => (d.data.tipo === 'resumo' ? 400 : 600))
       .attr('font-family', 'var(--fonte-texto), sans-serif')
       .attr('fill', (d) => {
-        if (d.data.tipo === 'raiz') return 'white'
+        // o cartão da raiz é preenchido de lilás; texto escuro em cima dele
+        // dá 7:1, enquanto o branco de antes ficava em 3,2:1
+        if (d.data.tipo === 'raiz') return 'var(--page)'
         if (d.data.tipo === 'materia') return d.data.cor
-        return d.data.no?.liberado ? 'var(--ink)' : 'var(--ink-dim)'
+        return d.data.no?.liberado ? 'var(--ink)' : 'var(--ink-faint)'
       })
       .text((d) => {
         const limite = 22
@@ -295,7 +297,7 @@ export default function MindMapView({
   }
 
   return (
-    <div ref={wrapRef} className="relative h-full overflow-hidden bg-white quadro-branco">
+    <div ref={wrapRef} className="relative h-full overflow-hidden quadro">
       <svg ref={svgRef} className="w-full h-full block touch-none" />
 
       <Balao dados={balao} />
@@ -305,7 +307,7 @@ export default function MindMapView({
         onClick={() =>
           (svgRef.current as (SVGSVGElement & { __reset?: () => void }) | null)?.__reset?.()
         }
-        className="absolute bottom-4 right-4 text-[11.5px] bg-white/90 backdrop-blur border border-[var(--line)] rounded px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+        className="absolute bottom-4 right-4 text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
       >
         Enquadrar
       </button>

@@ -27,7 +27,7 @@ export default function Balao({ dados }: { dados: PosicaoBalao | null }) {
       className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-full"
       style={{ left: dados.x, top: dados.y - 12 }}
     >
-      <div className="w-[248px] max-w-[70vw] bg-[var(--paper)] border border-[var(--line)] rounded-md shadow-lg px-3.5 py-2.5">
+      <div className="w-[248px] max-w-[70vw] bg-[var(--raised)] border border-[var(--line-forte)] rounded-lg shadow-[0_16px_40px_rgba(0,0,0,0.5)] px-3.5 py-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <span
             aria-hidden="true"

@@ -33,20 +33,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-[380px]">
-        <div className="flex items-center gap-2.5 font-semibold text-[19px] mb-10 justify-center">
-          <span aria-hidden="true" className="w-[30px] h-[30px] rounded-full border-[1.5px] border-[var(--stamp)] flex items-center justify-center font-mono-plex text-[11px] text-[var(--stamp)]">PG</span>
-          Plataforma Grafos
-        </div>
+    <div className="min-h-screen flex items-center px-6 md:px-24">
+      <div className="w-full max-w-[360px]">
+        <div className="marca font-medium text-[17px] mb-9">Plataforma Grafos</div>
 
-        <div role="tablist" className="flex gap-1 bg-[var(--panel)] rounded-md p-1 mb-8">
+        {/* Duas abas emendadas numa cápsula só, com a ativa marcada por um anel
+            lilás. A versão anterior pintava a aba ativa de branco sobre cinza —
+            no escuro esse contraste inverte e a aba ativa é que sumiria. */}
+        <div role="tablist" className="inline-flex overflow-hidden rounded-lg border border-[var(--line-forte)] mb-7">
           <button
             type="button"
             role="tab"
             aria-selected={modo === 'entrar'}
             onClick={() => setModo('entrar')}
-            className={`flex-1 py-2.5 rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)] ${modo === 'entrar' ? 'bg-white shadow-sm' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
+            className={`px-4.5 py-2 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${modo === 'entrar' ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
           >
             Entrar
           </button>
@@ -55,7 +55,7 @@ export default function LoginPage() {
             role="tab"
             aria-selected={modo === 'cadastrar'}
             onClick={() => setModo('cadastrar')}
-            className={`flex-1 py-2.5 rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)] ${modo === 'cadastrar' ? 'bg-white shadow-sm' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
+            className={`px-4.5 py-2 text-[13px] border-l border-[var(--line-forte)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${modo === 'cadastrar' ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
           >
             Criar conta
           </button>
@@ -63,7 +63,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="email" className="block text-[13px] text-[var(--ink-dim)] mb-1.5">
+            <label htmlFor="email" className="block text-xs text-[#CFD3E5] mb-1.5">
               E-mail
             </label>
             <input
@@ -78,12 +78,12 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+              className="campo text-sm"
               placeholder="voce@email.com"
             />
           </div>
           <div>
-            <label htmlFor="senha" className="block text-[13px] text-[var(--ink-dim)] mb-1.5">
+            <label htmlFor="senha" className="block text-xs text-[#CFD3E5] mb-1.5">
               Senha
             </label>
             <input
@@ -97,21 +97,21 @@ export default function LoginPage() {
               minLength={6}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--stamp)]"
+              className="campo text-sm"
               placeholder="mínimo 6 caracteres"
             />
           </div>
 
           {/* aria-live faz o leitor de tela anunciar o erro, que aparece depois
               da resposta da rede e portanto não seria lido de outra forma */}
-          <p role="status" aria-live="polite" className="text-sm text-[var(--stamp)] empty:hidden">
+          <p role="status" aria-live="polite" className="text-sm text-[var(--erro)] empty:hidden">
             {erro}
           </p>
 
           <button
             type="submit"
             disabled={carregando}
-            className="mt-2 bg-[var(--stamp)] text-white font-semibold py-3 rounded-md text-sm disabled:opacity-60 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--stamp)]"
+            className="botao botao-primario mt-1.5 w-full py-2.5 !rounded-lg text-sm font-medium"
           >
             {carregando ? 'Aguarde…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
           </button>

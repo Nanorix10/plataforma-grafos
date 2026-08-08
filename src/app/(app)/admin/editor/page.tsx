@@ -19,7 +19,7 @@ export default async function AdminEditorPage() {
         <h1 className="text-[26px] font-semibold">Editor</h1>
         <Link
           href="/admin/editor/novo"
-          className="bg-[var(--stamp)] text-white text-sm font-semibold px-4 py-2 rounded-md"
+          className="botao botao-primario !rounded-lg px-4 py-2 text-sm"
         >
           + Novo resumo
         </Link>
