@@ -355,6 +355,102 @@ button:focus-visible,
   outline: none;
 }
 
+/* ---- subscrito e sobrescrito ----
+   Os resumos de Física vinham com `v₀` e `x²` em caracteres Unicode, que só
+   existem para alguns símbolos (não há `q` subscrito) e não acompanham o
+   tamanho do texto em volta. Como marca de verdade, qualquer caractere serve. */
+.conteudo-resumo sub,
+.conteudo-resumo sup {
+  font-size: 0.72em;
+  line-height: 0;
+  /* mantém a altura da linha estável: sem isso um `x²` no meio do parágrafo
+     empurra as linhas vizinhas */
+  position: relative;
+  vertical-align: baseline;
+}
+.conteudo-resumo sup {
+  top: -0.5em;
+}
+.conteudo-resumo sub {
+  bottom: -0.25em;
+}
+
+/* ---- tabelas ----
+   Usadas nos resumos para linha do tempo (ano | evento) e glossário
+   (termo | definição). Antes eram feitas no Google Docs e vinham como imagem
+   ou texto solto. */
+.conteudo-resumo table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.2em 0;
+  /* `fixed` faz a largura arrastada pelo autor valer: com `auto` o navegador
+     reparte tudo de novo pelo conteúdo e ignora o ajuste feito no editor */
+  table-layout: fixed;
+  overflow: hidden;
+}
+.conteudo-resumo th,
+.conteudo-resumo td {
+  border: 1px solid var(--line-forte);
+  padding: 0.5em 0.7em;
+  vertical-align: top;
+  text-align: left;
+  /* uma URL ou fórmula longa não pode esticar a coluna até estourar a página */
+  overflow-wrap: break-word;
+}
+.conteudo-resumo th {
+  background: var(--raised);
+  font-weight: 600;
+}
+/* Tabela larga rola dentro da própria caixa em vez de empurrar a página pro
+   lado — o aluno lê no celular. O TipTap já embrulha a tabela nesta div; na
+   página publicada o wrapper vem junto no HTML salvo. */
+.conteudo-resumo .tableWrapper {
+  overflow-x: auto;
+  margin: 1.2em 0;
+}
+.conteudo-resumo .tableWrapper table {
+  margin: 0;
+}
+
+/* Rede de segurança para o celular. O `.tableWrapper` é criado pelo TipTap no
+   editor, e não há garantia de que ele venha dentro do HTML salvo — sem esta
+   regra, um glossário de duas colunas largas empurraria a página inteira pro
+   lado na tela do aluno. Aqui a própria tabela vira o elemento que rola. */
+@media (max-width: 640px) {
+  .conteudo-resumo table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Peças que só existem DENTRO do editor: célula selecionada e a alça de
+   arrastar a largura da coluna. */
+.conteudo-resumo .selectedCell:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--acento-fraco);
+  pointer-events: none;
+}
+.conteudo-resumo th,
+.conteudo-resumo td {
+  position: relative;
+}
+.conteudo-resumo .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--acento);
+  pointer-events: none;
+}
+.resize-cursor {
+  cursor: col-resize;
+}
+
 /* ---- fórmulas (KaTeX) ---- */
 
 /* Fórmula em bloco ocupa a linha inteira e rola sozinha no celular: uma

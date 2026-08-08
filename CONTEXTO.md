@@ -137,6 +137,27 @@ nem o de fechamento precedido de espaço) — é ela que salva o caso dos preço
 Diferente do wikilink, aqui o atributo é seguro: nenhum trigger do Postgres lê
 fórmula, só `[[...]]`.
 
+**8b. Símbolo solto é TEXTO; fórmula é KaTeX. São caminhos diferentes.**
+A paleta `Ω Símbolos` insere o caractere direto no texto (`μ`, `Δ`, `≠`), sem
+passar pelo KaTeX. Não é redundância com o botão `∑ Equação`: metade do resumo
+de Física é prosa que precisa de um `μ` no meio da frase, e abrir o editor de
+equação pra isso é caro — era justamente o que levava o autor a copiar o
+símbolo de outro lugar e colar. Fórmula inteira continua sendo KaTeX, que
+alinha, dimensiona e renderiza no servidor.
+
+Subscrito e sobrescrito são marcas (`<sub>`, `<sup>`), não caracteres Unicode.
+Os resumos antigos traziam `v₀` e `x²` colados, mas o Unicode só cobre alguns
+caracteres (não existe `q` subscrito) e não acompanha o tamanho do texto.
+
+**8c. As tabelas do editor viraram as caixas do Google Docs.**
+Os resumos de origem usavam tabela de uma célula só como caixa de destaque, e
+tabelas de duas colunas para linha do tempo (ano | evento) e glossário
+(termo | definição). Por isso `insertTable` abre com 2 colunas: é o formato
+dos dois usos reais. O CSS de tabela vive em `.conteudo-resumo`, então sai
+igual no editor e na página publicada — e tem uma media query que faz a tabela
+rolar sozinha no celular, porque não há garantia de que o `.tableWrapper` do
+TipTap venha dentro do HTML salvo.
+
 **9. O mapa mental tira a hierarquia da matéria, não dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
