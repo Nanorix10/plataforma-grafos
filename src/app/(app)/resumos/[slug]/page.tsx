@@ -48,7 +48,10 @@ export default async function ResumoPage({
     supabase.from('resumos').select('slug, titulo'),
     supabase
       .from('conexoes')
-      .select('origem:resumos!conexoes_origem_id_fkey(slug, titulo)')
+      // `materia_slug` vem junto porque cada backlink é pintado na cor da
+      // matéria DELE, não na deste resumo: quem cita costuma ser de outra
+      // disciplina, e é justamente isso que a lista mostra.
+      .select('origem:resumos!conexoes_origem_id_fkey(slug, titulo, materia_slug)')
       .eq('destino_id', resumo.id),
   ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
@@ -81,7 +84,12 @@ export default async function ResumoPage({
           <span aria-hidden="true" className="text-[var(--ink-faint)]">
             /
           </span>
-          <span className="text-[length:var(--t-peq)] text-[var(--ink)] font-medium truncate">
+          {/* o título no caminho também vai na cor da matéria, pra a barra
+              fixa não desmentir o título grande logo abaixo dela */}
+          <span
+            className="text-[length:var(--t-peq)] font-medium truncate"
+            style={{ color: materia?.cor ?? 'var(--ink)' }}
+          >
             {resumo.titulo}
           </span>
         </nav>
@@ -97,11 +105,10 @@ export default async function ResumoPage({
       </header>
 
       <article className="max-w-[720px] mx-auto px-6 md:px-10 py-10 md:py-14">
-        {/* A matéria vira uma etiqueta discreta. Antes ela pintava o título
-            inteiro, e um título grande em cor saturada domina a página sem
-            acrescentar informação. */}
         {/* A etiqueta é contornada na cor da matéria, e o texto vai na mesma
-            cor. É a única peça colorida da página — o título fica neutro. */}
+            cor. Ela já foi a ÚNICA peça colorida da página, quando o título
+            ficava neutro; agora a cor da matéria vale para todo título do
+            site, e a etiqueta voltou a ser só a porta de volta para a lista. */}
         <Link
           href="/resumos"
           className="inline-flex items-center rounded-md border px-2.5 py-1 mb-5 hover:bg-[var(--sel)]"
@@ -115,7 +122,10 @@ export default async function ResumoPage({
           </span>
         </Link>
 
-        <h1 className="text-[30px] font-medium leading-tight text-balance mb-8">
+        <h1
+          className="text-[30px] font-medium leading-tight text-balance mb-8"
+          style={{ color: materia?.cor ?? 'var(--ink)' }}
+        >
           {resumo.titulo}
         </h1>
 
@@ -138,13 +148,20 @@ export default async function ResumoPage({
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {backlinks.map((b: { slug: string; titulo: string }) => (
+              {backlinks.map((b: { slug: string; titulo: string; materia_slug: string }) => (
                 <li key={b.slug}>
                   <Link
                     href={`/resumos/${b.slug}`}
                     className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[var(--raised-hover)]"
                   >
-                    <span className="text-sm font-medium truncate">
+                    <span
+                      className="text-sm font-medium truncate"
+                      style={{
+                        color:
+                          MATERIAS[b.materia_slug as keyof typeof MATERIAS]?.cor ??
+                          'var(--ink)',
+                      }}
+                    >
                       {b.titulo}
                     </span>
                     <span

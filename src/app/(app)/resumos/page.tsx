@@ -17,7 +17,16 @@ function Cartao({ resumo }: { resumo: ResumoItem }) {
           : 'bg-[var(--panel)] opacity-55'
       }`}
     >
-      <span className="font-medium text-[15px] text-pretty break-words">
+      {/* O título vai na cor da matéria. Só o liberado: o bloqueado precisa
+          continuar lendo como apagado, e cor cheia desmentiria o cadeado. */}
+      <span
+        className="font-medium text-[15px] text-pretty break-words"
+        style={
+          resumo.liberado
+            ? { color: MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]?.cor }
+            : undefined
+        }
+      >
         {resumo.titulo}
       </span>
       {resumo.liberado ? null : (
@@ -78,7 +87,10 @@ export default async function ResumosPage() {
                 className="w-2 h-2 rounded-full shrink-0"
                 style={{ background: info?.cor ?? 'var(--ink-faint)' }}
               />
-              <h2 className="text-[15px] font-medium">
+              <h2
+                className="text-[15px] font-medium"
+                style={{ color: info?.cor ?? 'var(--ink)' }}
+              >
                 {info?.nome ?? materia}
               </h2>
               {/* o contador só aparece quando há o que contar: numa matéria

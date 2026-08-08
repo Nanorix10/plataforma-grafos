@@ -312,7 +312,9 @@ export default function GraphView({
       .attr('font-weight', (d) => (d.tipo === 'materia' ? 600 : 400))
       .attr('font-family', 'var(--fonte-texto), sans-serif')
       .attr('fill', (d) =>
-        d.tipo === 'materia' ? d.cor : d.liberado ? 'var(--ink)' : 'var(--ink-faint)'
+        // o rótulo do resumo agora acompanha a cor da matéria, como todo
+        // título do site; o bloqueado segue apagado, pra não parecer aberto
+        d.tipo === 'materia' ? d.cor : d.liberado ? d.cor : 'var(--ink-faint)'
       )
       .attr('paint-order', 'stroke')
       .attr('stroke', 'var(--canvas)')

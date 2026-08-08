@@ -136,7 +136,7 @@ usam `light-dark()`, porque ficam gravadas no conteúdo e precisam ler bem nos
 dois temas. A exceção deliberada é a **faixa de números** da landing, que fica
 azul-marinho sempre: clareá-la tiraria o respiro de cor que ela existe para dar.
 
-**4c. A cor da matéria entra no resumo, mas só no título e no termo em negrito.**
+**4c. Todo título do site sai na cor da matéria dele.**
 Nos documentos de origem cada matéria tinha uma cor e o resumo INTEIRO era
 escrito nela: Língua Portuguesa `#FD0032`, História Global `#6C0B6A`, Geografia
 `#BC462F`, Física `#007473`, Biologia `#3F7848`. É de lá que saíram as cores de
@@ -161,6 +161,34 @@ No editor a variável fica na "folha", não no elemento do TipTap: aquele é cri
 pelo ProseMirror e só aceita atributos via `editorProps`, que não reage à troca
 de matéria no `<select>`. Variável de CSS herda, então dá no mesmo — e o autor vê
 a cor mudar na hora.
+
+**Fora do corpo, a regra vale para todo título**, e não sobrou lugar de fora:
+o `h1` do resumo e o título no caminho da barra fixa, o cartão e o cabeçalho de
+matéria em `/resumos`, a árvore e o nome da matéria na barra lateral, o rótulo
+dos nós nas duas visões do mapa, o balão do mapa e a lista do `/admin/editor`.
+A etiqueta de matéria na página do resumo já foi a única peça colorida ali —
+não é mais, e virou só a porta de volta para a lista.
+
+Três regras que não dá pra adivinhar lendo o CSS:
+
+- **Resumo bloqueado não recebe cor.** Fica em `--ink-faint`, porque cor cheia
+  o faria parecer disponível e desmentiria o cadeado ao lado. Vale no cartão,
+  na barra lateral e nos dois mapas.
+- **Cada título usa a cor da PRÓPRIA matéria, não a do bloco onde está.** Os
+  backlinks trazem `materia_slug` na consulta por isso, e o mapa mental lê
+  `no.cor` em vez do `cor` do ramo — senão um tópico interdisciplinar (decisão
+  9) sairia com a cor da disciplina que abre o galho, e o mapa afirmaria o que
+  a barra lateral nega.
+- **O ponto de "outra matéria" na barra lateral continua**, mesmo agora que a
+  cor do título diz a mesma coisa. Cor é reforço, nunca a única pista — é a
+  regra escrita no `lib/materias.ts`, e quem não distingue os matizes ainda
+  depende do ponto.
+
+Conferido antes de aplicar, porque a paleta nasceu para PONTO marcador e virou
+texto de 12,5px: as 12 matérias passam em WCAG AA (≥4,5:1) nos dois temas sobre
+`--paper`, `--panel` e `--raised`. As mais apertadas são Redação (4,53) e
+Física (4,81). Quem mexer num tom do `materias.ts` está mexendo em texto agora,
+não só num ponto de 6px — vale refazer a conta.
 
 **5. `getClaims()`, não `getUser()`.**
 `getClaims()` valida o JWT localmente; `getUser()` faz ida e volta na rede. Trocar

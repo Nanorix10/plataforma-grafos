@@ -172,7 +172,11 @@ export default function MindMapView({
         // dá 7:1, enquanto o branco de antes ficava em 3,2:1
         if (d.data.tipo === 'raiz') return 'var(--page)'
         if (d.data.tipo === 'materia') return d.data.cor
-        return d.data.no?.liberado ? 'var(--ink)' : 'var(--ink-faint)'
+        // `no.cor` e não `data.cor`: o segundo é a cor do RAMO, herdada da
+        // matéria que abre aquele galho. Um tópico interdisciplinar pendurado
+        // em outra disciplina (decisão 9 do CONTEXTO) tem que sair na cor da
+        // matéria dele, senão o mapa afirma o que a barra lateral nega.
+        return d.data.no?.liberado ? d.data.no.cor : 'var(--ink-faint)'
       })
       .text((d) => {
         const limite = 22

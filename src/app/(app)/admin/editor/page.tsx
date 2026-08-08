@@ -36,7 +36,12 @@ export default async function AdminEditorPage() {
               className="w-[10px] h-[10px] rounded-sm shrink-0"
               style={{ background: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999' }}
             />
-            <span className="text-sm font-medium">{r.titulo}</span>
+            <span
+              className="text-sm font-medium"
+              style={{ color: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor }}
+            >
+              {r.titulo}
+            </span>
           </Link>
         ))}
       </div>

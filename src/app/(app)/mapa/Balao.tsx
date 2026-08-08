@@ -34,7 +34,10 @@ export default function Balao({ dados }: { dados: PosicaoBalao | null }) {
             className="w-[7px] h-[7px] rounded-sm shrink-0"
             style={{ background: dados.no.cor }}
           />
-          <span className="font-semibold text-[12.5px] leading-tight text-balance">
+          <span
+            className="font-semibold text-[12.5px] leading-tight text-balance"
+            style={{ color: dados.no.cor }}
+          >
             {dados.no.titulo}
           </span>
         </div>
