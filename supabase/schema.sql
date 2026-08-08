@@ -181,6 +181,13 @@ create trigger trg_sync_conexoes_resumo
 -- ao lado de "14/07/1789", e `date` obrigaria a inventar mês e dia para o
 -- primeiro. Os inteiros POSICIONAM no eixo; `rotulo_data` é o texto que o
 -- aluno LÊ. `ano_fim` nulo = evento pontual; preenchido = período, vira barra.
+--
+-- `materia_slugs` é ARRAY (migration 20260808234500): o Renascimento é
+-- História, Arte, Literatura e Filosofia ao mesmo tempo. Tabela de junção
+-- seria o desenho de livro e pagaria caro por nada — a linha do tempo carrega
+-- todos os eventos de uma vez e filtra no navegador, então não existe consulta
+-- "eventos da matéria X" para um índice servir. O que o array não dá é a chave
+-- estrangeira, e é o trigger abaixo que a devolve.
 -- ============================================
 create table if not exists eventos (
   id uuid primary key default gen_random_uuid(),
@@ -188,14 +195,47 @@ create table if not exists eventos (
   ano_inicio integer not null,
   ano_fim integer,
   rotulo_data text not null default '',
-  materia_slug text not null references materias(slug),
+  materia_slugs text[] not null default '{}',
   resumo_id uuid references resumos(id) on delete set null,
   descricao text not null default '',
   criado_em timestamptz default now(),
   atualizado_em timestamptz default now(),
   constraint eventos_periodo_valido
-    check (ano_fim is null or ano_fim >= ano_inicio)
+    check (ano_fim is null or ano_fim >= ano_inicio),
+  -- evento sem matéria não teria chip que o mostrasse: ficaria no banco e
+  -- sumiria da tela, que é o pior tipo de dado perdido
+  constraint eventos_tem_materia check (cardinality(materia_slugs) > 0)
 );
+
+-- `check` não aceita subconsulta, então a integridade dos slugs vive aqui.
+-- Sem ela, um slug errado numa migration futura entra calado e o evento some
+-- da tela: o componente procura a cor em MATERIAS, não acha, e o chip nunca
+-- aparece. Mesmo princípio do trigger de ciclos — a interface ajuda, mas quem
+-- tem a palavra final é o banco.
+create or replace function checar_materias_do_evento()
+returns trigger
+language plpgsql
+as $$
+declare
+  invalida text;
+begin
+  select s into invalida
+  from unnest(new.materia_slugs) as s
+  where not exists (select 1 from materias m where m.slug = s)
+  limit 1;
+
+  if invalida is not null then
+    raise exception 'matéria inexistente em materia_slugs: %', invalida;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_checar_materias_do_evento
+  before insert or update of materia_slugs on eventos
+  for each row
+  execute function checar_materias_do_evento();
 
 create index if not exists eventos_ano_inicio_idx on eventos (ano_inicio);
 create index if not exists eventos_resumo_id_idx on eventos (resumo_id);

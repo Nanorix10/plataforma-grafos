@@ -43,8 +43,17 @@ export async function salvarEvento(formData: FormData) {
     return { ok: false as const, erro: 'O ano de fim não pode ser anterior ao de início.' }
   }
 
-  const materia = String(formData.get('materia_slug') ?? '')
-  if (!materia) return { ok: false as const, erro: 'Escolha a matéria.' }
+  /* `getAll`, porque as matérias são caixas de seleção: um evento pode ser de
+     várias (o Renascimento é História, Arte, Literatura e Filosofia). O banco
+     também recusa a lista vazia — `eventos_tem_materia` —, mas errar aqui daria
+     uma mensagem de Postgres em vez de uma frase. */
+  const materias = formData
+    .getAll('materia_slugs')
+    .map((m) => String(m))
+    .filter(Boolean)
+  if (materias.length === 0) {
+    return { ok: false as const, erro: 'Escolha pelo menos uma matéria.' }
+  }
 
   const dados = {
     titulo,
@@ -53,7 +62,7 @@ export async function salvarEvento(formData: FormData) {
     // ano 1 a.C./1 d.C. e desenharia uma barra atravessando a era inteira
     ano_fim: anoFim,
     rotulo_data: String(formData.get('rotulo_data') ?? '').trim(),
-    materia_slug: materia,
+    materia_slugs: materias,
     resumo_id: String(formData.get('resumo_id') ?? '') || null,
     descricao: String(formData.get('descricao') ?? '').trim(),
   }
