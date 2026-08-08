@@ -20,6 +20,7 @@ import 'katex/dist/contrib/mhchem.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
+import { Questao, Resolucao } from './questaoResolvida'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import { salvarCorpoAuto } from './actions'
 
@@ -428,6 +429,16 @@ function Barra({
       >
         ▦ Tabela
       </Bt>
+      {/* Fica ao lado da tabela porque as duas são "blocos que se insere", e
+          não formatação do que já está escrito. */}
+      <Bt
+        title="Questão resolvida — a resolução fica escondida até o aluno clicar"
+        largo
+        ativo={editor.isActive('questao')}
+        onClick={() => editor.chain().focus().inserirQuestao().run()}
+      >
+        ？ Questão
+      </Bt>
 
       <Sep />
 
@@ -567,6 +578,10 @@ export default function EditorCorpo({
       Superscript,
       // negrita o termo antes do `:`, no padrão em que os resumos são escritos
       TermoNegrito,
+      // `Resolucao` precisa estar registrada junto: é ela que o comando
+      // `inserirQuestao` cria dentro da moldura.
+      Questao,
+      Resolucao,
       // `resizable` deixa arrastar a divisa entre colunas: uma linha do tempo
       // quer a coluna do ano estreita, e um glossário quer o termo estreito.
       TableKit.configure({ table: { resizable: true } }),

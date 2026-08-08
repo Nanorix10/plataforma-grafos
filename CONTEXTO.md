@@ -250,6 +250,48 @@ dado escapar.
 `/mapa?visao=mental` e `/mapa?visao=grafo` — o modo vive na URL pra poder ser
 favoritado e compartilhado.
 
+**9b. Questão resolvida: `<div>` no editor, `<details>` na leitura.**
+A resolução fica escondida até o aluno clicar. É o único bloco que existe
+*porque* o material virou site — no Google Docs a resolução aparece logo abaixo
+do enunciado, então o olho a lê antes de a cabeça tentar, e a questão vira
+exemplo em vez de exercício.
+
+O caminho óbvio seria o editor já gravar `<details>`, que abre e fecha sem
+JavaScript nenhum. Não dá: dentro do editor um `<details>` fechado esconde o
+texto que o autor está escrevendo, e o clique no `<summary>` briga com o clique
+que posiciona o cursor. Então o editor grava `<div class="resolucao">`, sempre
+aberta, e `lib/questoes.ts` troca por `<details>` na hora de ler — no mesmo
+ponto em que wikilinks e fórmulas já são convertidos.
+
+A troca conta `<div>` para achar onde a gaveta fecha, e por isso roda **antes**
+de `renderizarMatematica`: o KaTeX enche o HTML de `<div>` aninhado. A ordem em
+`resumos/[slug]/page.tsx` é questões → wikilinks → matemática, do estrutural
+para o miúdo.
+
+**9c. Conteúdo entra por migração, não por tela de importação.**
+Os resumos vindos do Google Docs entram como `insert` numa migration
+(a primeira é `20260808143000_importa_dinamica_fisica.sql`). Uma tela de
+importação seria código novo para um problema que acontece uma vez por matéria,
+e uma caixa de colar não deixa rastro — a migration fica versionada e o PR
+mostra exatamente que texto foi para o banco.
+
+Dois cuidados que a migration precisa ter:
+
+- **Fórmula é nó do editor** (`<span data-type="inline-math" data-latex="…">`),
+  não `$…$`. As duas formas renderizam na página publicada, mas só o nó aparece
+  renderizado **dentro do editor** — com `$…$` o autor abriria o resumo e veria
+  texto cru esperando ser redigitado.
+- **Um `update resumos set corpo = corpo` no fim.** O trigger
+  `trg_sync_conexoes_resumo` resolve cada `[[wikilink]]` procurando um resumo
+  com aquele título, e roda no insert. Como as linhas entram em sequência, todo
+  link que aponta para um irmão inserido depois não acha destino e é descartado
+  em silêncio. O update vazio dispara o trigger de novo com todos já no banco.
+
+Um documento do Docs vira **vários** resumos ligados por `pai_id`, não um só —
+é o que faz o mapa ter nós de verdade. O pai não linka os filhos em `[[…]]`:
+conter e citar são os dois eixos da decisão 9, e linkar quem já está pendurado
+desenharia a mesma relação duas vezes.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
