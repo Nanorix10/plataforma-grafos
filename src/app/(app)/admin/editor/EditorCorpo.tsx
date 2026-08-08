@@ -212,6 +212,20 @@ function Barra({
         ? 'h4'
         : 'p'
 
+  // "18px" → "18"; sem fontSize definido o campo fica vazio e mostra o padrão
+  // do corpo como placeholder
+  const tamanhoDoEditor = String(editor.getAttributes('textStyle').fontSize ?? '').replace('px', '')
+
+  /**
+   * O que está no campo enquanto se digita, que nem sempre é o que o editor
+   * tem. Sem esse estado o campo seria controlado direto pelo editor e não
+   * daria pra digitar número de dois dígitos: o "2" de "23" é menor que o
+   * mínimo, seria recusado, e o React repintaria o campo com o valor antigo
+   * antes do "3" chegar. `null` significa "espelhe o editor".
+   */
+  const [tamanhoDigitado, setTamanhoDigitado] = useState<string | null>(null)
+  const tamanhoAtual = tamanhoDigitado ?? tamanhoDoEditor
+
   return (
     <div className="sticky top-0 z-20 flex flex-wrap items-center gap-0.5 px-3 py-1.5 bg-[var(--panel)] border-b border-[var(--line)]">
       <Bt title="Desfazer (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}>
@@ -239,23 +253,49 @@ function Barra({
         <option value="h4">Título 3</option>
       </select>
 
-      <select
-        value={editor.getAttributes('textStyle').fontSize ?? ''}
-        onChange={(e) => {
-          const v = e.target.value
-          const c = editor.chain().focus()
-          if (v) c.setFontSize(v).run()
-          else c.unsetFontSize().run()
-        }}
-        className="h-[28px] text-[12.5px] bg-transparent border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
-      >
-        <option value="">Tamanho</option>
-        {TAMANHOS.map((t) => (
-          <option key={t} value={t}>
-            {t.replace('px', '')}
-          </option>
-        ))}
-      </select>
+      {/* Tamanho é campo numérico livre, não uma lista fechada: os cinco
+          valores de antes cobriam o que se imaginou na mesa, não o que o texto
+          pede. A `datalist` mantém os atalhos comuns a um clique, e os limites
+          (8–96) só barram o que quebraria a leitura. Vazio = tamanho padrão do
+          corpo do resumo. */}
+      <span className="inline-flex items-center gap-1 shrink-0">
+        <input
+          type="number"
+          min={8}
+          max={96}
+          step={1}
+          list="tamanhos-de-texto"
+          aria-label="Tamanho do texto, em pixels"
+          title="Tamanho do texto (px) — vazio usa o tamanho padrão"
+          value={tamanhoAtual}
+          onChange={(e) => {
+            const v = e.target.value
+            setTamanhoDigitado(v)
+
+            // Sem `.focus()` de propósito: devolver o foco ao editor aqui
+            // tiraria o cursor do campo no meio da digitação. Os comandos do
+            // TipTap agem sobre a seleção guardada, que continua de pé.
+            if (v === '') return editor.chain().unsetFontSize().run()
+            const n = Number(v)
+            // fora da faixa, guarda o que foi digitado mas não aplica —
+            // é o estado passageiro de quem ainda está digitando "23"
+            if (!Number.isFinite(n) || n < 8 || n > 96) return
+            editor.chain().setFontSize(`${n}px`).run()
+          }}
+          // ao sair, o campo volta a espelhar o editor: se o que ficou ali era
+          // inválido, ele some em vez de mentir sobre o tamanho aplicado
+          onBlur={() => setTamanhoDigitado(null)}
+          // as setinhas nativas do `number` comiam metade da caixa e cortavam
+          // o segundo dígito; sem elas cabe o número e o marcador da datalist
+          className="campo !w-[52px] h-[28px] !py-0 !px-1.5 text-[12.5px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+          placeholder="17"
+        />
+        <datalist id="tamanhos-de-texto">
+          {TAMANHOS.map((t) => (
+            <option key={t} value={t.replace('px', '')} />
+          ))}
+        </datalist>
+      </span>
 
       <Sep />
 
