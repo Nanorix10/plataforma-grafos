@@ -14,7 +14,7 @@ export default async function AdminEditorPage() {
     .order('titulo')
 
   return (
-    <div className="max-w-[820px] mx-auto px-8 py-10">
+    <div className="max-w-[820px] mx-auto px-5 py-8 sm:px-8 sm:py-10">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-[26px] font-semibold">Editor</h1>
         <Link

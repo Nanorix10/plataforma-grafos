@@ -7,7 +7,7 @@ export default async function ResumosPage() {
   const resumos = await getResumos()
 
   return (
-    <div className="max-w-[900px] mx-auto px-10 py-11">
+    <div className="max-w-[900px] mx-auto px-5 py-8 sm:px-10 sm:py-11">
       <h1 className="text-2xl font-medium mb-1">Seus resumos</h1>
       <p className="text-[13px] text-[var(--ink-faint)] mb-7">
         {resumos.length === 0

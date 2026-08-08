@@ -23,7 +23,7 @@ export default async function PessoasPage() {
   const admins = pessoas.filter((p) => p.is_admin).length
 
   return (
-    <div className="max-w-[900px] mx-auto px-10 py-11">
+    <div className="max-w-[900px] mx-auto px-5 py-8 sm:px-10 sm:py-11">
       <h1 className="text-2xl font-medium mb-1">Pessoas</h1>
       <p className="text-[13px] text-[var(--ink-faint)] mb-7">
         {pessoas.length} {pessoas.length === 1 ? 'conta' : 'contas'} ·{' '}

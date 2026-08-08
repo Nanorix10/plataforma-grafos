@@ -30,7 +30,7 @@ export default async function EditarResumoPage({
   const titulos = (todos ?? []).map((r) => r.titulo).filter((t) => t !== resumo.titulo)
 
   return (
-    <div className="max-w-[1000px] mx-auto px-8 py-8">
+    <div className="max-w-[1000px] mx-auto px-5 sm:px-8 py-8">
       <div className="flex items-baseline gap-3 mb-6">
         <h1 className="text-[22px] font-semibold">{resumo.titulo}</h1>
         <Link

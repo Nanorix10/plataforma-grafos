@@ -65,7 +65,7 @@ export default async function ResumoPage({
     <>
       {/* Barra fina só com o caminho e a ação. Antes era em fonte de código,
           o que fazia a página parecer console de desenvolvedor. */}
-      <header className="sticky top-0 z-10 bg-[var(--paper)]/85 backdrop-blur border-b border-[var(--line)] px-6 md:px-10 h-12 flex items-center gap-2">
+      <header className="sticky top-12 lg:top-0 z-10 bg-[var(--paper)]/85 backdrop-blur border-b border-[var(--line)] px-6 md:px-10 h-12 flex items-center gap-2">
         <nav aria-label="Caminho" className="min-w-0 flex items-center gap-2">
           <Link
             href="/resumos"

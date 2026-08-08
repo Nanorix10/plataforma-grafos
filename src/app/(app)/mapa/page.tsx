@@ -65,8 +65,8 @@ export default async function MapaPage({
   }))
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="border-b border-[var(--line)] px-10 py-3 flex items-center gap-4 shrink-0">
+    <div className="h-[calc(100vh-3rem)] lg:h-screen flex flex-col">
+      <div className="border-b border-[var(--line)] px-5 sm:px-10 py-3 flex items-center gap-4 shrink-0">
         <span className="text-xs text-[var(--ink-faint)]">
           <b className="text-[var(--ink)] font-medium">
             {visao === 'grafo' ? 'Mapa de conexões' : 'Mapa mental'}

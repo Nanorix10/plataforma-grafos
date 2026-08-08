@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
 // de `lib/arvore` e não de `lib/resumos`: este é um componente de cliente, e
 // `resumos.ts` importa `getSessao`, que depende de `next/headers`
@@ -178,6 +178,23 @@ export default function Sidebar({
   const [fechados, setFechados] = useState<Set<string>>(new Set())
 
   /**
+   * No celular a barra vira gaveta. Ela tem 262px fixos: numa tela de 390px
+   * sobrariam 128px para o resumo, que é o conteúdo que o aluno veio ler.
+   * A partir de `lg` ela volta a ser coluna fixa, como sempre foi.
+   */
+  const [menuAberto, setMenuAberto] = useState(false)
+
+  // Esc fecha, como em qualquer camada sobreposta
+  useEffect(() => {
+    if (!menuAberto) return
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuAberto(false)
+    }
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  }, [menuAberto])
+
+  /**
    * Buscando, a árvore vira lista.
    *
    * Manter a hierarquia durante a busca obrigaria a mostrar os ancestrais de
@@ -209,7 +226,58 @@ export default function Sidebar({
   const total = grupos.reduce((n, g) => n + g.itens.length, 0)
 
   return (
-    <aside className="w-[262px] shrink-0 h-screen sticky top-0 flex flex-col bg-[var(--panel)] border-r border-[var(--line)]">
+    <>
+      {/* Barra do celular: some a partir de `lg`, onde a coluna fixa dá conta.
+          É `fixed` porque o conteúdo rola por baixo dela — o layout reserva a
+          altura com um padding no <main>. */}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-30 h-12 flex items-center gap-2 px-3 bg-[var(--panel)] border-b border-[var(--line)]">
+        <button
+          type="button"
+          onClick={() => setMenuAberto(true)}
+          aria-expanded={menuAberto}
+          aria-controls="barra-lateral"
+          aria-label="Abrir menu"
+          className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+        >
+          <svg width="17" height="17" viewBox="0 0 20 20" aria-hidden>
+            <path
+              d="M3 5h14M3 10h14M3 15h14"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+        <Link href="/resumos" className="marca font-medium text-sm truncate">
+          Plataforma Grafos
+        </Link>
+      </div>
+
+      {/* Véu: fecha a gaveta ao tocar fora. Só existe com ela aberta. */}
+      {menuAberto ? (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          onClick={() => setMenuAberto(false)}
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+        />
+      ) : null}
+
+      <aside
+        id="barra-lateral"
+        /* Tocar num link fecha a gaveta. Por delegação, e não por um efeito que
+           observa a rota: assim fecha no toque, sem esperar a navegação — e um
+           `setState` dentro de efeito dispara render em cascata à toa. Só links
+           contam; os botões de expandir matéria mantêm o menu aberto, que é o
+           que se espera de quem está procurando um resumo. */
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('a')) setMenuAberto(false)
+        }}
+        className={`w-[262px] shrink-0 flex flex-col bg-[var(--panel)] border-r border-[var(--line)]
+          fixed inset-y-0 left-0 z-50 transition-transform duration-200
+          ${menuAberto ? 'translate-x-0' : '-translate-x-full'}
+          lg:sticky lg:top-0 lg:h-screen lg:z-auto lg:translate-x-0 lg:transition-none`}
+      >
       {/* topo */}
       <div className="px-3 pt-3.5 pb-2.5">
         <Link
@@ -321,6 +389,7 @@ export default function Sidebar({
           {isAdmin && ' · admin'}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }

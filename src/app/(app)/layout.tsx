@@ -18,7 +18,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         vendoComoAluno={vendoComoAluno}
         plano={plano}
       />
-      <main className="flex-1 min-w-0">{children}</main>
+      {/* `pt-12` reserva a altura da barra do celular, que é `fixed` e ficaria
+          por cima do começo do conteúdo. A partir de `lg` a barra some e o
+          espaço não faz mais sentido. */}
+      <main className="flex-1 min-w-0 pt-12 lg:pt-0">{children}</main>
     </div>
   )
 }

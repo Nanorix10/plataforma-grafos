@@ -678,7 +678,7 @@ export default function EditorCorpo({
         }`}
       >
         <div
-          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[760px] px-[70px] py-[58px] ${
+          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[760px] px-6 py-8 sm:px-[70px] sm:py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
         >

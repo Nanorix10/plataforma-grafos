@@ -15,7 +15,7 @@ export default async function NovoResumoPage() {
   const titulos = (todos ?? []).map((r) => r.titulo)
 
   return (
-    <div className="max-w-[1000px] mx-auto px-8 py-8">
+    <div className="max-w-[1000px] mx-auto px-5 sm:px-8 py-8">
       <h1 className="text-[22px] font-semibold mb-6">Novo resumo</h1>
       <ResumoForm titulos={titulos} candidatosPai={todos ?? []} />
     </div>
