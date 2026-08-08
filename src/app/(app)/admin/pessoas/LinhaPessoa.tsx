@@ -39,7 +39,7 @@ export default function LinhaPessoa({
         ) : null}
 
         <span
-          className={`text-[11px] ${liberado ? 'text-[#8FAE94]' : 'text-[var(--ink-faint)]'}`}
+          className={`text-[11px] ${liberado ? 'text-[var(--ok)]' : 'text-[var(--ink-faint)]'}`}
         >
           {liberado ? `acesso: ${pessoa.plano}` : 'sem acesso'}
         </span>

@@ -19,47 +19,64 @@
    não deve aparecer num componente.
    ================================================================ */
 
+/* ---- os dois temas ----
+   Cada token traz os dois valores em `light-dark(claro, escuro)`, e quem
+   escolhe é o `color-scheme` logo abaixo. A alternativa seria repetir a paleta
+   inteira dentro de um `@media (prefers-color-scheme)` E de novo num seletor
+   `[data-tema]` — três cópias dos mesmos tokens, que divergem no primeiro
+   ajuste. Assim o valor claro e o escuro ficam lado a lado, onde é impossível
+   mudar um e esquecer o outro. */
 :root {
-  /* --- superfícies ---
-     O site é escuro por decisão de projeto, não por preferência do sistema:
-     um tema só, igual pra todo mundo, é o que mantém o material de estudo
-     com a mesma cara no computador da escola e no celular do aluno. */
-  --page: #0E0F18; /* fundo atrás de tudo — o mais escuro da escala */
-  --paper: #161826; /* fundo do conteúdo */
-  --panel: #1A1C29; /* barras laterais e cabeçalhos */
-  --sel: #232532; /* item selecionado ou sob o cursor */
-  --raised: #232532; /* cartão sobre o conteúdo (mesmo tom do --sel, de propósito) */
-  --canvas: #12131E; /* área do mapa, mais funda que o conteúdo */
+  /* Sem escolha do aluno, o aparelho decide. Com escolha, `[data-tema]` abaixo
+     fixa um dos dois — é isso que o botão de tema alterna. */
+  color-scheme: light dark;
 
-  /* --- texto --- */
-  --ink: #E9E9ED; /* texto principal — 14,8:1 sobre --paper */
-  --ink-dim: #B2B6CA; /* texto secundário — 9,4:1, passa AAA */
-  --ink-faint: #75798C; /* rótulos e dicas — 4,6:1, usar só em 12px ou mais */
+  /* --- superfícies --- */
+  --page: light-dark(#F4F5F7, #0E0F18); /* fundo atrás de tudo */
+  --paper: light-dark(#FFFFFF, #161826); /* fundo do conteúdo */
+  --panel: light-dark(#F7F8FA, #1A1C29); /* barras laterais e cabeçalhos */
+  --sel: light-dark(#ECEEF2, #232532); /* item selecionado ou sob o cursor */
+  --raised: light-dark(#F7F8FA, #232532); /* cartão sobre o conteúdo */
+  --raised-hover: light-dark(#ECEEF2, #2A2D3C); /* o mesmo cartão sob o cursor */
+  --canvas: light-dark(#FBFBFC, #12131E); /* área do mapa */
+
+  /* Verde de "deu certo" — acesso liberado, pagamento confirmado. Escurece no
+     claro para passar de 4,5:1 sobre o papel branco. */
+  --ok: light-dark(#2E7D50, #8FAE94);
+
+  /* --- texto ---
+     No claro a escala inverte: o texto principal é o mais ESCURO. Os tons
+     foram escolhidos para manter as mesmas relações de contraste do escuro. */
+  --ink: light-dark(#16181D, #E9E9ED); /* principal — 15,8:1 no claro, 14,8:1 no escuro */
+  --ink-soft: light-dark(#3A3F4C, #CFD3E5); /* um passo abaixo do principal, para texto longo */
+  --ink-dim: light-dark(#565B6B, #B2B6CA); /* secundário — 7,4:1 / 9,4:1 */
+  --ink-faint: light-dark(#767C8C, #75798C); /* rótulos — 4,7:1 / 4,6:1, só em 12px+ */
 
   /* --- traços --- */
-  --line: #292B31; /* divisórias */
-  --line-forte: #3F424D; /* borda de campo e de cartão: precisa ser vista */
+  --line: light-dark(#E6E8EC, #292B31); /* divisórias */
+  --line-forte: light-dark(#C9CDD6, #3F424D); /* borda de campo e de cartão */
 
   /* --- destaque ---
-     Um lilás no lugar do azul. Sobre fundo escuro o azul de link padrão
-     fica pesado e some no roxo do plano de fundo; este tom mantém 7:1 de
-     contraste e ainda lê como "clicável". */
-  --acento: #9184D9;
-  --acento-claro: #D2CEFD; /* texto de destaque sobre superfície escura */
-  --acento-fraco: rgba(145, 132, 217, 0.14); /* preenchimento de hover e foco */
+     O lilás do escuro ficaria lavado sobre branco, então o claro usa o mesmo
+     matiz puxado para baixo, até passar de 4,5:1 sobre `--paper`. */
+  --acento: light-dark(#5B4BC4, #9184D9);
+  --acento-claro: light-dark(#3F32A0, #D2CEFD); /* o realce do hover: escurece no claro, clareia no escuro */
+  --acento-fraco: light-dark(rgba(91, 75, 196, 0.10), rgba(145, 132, 217, 0.14));
 
-  /* Apelido mantido pra não quebrar quem ainda chama --acento-escuro. No tema
-     escuro "mais escuro" não serve de hover — o realce tem que CLAREAR. */
+  /* Apelido mantido pra não quebrar quem ainda chama --acento-escuro. O nome
+     mente nos dois temas (no escuro ele CLAREIA), mas aponta sempre para o
+     realce correto — que é o que importa em `.botao-primario:hover`. */
   --acento-escuro: var(--acento-claro);
 
   /* --- faixa de números ---
-     A única superfície saturada do sistema. Existe pra dar um respiro de cor
-     na landing sem espalhar azul-marinho pelo resto do site. */
+     A única superfície saturada do sistema. Fica azul-marinho nos dois temas:
+     é uma faixa que se destaca do fundo, e clareá-la no tema claro tiraria
+     justamente o respiro de cor que ela existe para dar. */
   --faixa: #262A60;
   --faixa-ink: #F3F5FE;
   --faixa-dim: #C7C8F0;
 
-  --erro: #C9767E;
+  --erro: light-dark(#B3243C, #C9767E);
 
   /* Apelido de transição. `--stamp` era o vermelho-carimbo e ainda é citado
      por telas que não foram redesenhadas. Apontar pro acento novo mantém o
@@ -81,10 +98,24 @@
   --raio: 8px;
   --raio-peq: 6px;
   /* No escuro a sombra sozinha não separa camadas — o que separa é a linha de
-     1px. Por isso toda elevação aqui é "anel + sombra", nunca só sombra. */
+     1px. Por isso toda elevação começa por um anel, nos dois temas; o claro
+     acrescenta a sombra de verdade, que ali funciona. */
   --sombra: 0 0 0 1px var(--line-forte);
-  --sombra-alta: 0 0 0 1px var(--line-forte), 0 16px 40px rgba(0, 0, 0, 0.5);
+  /* A parte que muda de tema vive num token próprio porque `light-dark()`
+     separa seus dois valores por vírgula — e uma lista de sombras também usa
+     vírgula, então as duas coisas não cabem na mesma função. */
+  --sombra-profunda: light-dark(
+    0 12px 28px rgba(22, 24, 29, 0.13),
+    0 16px 40px rgba(0, 0, 0, 0.5)
+  );
+  --sombra-alta: 0 0 0 1px var(--line-forte), var(--sombra-profunda);
+}
 
+/* O botão de tema fixa um dos dois; sem ele, vale a preferência do aparelho. */
+:root[data-tema='claro'] {
+  color-scheme: light;
+}
+:root[data-tema='escuro'] {
   color-scheme: dark;
 }
 
@@ -225,14 +256,18 @@ button:focus-visible,
   outline-offset: 2px;
 }
 
-/* Fundo do mapa: quadriculado leve, agora riscado em claro sobre o escuro.
-   Feito com gradientes em vez de imagem pra não custar requisição nem
-   pixelar no zoom. (Chamava-se `.quadro-branco` enquanto o site era claro.) */
+/* Fundo do mapa: quadriculado leve. Feito com gradientes em vez de imagem pra
+   não custar requisição nem pixelar no zoom.
+
+   O risco inverte com o tema — escuro sobre o papel claro, claro sobre o
+   escuro. A cor sai de um token porque a linha do gradiente se repete quatro
+   vezes aqui, e `light-dark()` em cada uma seria fácil de mudar pela metade. */
 .quadro {
+  --risco: light-dark(rgba(22, 24, 29, 0.055), rgba(233, 233, 237, 0.04));
   background-color: var(--canvas);
   background-image:
-    linear-gradient(to right, rgba(233, 233, 237, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(233, 233, 237, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, var(--risco) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--risco) 1px, transparent 1px);
   background-size: 26px 26px;
 }
 
@@ -257,10 +292,10 @@ button:focus-visible,
   font-family: var(--fonte-resumo), sans-serif;
   font-size: var(--t-medio);
   line-height: 1.7;
-  /* Um passo mais SUAVE que o --ink. No claro isso era escurecer; no escuro é
-     tirar brilho: branco puro em texto longo sobre fundo escuro cansa a vista
-     e faz as letras "vibrarem". */
-  color: #CFD3E5;
+  /* Um passo mais suave que o `--ink`, nos dois sentidos: no claro é clarear
+     um pouco o preto, no escuro é tirar o brilho do branco. Texto longo no
+     extremo da escala cansa a vista e faz as letras "vibrarem". */
+  color: light-dark(#23262C, #CFD3E5);
 }
 .conteudo-resumo > * + * {
   margin-top: 0.9em;

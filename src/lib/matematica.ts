@@ -45,7 +45,7 @@ function renderizar(tex: string, emBloco: boolean) {
       // uma fórmula com erro de digitação sai em vermelho e o resumo continua
       // legível, em vez de derrubar a página inteira
       throwOnError: false,
-      errorColor: '#8A1224',
+      errorColor: 'var(--erro)',
       strict: false,
       trust: false,
     })

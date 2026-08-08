@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
+import { BotaoTema } from '@/components/BotaoTema'
 
 const cartaoResposta = [
   { num: '01', label: 'Biologia — PAS UEM', filled: 0, cor: MATERIAS.biologia.cor },
@@ -43,6 +44,7 @@ export default function LandingPage() {
             <a href="#materias" className="hover:text-[var(--ink)]">Matérias</a>
             <a href="#planos" className="hover:text-[var(--ink)]">Planos</a>
           </div>
+          <BotaoTema className="md:ml-0 ml-auto" />
           <Link
             href="/login"
             className="px-3 py-1.5 rounded-lg border border-[var(--acento)] text-[var(--acento)] font-medium text-sm hover:bg-[var(--acento-fraco)] hover:text-[var(--acento-claro)]"
@@ -84,7 +86,7 @@ export default function LandingPage() {
           {cartaoResposta.map((row) => (
             <div key={row.num} className="flex items-center gap-3 py-2.5">
               <span className="text-xs text-[var(--ink-faint)] w-[18px]">{row.num}</span>
-              <span className="text-[13px] flex-1 text-[#CFD3E5]">{row.label}</span>
+              <span className="text-[13px] flex-1 text-[var(--ink-soft)]">{row.label}</span>
               <div className="flex gap-1.5">
                 {[0, 1, 2].map((i) => (
                   <div
@@ -122,7 +124,7 @@ export default function LandingPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line-forte)] rounded-lg overflow-hidden">
           {materiasGrid.map((m) => (
-            <div key={m.slug} className="bg-[#1C1F2C] p-5.5 min-h-[140px] flex flex-col justify-between">
+            <div key={m.slug} className="bg-[var(--raised)] p-5.5 min-h-[140px] flex flex-col justify-between">
               <span
                 aria-hidden="true"
                 className="w-2 h-2 rounded-full"
@@ -152,7 +154,7 @@ export default function LandingPage() {
               key={p.nome}
               className={`bg-[var(--raised)] rounded-2xl p-7 flex flex-col gap-4.5 ${
                 p.destaque
-                  ? 'shadow-[0_0_0_1px_var(--acento),0_16px_40px_rgba(0,0,0,0.5)]'
+                  ? 'shadow-[0_0_0_1px_var(--acento),var(--sombra-profunda)]'
                   : 'shadow-[var(--sombra)]'
               }`}
             >

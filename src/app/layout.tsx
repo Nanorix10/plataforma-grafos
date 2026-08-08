@@ -60,16 +60,40 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#161826",
-  colorScheme: "dark",
+  // Uma cor de barra do navegador para cada tema, casando com `--paper`.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#161826" },
+  ],
+  colorScheme: "light dark",
 };
+
+/**
+ * Aplica o tema salvo ANTES da primeira pintura.
+ *
+ * Roda como script síncrono no `<head>`: se esperasse o React hidratar, quem
+ * escolheu claro veria o site escuro por uma fração de segundo a cada
+ * navegação — o clarão que todo site com tema salvo erra.
+ *
+ * Sem nada salvo, não escreve atributo nenhum e o `color-scheme: light dark`
+ * do CSS deixa o aparelho decidir. O `try/catch` cobre navegador com
+ * localStorage bloqueado (aba anônima restrita), onde o pior caso é cair na
+ * preferência do sistema.
+ */
+const scriptDeTema = `try{var t=localStorage.getItem('tema');if(t==='claro'||t==='escuro')document.documentElement.dataset.tema=t}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
       className={`h-full antialiased ${inter.variable} ${plexMono.variable} ${nunito.variable}`}
+      // o script abaixo escreve `data-tema` antes do React assumir; sem isto o
+      // React reclamaria de um atributo que não estava no HTML do servidor
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: scriptDeTema }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

@@ -8,6 +8,7 @@ import { MATERIAS } from '@/lib/materias'
 // `resumos.ts` importa `getSessao`, que depende de `next/headers`
 import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 import { alternarVisao } from './acoes'
+import { BotaoTema } from '@/components/BotaoTema'
 
 type Grupo = { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }
 
@@ -251,6 +252,7 @@ export default function Sidebar({
         <Link href="/resumos" className="marca font-medium text-sm truncate">
           Plataforma Grafos
         </Link>
+        <BotaoTema className="ml-auto" />
       </div>
 
       {/* Véu: fecha a gaveta ao tocar fora. Só existe com ela aberta. */}
@@ -384,9 +386,12 @@ export default function Sidebar({
           </form>
         ) : null}
 
-        <div className="text-[10.5px] text-[var(--ink-faint)] px-0.5">
-          plano: {plano}
-          {isAdmin && ' · admin'}
+        <div className="flex items-center gap-1">
+          <div className="text-[10.5px] text-[var(--ink-faint)] px-0.5">
+            plano: {plano}
+            {isAdmin && ' · admin'}
+          </div>
+          <BotaoTema className="ml-auto -my-1" />
         </div>
       </div>
       </aside>

@@ -107,12 +107,34 @@ escreve em `#CFD3E5`, então uma folha branca deixaria o Ronny digitando
 cinza-claro sobre branco. Se alguém clarear a folha, tem que clarear o texto
 junto, e aí o editor deixa de mostrar o que o aluno vê.
 
-**4b. O site tem UM tema, escuro, e ele não segue o sistema operacional.**
-Não há `@media (prefers-color-scheme)` nem alternador. Os tokens de
-`globals.css` são a única fonte de cor: se um componente precisa de um tom que
-não está lá, o tom entra no `:root` primeiro. Foi assim que a virada de claro
-pra escuro saiu quase toda no CSS, sem varrer arquivo por arquivo — e é o que
-mantém isso verdade na próxima vez.
+**4b. Dois temas, e quem escolhe é `color-scheme` — não uma segunda paleta.**
+Cada token traz os dois valores em `light-dark(claro, escuro)`. A alternativa
+seria repetir a paleta inteira num `@media (prefers-color-scheme)` E de novo
+num seletor `[data-tema]` — três cópias que divergem no primeiro ajuste. Assim
+o par vive lado a lado, onde é impossível mudar um e esquecer o outro.
+
+Sem escolha do aluno, o aparelho decide (`color-scheme: light dark`). Com
+escolha, `<html data-tema="claro|escuro">` fixa um dos dois. O botão
+(`components/BotaoTema.tsx`) cicla claro → escuro → seguir o aparelho; o
+terceiro estado existe porque, com só dois, quem clica uma vez fica preso e não
+volta a acompanhar o celular quando ele troca sozinho ao anoitecer.
+
+Duas coisas que parecem exagero e não são:
+
+- **O script inline no `<head>`** (`layout.tsx`) aplica o tema salvo antes da
+  primeira pintura. Esperar o React hidratar faria o site piscar no tema errado
+  a cada navegação. É ele que exige o `suppressHydrationWarning` no `<html>`.
+- **`useSyncExternalStore` no botão**, não `useState` + `useEffect`. O tema mora
+  fora do React (no DOM e no localStorage) e o servidor não sabe qual é; o hook
+  devolve `null` no servidor e o valor real no cliente, sem o `setState` dentro
+  de efeito que o lint (com razão) recusa.
+
+Os tokens de `globals.css` seguem sendo a única fonte de cor: se um componente
+precisa de um tom que não está lá, o tom entra no `:root` primeiro. Vale também
+para cor que o autor escolhe no editor e para as cores das matérias — as duas
+usam `light-dark()`, porque ficam gravadas no conteúdo e precisam ler bem nos
+dois temas. A exceção deliberada é a **faixa de números** da landing, que fica
+azul-marinho sempre: clareá-la tiraria o respiro de cor que ela existe para dar.
 
 **5. `getClaims()`, não `getUser()`.**
 `getClaims()` valida o JWT localmente; `getUser()` faz ida e volta na rede. Trocar

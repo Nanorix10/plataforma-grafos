@@ -130,7 +130,7 @@ export default async function ResumoPage({
                 <li key={b.slug}>
                   <Link
                     href={`/resumos/${b.slug}`}
-                    className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[#2A2D3C]"
+                    className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[var(--raised-hover)]"
                   >
                     <span className="text-sm font-medium truncate">
                       {b.titulo}

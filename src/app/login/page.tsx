@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { BotaoTema } from '@/components/BotaoTema'
 
 export default function LoginPage() {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
@@ -34,6 +35,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center px-6 md:px-24">
+      <BotaoTema className="fixed top-4 right-4" />
       <div className="w-full max-w-[360px]">
         <div className="marca font-medium text-[17px] mb-9">Plataforma Grafos</div>
 
@@ -63,7 +65,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="email" className="block text-xs text-[#CFD3E5] mb-1.5">
+            <label htmlFor="email" className="block text-xs text-[var(--ink-soft)] mb-1.5">
               E-mail
             </label>
             <input
@@ -83,7 +85,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="senha" className="block text-xs text-[#CFD3E5] mb-1.5">
+            <label htmlFor="senha" className="block text-xs text-[var(--ink-soft)] mb-1.5">
               Senha
             </label>
             <input

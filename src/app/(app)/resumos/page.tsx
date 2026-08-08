@@ -24,7 +24,7 @@ export default async function ResumosPage() {
             <div
               className={`rounded-lg p-4 h-full flex flex-col gap-1.5 ${
                 r.liberado
-                  ? 'bg-[var(--raised)] hover:bg-[#2A2D3C]'
+                  ? 'bg-[var(--raised)] hover:bg-[var(--raised-hover)]'
                   : 'bg-[var(--panel)] opacity-55'
               }`}
             >

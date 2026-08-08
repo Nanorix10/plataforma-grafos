@@ -23,10 +23,22 @@ import { TermoNegrito } from './termoNegrito'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import { salvarCorpoAuto } from './actions'
 
-/* Cores de texto claras: no tema escuro as antigas (#1D1B18, #8A1224…) eram
-   quase invisíveis sobre a folha. Mesmos matizes das matérias, pra que o
-   destaque dentro do resumo converse com o marcador da matéria. */
-const CORES = ['#E9E9ED', '#E08088', '#7FA8CF', '#8FAE94', '#C576A6', '#C98663', '#B2B6CA']
+/* Cores de texto do resumo, uma por tema.
+   A cor escolhida aqui é gravada no HTML do resumo, então acompanha o texto
+   para sempre — e um valor fixo só serviria a um dos temas: o branco da
+   primeira posição sumiria no papel claro, e o preto equivalente sumiria no
+   escuro. Com `light-dark()` a mesma marcação lê bem nos dois.
+   Os matizes são os das matérias, pra que o destaque dentro do resumo
+   converse com o marcador da disciplina. */
+const CORES = [
+  'light-dark(#16181D, #E9E9ED)', /* padrão: o próprio texto */
+  'light-dark(#C2334D, #E08088)',
+  'light-dark(#1F5F9E, #7FA8CF)',
+  'light-dark(#3F7848, #8FAE94)',
+  'light-dark(#9E2E70, #C576A6)',
+  'light-dark(#A65224, #C98663)',
+  'light-dark(#565B6B, #B2B6CA)',
+]
 
 /* Os grifos continuam pastéis claros — `.conteudo-resumo mark` força o texto
    escuro por cima deles, então seguem legíveis. */
@@ -565,7 +577,7 @@ export default function EditorCorpo({
       // `setAlvoFormula` pode ser capturado direto: setters do useState são
       // estáveis entre renders, então este closure nunca fica velho.
       InlineMath.configure({
-        katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+        katexOptions: { throwOnError: false, errorColor: 'var(--erro)', strict: false },
         onClick: (node, pos) =>
           setAlvoFormula({
             modo: 'editar',
@@ -575,7 +587,7 @@ export default function EditorCorpo({
           }),
       }),
       BlockMath.configure({
-        katexOptions: { throwOnError: false, errorColor: '#8A1224', strict: false },
+        katexOptions: { throwOnError: false, errorColor: 'var(--erro)', strict: false },
         onClick: (node, pos) =>
           setAlvoFormula({
             modo: 'editar',
