@@ -239,9 +239,14 @@ export default function Sidebar({
           <Ponto ativo={pathname === '/mapa'} /> Mapa de conexões
         </ItemNav>
         {isAdmin ? (
-          <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin')}>
-            <Ponto ativo={pathname.startsWith('/admin')} /> Editor
-          </ItemNav>
+          <>
+            <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin/editor')}>
+              <Ponto ativo={pathname.startsWith('/admin/editor')} /> Editor
+            </ItemNav>
+            <ItemNav href="/admin/pessoas" ativo={pathname.startsWith('/admin/pessoas')}>
+              <Ponto ativo={pathname.startsWith('/admin/pessoas')} /> Pessoas
+            </ItemNav>
+          </>
         ) : null}
       </nav>
 

@@ -61,6 +61,30 @@ o trigger `sync_conexoes_resumo` no Postgres lê o campo `corpo` com a regex
 `\[\[(.+?)\]\]` pra popular a tabela `conexoes`. Se alguém transformar o wikilink
 num nó customizado com atributos, o grafo e os backlinks param de funcionar.
 
+**1b. Cadastro é aberto; acesso é fechado por padrão.**
+Qualquer pessoa cria conta sozinha em `/login`. Um trigger em `auth.users`
+(`criar_plano_do_usuario`) abre a linha correspondente em `planos_usuarios` com
+`plano = 'nenhum'` e `ativo = false` — e `PLANO_PROCESSOS.nenhum` é lista vazia,
+então quem acabou de se cadastrar não enxerga resumo algum. Liberar é um ato
+explícito do admin em `/admin/pessoas`, feito quando o Pix cai.
+
+O e-mail é copiado para `planos_usuarios` de propósito: `auth.users` não é
+legível pelas policies normais, e o projeto roda só com a chave anônima (não há
+`service_role` em lugar nenhum). Sem essa cópia, a tela de gestão mostraria uma
+lista de UUIDs.
+
+Duas armadilhas resolvidas ali, que vão morder de novo se alguém mexer:
+
+- **`eh_admin()` é `security definer`.** As policies de `resumos` perguntam
+  "existe linha em `planos_usuarios` com `is_admin`?" direto, e funciona porque
+  é outra tabela. Numa policy da PRÓPRIA `planos_usuarios`, esse mesmo `select`
+  dispararia a policy de select dela, que dispararia de novo — recursão, e o
+  Postgres recusa. A função roda fora do RLS e corta o laço.
+- **O admin não tira o próprio selo.** O `with check` exige
+  `user_id <> auth.uid() or is_admin = true`. Sem isso, um clique errado na
+  própria linha tranca a pessoa para fora da gestão, e a única saída seria o
+  SQL Editor — exatamente o que a tela veio eliminar.
+
 **2. `isAdmin` ≠ `isAdminReal`.**
 `getSessao()` devolve os dois. `isAdmin` é a visão **efetiva** (o que a interface
 deve usar); `isAdminReal` é a permissão de verdade, usada só pra decidir se o botão
@@ -254,9 +278,18 @@ antes), os botões (contornados em vez de preenchidos) e o fundo do mapa
 (quadriculado escuro, classe `.quadro` — chamava-se `.quadro-branco`). A faixa
 de números da landing é nova.
 
-Falta: **pagamento automático** — hoje `planos_usuarios.ativo` é atualizado na mão
-depois de um Pix pessoal. Quando automatizar, um webhook do gateway (Asaas, Efí Bank
-ou PagBank) deve atualizar essa mesma coluna.
+Feito em agosto/2026: **gestão de pessoas** em `/admin/pessoas` — lista quem se
+cadastrou, libera ou bloqueia o acesso por plano, e dá ou tira o selo de admin.
+Antes disso, tudo isso exigia o SQL Editor do Supabase.
+
+Falta: **pagamento automático** — `planos_usuarios.ativo` continua sendo virado à
+mão depois de um Pix pessoal, só que agora por um botão e não por SQL. Quando
+automatizar, um webhook do gateway (Asaas, Efí Bank ou PagBank) deve atualizar
+essa mesma coluna, e a tela de pessoas segue valendo para os casos manuais.
+
+> Confirmação de e-mail é configuração do painel do Supabase (Authentication →
+> Providers → Email), não do código. Com ela ligada, quem se cadastra só entra
+> depois de clicar no link recebido; desligada, entra na hora.
 
 ## Publicação
 
