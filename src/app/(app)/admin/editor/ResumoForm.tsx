@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { salvarResumo, excluirResumo } from './actions'
 import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
@@ -23,21 +23,99 @@ type ResumoExistente = {
   processo_slug: string
   corpo: string
   definicao: string
+  pai_id: string | null
+}
+
+/** Resumo já existente, como candidato a receber este dentro dele. */
+type CandidatoPai = {
+  id: string
+  titulo: string
+  materia_slug: string
+  pai_id: string | null
 }
 
 const LIMITE_DEFINICAO = 180
 
+/**
+ * Lista de possíveis pais, indentada pela profundidade e já sem as opções
+ * inválidas.
+ *
+ * O que sai da lista: o próprio resumo e TODA a subárvore dele. Oferecer um
+ * descendente como pai criaria um ciclo — "Atrito dentro de Dinâmica, Dinâmica
+ * dentro de Atrito" — e a árvore deixaria de ter raiz. O trigger no banco
+ * recusaria de qualquer forma, mas com um erro cru na cara de quem salvou;
+ * melhor a opção nem aparecer.
+ */
+function opcoesPai(
+  candidatos: CandidatoPai[],
+  idAtual: string | undefined,
+  materia: string
+): { id: string; rotulo: string }[] {
+  // um resumo só pode morar dentro de outro da mesma matéria: ela é o
+  // guarda-chuva, e misturar matérias na mesma árvore quebraria a barra
+  // lateral, que agrupa por matéria antes de mostrar a hierarquia
+  const daMateria = candidatos.filter((c) => c.materia_slug === materia)
+
+  const proibidos = new Set<string>()
+  if (idAtual) {
+    proibidos.add(idAtual)
+    // varre até estabilizar: pega descendentes em qualquer profundidade sem
+    // depender de a lista vir em ordem de árvore
+    let cresceu = true
+    while (cresceu) {
+      cresceu = false
+      for (const c of daMateria) {
+        if (c.pai_id && proibidos.has(c.pai_id) && !proibidos.has(c.id)) {
+          proibidos.add(c.id)
+          cresceu = true
+        }
+      }
+    }
+  }
+
+  const filhosDe = new Map<string | null, CandidatoPai[]>()
+  for (const c of daMateria) {
+    if (proibidos.has(c.id)) continue
+    const chave = c.pai_id && !proibidos.has(c.pai_id) ? c.pai_id : null
+    filhosDe.set(chave, [...(filhosDe.get(chave) ?? []), c])
+  }
+
+  const saida: { id: string; rotulo: string }[] = []
+  function descer(paiId: string | null, nivel: number) {
+    const filhos = (filhosDe.get(paiId) ?? []).sort((a, b) =>
+      a.titulo.localeCompare(b.titulo, 'pt-BR')
+    )
+    for (const f of filhos) {
+      saida.push({ id: f.id, rotulo: `${'  '.repeat(nivel)}${nivel ? '└ ' : ''}${f.titulo}` })
+      descer(f.id, nivel + 1)
+    }
+  }
+  descer(null, 0)
+  return saida
+}
+
 export default function ResumoForm({
   resumo,
   titulos = [],
+  candidatosPai = [],
 }: {
   resumo?: ResumoExistente
   titulos?: string[]
+  candidatosPai?: CandidatoPai[]
 }) {
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
   const [slugEditadoManualmente, setSlugEditadoManualmente] = useState(!!resumo)
   const [definicao, setDefinicao] = useState(resumo?.definicao ?? '')
+  // a matéria é estado porque o seletor de pai depende dela: trocar de matéria
+  // troca a lista de assuntos onde este resumo pode morar
+  const [materia, setMateria] = useState(resumo?.materia_slug ?? '')
+  const [paiId, setPaiId] = useState(resumo?.pai_id ?? '')
+
+  const pais = useMemo(
+    () => opcoesPai(candidatosPai, resumo?.id, materia),
+    [candidatosPai, resumo?.id, materia]
+  )
 
   return (
     <form action={salvarResumo} className="flex flex-col gap-4">
@@ -112,7 +190,13 @@ export default function ResumoForm({
           <select
             name="materia_slug"
             required
-            defaultValue={resumo?.materia_slug ?? ''}
+            value={materia}
+            onChange={(e) => {
+              setMateria(e.target.value)
+              // o pai antigo é de outra matéria e deixaria a árvore
+              // atravessando disciplinas — volta pra raiz
+              setPaiId('')
+            }}
             className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
           >
             <option value="" disabled>Selecione…</option>
@@ -136,6 +220,34 @@ export default function ResumoForm({
             ))}
           </select>
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="pai_id" className="block text-[13px] text-[var(--ink-dim)] mb-1.5">
+          Está dentro de
+          <span className="ml-2 opacity-70">define a hierarquia no mapa e na barra lateral</span>
+        </label>
+        <select
+          id="pai_id"
+          name="pai_id"
+          value={paiId}
+          onChange={(e) => setPaiId(e.target.value)}
+          disabled={!materia}
+          className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)] disabled:opacity-50"
+        >
+          <option value="">
+            {materia ? '— nenhum (assunto principal da matéria) —' : 'Escolha a matéria primeiro'}
+          </option>
+          {pais.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.rotulo}
+            </option>
+          ))}
+        </select>
+        <span className="block text-[11.5px] text-[var(--ink-dim)] mt-1">
+          Deixe vazio para começar um assunto novo. A lista só mostra resumos da
+          mesma matéria, sem os que estão dentro deste.
+        </span>
       </div>
       </div>
 

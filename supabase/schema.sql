@@ -42,6 +42,10 @@ create table resumos (
   materia_slug text references materias(slug),
   processo_slug text references processos_seletivos(slug),
   corpo text not null default '', -- markdown com [[wikilinks]]
+  -- resumo em que este mora. null = está na raiz da matéria.
+  -- "contém" (estrutura à mão) é outro eixo, e não substitui `conexoes`, que
+  -- é "cita" (extraído dos [[wikilinks]]). Ver a migration de hierarquia.
+  pai_id uuid references resumos(id) on delete set null,
   criado_em timestamptz default now(),
   atualizado_em timestamptz default now()
 );

@@ -15,6 +15,8 @@ type No = {
   cor: string
   liberado: boolean
   definicao: string
+  /** id do resumo que contém este; null = assunto principal da matéria */
+  pai: string | null
 }
 
 /** Um item da árvore: a raiz, uma matéria ou um resumo. */
@@ -51,15 +53,34 @@ export default function MindMapView({
     // posição fixa e não anima, ao contrário do grafo de forças.
 
     // ---------- monta a árvore ----------
-    // A hierarquia vem da matéria de cada resumo, e não das ligações [[wikilink]]:
-    // os wikilinks formam um grafo sem raiz, e forçar uma árvore neles daria um
-    // desenho instável, que muda de forma a cada resumo novo. Matéria é uma
-    // estrutura que o autor já mantém e que o aluno já usa pra estudar.
-    const porMateria = new Map<string, No[]>()
+    // Dois níveis de estrutura, os dois escritos à mão pelo autor:
+    //   matéria  → o guarda-chuva de sempre
+    //   pai_id   → a hierarquia entre resumos, de profundidade livre
+    //
+    // Continua sem usar os [[wikilinks]] para isso, e a razão original vale:
+    // wikilinks formam um grafo sem raiz, e forçar uma árvore neles daria um
+    // desenho que muda de forma a cada resumo novo. A diferença é que agora a
+    // árvore não para nos dois níveis — "Atrito" pendura em "Dinâmica", que
+    // pendura em "Mecânica".
+    const filhosDe = new Map<string | null, No[]>()
     for (const n of nos) {
-      const lista = porMateria.get(n.materia)
-      if (lista) lista.push(n)
-      else porMateria.set(n.materia, [n])
+      const chave = n.pai ?? `materia:${n.materia}`
+      filhosDe.set(chave, [...(filhosDe.get(chave) ?? []), n])
+    }
+
+    // `vistos` corta ciclo: o banco já barra por trigger, mas quem desenha não
+    // pode travar num laço infinito se algum dado escapar
+    const vistos = new Set<string>()
+    function ramo(n: No, cor: string): Item {
+      vistos.add(n.id)
+      const filhos = (filhosDe.get(n.id) ?? []).filter((f) => !vistos.has(f.id))
+      return {
+        nome: n.titulo,
+        tipo: 'resumo' as const,
+        cor,
+        no: n,
+        filhos: filhos.map((f) => ramo(f, cor)),
+      }
     }
 
     const raiz: Item = {
@@ -67,17 +88,12 @@ export default function MindMapView({
       tipo: 'raiz',
       cor: 'var(--acento)',
       filhos: materias
-        .filter((m) => porMateria.has(m.slug))
+        .filter((m) => nos.some((n) => n.materia === m.slug))
         .map((m) => ({
           nome: m.nome,
           tipo: 'materia' as const,
           cor: m.cor,
-          filhos: (porMateria.get(m.slug) ?? []).map((n) => ({
-            nome: n.titulo,
-            tipo: 'resumo' as const,
-            cor: m.cor,
-            no: n,
-          })),
+          filhos: (filhosDe.get(`materia:${m.slug}`) ?? []).map((n) => ramo(n, m.cor)),
         })),
     }
 

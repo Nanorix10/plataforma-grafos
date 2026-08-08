@@ -2,14 +2,13 @@ import { cache } from 'react'
 import { getSessao } from '@/lib/sessao'
 import { MATERIAS } from '@/lib/materias'
 import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { montarArvore, type ResumoItem } from '@/lib/arvore'
 
-export type ResumoItem = {
-  slug: string
-  titulo: string
-  materia_slug: string
-  processo_slug: string
-  liberado: boolean
-}
+// A montagem da árvore mora em `lib/arvore.ts`, sem nada de servidor, porque a
+// barra lateral (componente de cliente) também precisa dela. Reexportado aqui
+// para quem já importava daqui não ter que saber dessa divisão.
+export { montarArvore, descendentes } from '@/lib/arvore'
+export type { ResumoItem, NoResumo } from '@/lib/arvore'
 
 // Lista usada pela barra lateral E pelas páginas. Memoizada por request pelo
 // `cache()`, então a sidebar e a página não fazem a mesma consulta duas vezes.
@@ -19,7 +18,7 @@ export const getResumos = cache(async (): Promise<ResumoItem[]> => {
 
   const { data } = await supabase
     .from('resumos')
-    .select('slug, titulo, materia_slug, processo_slug')
+    .select('id, slug, titulo, materia_slug, processo_slug, pai_id')
     .order('titulo')
 
   return (data ?? []).map((r) => ({
@@ -28,7 +27,9 @@ export const getResumos = cache(async (): Promise<ResumoItem[]> => {
   }))
 })
 
-// Agrupa por matéria, na ordem em que as matérias estão definidas.
+// Agrupa por matéria, na ordem em que as matérias estão definidas. Dentro de
+// cada matéria os resumos vêm em árvore, não em lista: a matéria é o
+// guarda-chuva, e a hierarquia de assuntos começa dentro dela.
 export function agruparPorMateria(resumos: ResumoItem[]) {
   const grupos = new Map<string, ResumoItem[]>()
 
@@ -42,5 +43,9 @@ export function agruparPorMateria(resumos: ResumoItem[]) {
   const orfaos = resumos.filter((r) => !conhecidas.has(r.materia_slug))
   if (orfaos.length > 0) grupos.set('outros', orfaos)
 
-  return [...grupos.entries()].map(([materia, itens]) => ({ materia, itens }))
+  return [...grupos.entries()].map(([materia, itens]) => ({
+    materia,
+    itens,
+    arvore: montarArvore(itens),
+  }))
 }

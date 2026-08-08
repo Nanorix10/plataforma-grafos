@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
-import type { ResumoItem } from '@/lib/resumos'
+// de `lib/arvore` e não de `lib/resumos`: este é um componente de cliente, e
+// `resumos.ts` importa `getSessao`, que depende de `next/headers`
+import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 import { alternarVisao } from './acoes'
 
-type Grupo = { materia: string; itens: ResumoItem[] }
+type Grupo = { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }
 
 function Chevron({ aberto }: { aberto: boolean }) {
   return (
@@ -64,6 +66,85 @@ function ItemNav({
   )
 }
 
+/**
+ * Um resumo na árvore, com os que moram dentro dele.
+ *
+ * A profundidade é livre, então isto se chama recursivamente. O recuo vem por
+ * `style` e não por classe do Tailwind: o nível não é um valor conhecido em
+ * tempo de build, e classe gerada em runtime (`pl-${n}`) não existe no CSS
+ * final. Cada nível ganha uma guia vertical, que é o que deixa ler de relance
+ * onde uma ramificação termina.
+ */
+function ItemArvore({
+  no,
+  pathname,
+  nivel,
+}: {
+  no: NoResumo
+  pathname: string
+  nivel: number
+}) {
+  const [aberto, setAberto] = useState(true)
+  const href = `/resumos/${no.slug}`
+  const ativo = pathname === href
+  const temFilhos = no.filhos.length > 0
+
+  return (
+    <li>
+      <div className="flex items-center gap-0.5" style={{ paddingLeft: nivel * 10 }}>
+        {temFilhos ? (
+          <button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            aria-label={aberto ? `Recolher ${no.titulo}` : `Expandir ${no.titulo}`}
+            className="w-[14px] h-[18px] shrink-0 flex items-center justify-center text-[var(--ink-faint)] hover:text-[var(--ink)] rounded focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+          >
+            <Chevron aberto={aberto} />
+          </button>
+        ) : (
+          // espaço reservado: sem ele, os resumos sem filhos ficariam
+          // desalinhados dos que têm
+          <span className="w-[14px] shrink-0" aria-hidden="true" />
+        )}
+
+        <Link
+          href={href}
+          title={no.liberado ? no.titulo : `${no.titulo} — fora do seu plano`}
+          aria-current={ativo ? 'page' : undefined}
+          className={`flex-1 min-w-0 block px-1.5 py-[5px] rounded-md text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+            ativo
+              ? 'shadow-[inset_0_0_0_1px_var(--line-forte)] text-[var(--ink)]'
+              : no.liberado
+                ? 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
+                : 'text-[var(--ink-faint)] hover:bg-[var(--sel)]'
+          }`}
+        >
+          {no.liberado ? null : <span aria-hidden="true" className="mr-1">🔒</span>}
+          {no.titulo}
+        </Link>
+
+        {temFilhos ? (
+          <span className="text-[10px] text-[var(--ink-faint)] pr-1 shrink-0 tabular-nums">
+            {no.filhos.length}
+          </span>
+        ) : null}
+      </div>
+
+      {temFilhos && aberto ? (
+        <ul
+          className="list-none m-0 p-0 shadow-[inset_1px_0_0_var(--line)]"
+          style={{ marginLeft: nivel * 10 + 7 }}
+        >
+          {no.filhos.map((f) => (
+            <ItemArvore key={f.slug} no={f} pathname={pathname} nivel={0} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
+
 export default function Sidebar({
   grupos,
   isAdmin,
@@ -81,11 +162,23 @@ export default function Sidebar({
   const [busca, setBusca] = useState('')
   const [fechados, setFechados] = useState<Set<string>>(new Set())
 
+  /**
+   * Buscando, a árvore vira lista.
+   *
+   * Manter a hierarquia durante a busca obrigaria a mostrar os ancestrais de
+   * cada resultado só para servirem de caminho — e o que se quer ao digitar é
+   * a lista curta do que casou, não a estrutura em volta. Sem busca, a árvore
+   * volta inteira. Ela é remontada a partir dos itens filtrados porque um
+   * resultado pode ter ficado sem o pai.
+   */
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
     if (!q) return grupos
     return grupos
-      .map((g) => ({ ...g, itens: g.itens.filter((i) => i.titulo.toLowerCase().includes(q)) }))
+      .map((g) => {
+        const itens = g.itens.filter((i) => i.titulo.toLowerCase().includes(q))
+        return { ...g, itens, arvore: montarArvore(itens) }
+      })
       .filter((g) => g.itens.length > 0)
   }, [grupos, busca])
 
@@ -151,7 +244,7 @@ export default function Sidebar({
           </p>
         )}
 
-        {filtrados.map(({ materia, itens }) => {
+        {filtrados.map(({ materia, itens, arvore }) => {
           const info = MATERIAS[materia as keyof typeof MATERIAS]
           const aberto = !fechados.has(materia) || !!busca
 
@@ -174,32 +267,10 @@ export default function Sidebar({
               </button>
 
               {aberto && (
-                <ul className="ml-[13px] border-l border-[var(--line)] pl-1.5">
-                  {itens.map((r) => {
-                    const href = `/resumos/${r.slug}`
-                    const ativo = pathname === href
-                    return (
-                      <li key={r.slug}>
-                        <Link
-                          href={href}
-                          title={r.liberado ? r.titulo : `${r.titulo} — fora do seu plano`}
-                          aria-current={ativo ? 'page' : undefined}
-                          className={`block px-2 py-[5px] rounded-md text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
-                            ativo
-                              ? 'shadow-[inset_0_0_0_1px_var(--line-forte)] text-[var(--ink)]'
-                              : r.liberado
-                                ? 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
-                                : 'text-[var(--ink-faint)] hover:bg-[var(--sel)]'
-                          }`}
-                        >
-                          {/* o cadeado é decorativo: a informação já está no
-                              title, então o leitor de tela não deve lê-lo */}
-                          {r.liberado ? null : <span aria-hidden="true" className="mr-1">🔒</span>}
-                          {r.titulo}
-                        </Link>
-                      </li>
-                    )
-                  })}
+                <ul className="list-none m-0 ml-[13px] border-l border-[var(--line)] pl-0.5 p-0">
+                  {arvore.map((no) => (
+                    <ItemArvore key={no.slug} no={no} pathname={pathname} nivel={0} />
+                  ))}
                 </ul>
               )}
             </div>

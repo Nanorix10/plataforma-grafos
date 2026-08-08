@@ -21,10 +21,20 @@ export async function salvarResumo(formData: FormData) {
     processo_slug: String(formData.get('processo_slug') ?? ''),
     corpo: String(formData.get('corpo') ?? ''),
     definicao: String(formData.get('definicao') ?? '').trim(),
+    // "" no <select> significa "na raiz da matéria" — vira null, não string
+    // vazia, senão o Postgres recusa por não ser um uuid válido.
+    pai_id: String(formData.get('pai_id') ?? '') || null,
   }
 
   if (!dados.slug || !dados.titulo) {
     throw new Error('Slug e título são obrigatórios.')
+  }
+
+  // O trigger `trg_checar_ciclo_resumo` é quem realmente barra ciclos; o
+  // <select> do formulário já esconde o próprio resumo e seus descendentes,
+  // mas isso é conveniência de interface e pode ser burlado.
+  if (id && dados.pai_id === id) {
+    throw new Error('Um resumo não pode estar dentro de si mesmo.')
   }
 
   const { error } = id

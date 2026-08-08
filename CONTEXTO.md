@@ -158,13 +158,40 @@ igual no editor e na página publicada — e tem uma media query que faz a tabel
 rolar sozinha no celular, porque não há garantia de que o `.tableWrapper` do
 TipTap venha dentro do HTML salvo.
 
-**9. O mapa mental tira a hierarquia da matéria, não dos `[[wikilinks]]`.**
+**9. A hierarquia é escrita à mão (`pai_id`), nunca deduzida dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
-de forma toda vez que um resumo novo aparece. A matéria de cada resumo já é uma
-hierarquia real, que o autor mantém e o aluno usa pra estudar. Matéria sem nenhum
-resumo não vira ramo. `/mapa?visao=mental` e `/mapa?visao=grafo` — o modo vive na
-URL pra poder ser favoritado e compartilhado.
+de forma toda vez que um resumo novo aparece. Por isso a estrutura é um campo que
+o autor preenche — "Está dentro de", no editor — e não algo inferido.
+
+São **dois eixos independentes**, e confundir os dois quebra os dois:
+
+| eixo | onde mora | significa | no mapa |
+|---|---|---|---|
+| contém | `resumos.pai_id` | estrutura, escrita à mão | linha cheia |
+| cita | tabela `conexoes` | referência, extraída do `[[…]]` | linha tracejada |
+
+A matéria segue sendo o guarda-chuva: a árvore começa dentro dela, e um resumo
+só pode ter pai da mesma matéria (o `<select>` do editor já filtra assim) —
+senão a barra lateral, que agrupa por matéria antes de mostrar a hierarquia,
+ficaria com um ramo atravessando disciplinas. Matéria sem resumo não vira ramo.
+
+No grafo (`/mapa?visao=grafo`) a matéria também é um nó, e cada assunto com
+filhos ganha um selo com o número deles: clicar no selo abre e fecha o ramo **no
+lugar**, sem trocar de tela. O selo é um alvo separado do nó de propósito —
+clicar no nó abre o resumo, e as duas ações não podem morar no mesmo pixel.
+As posições dos nós são guardadas entre expansões (`posicoes`, um `useRef`),
+senão o mapa inteiro saltaria para um layout novo a cada clique.
+
+Ciclos (A dentro de B, B dentro de A) são barrados pelo trigger
+`trg_checar_ciclo_resumo` no Postgres — o editor esconder as opções inválidas é
+conveniência de interface, e o banco é quem tem a palavra final (mesmo princípio
+das policies de RLS). Ainda assim, todo código que percorre a árvore carrega um
+`visitados`/`vistos`: quem desenha não pode travar num laço infinito se algum
+dado escapar.
+
+`/mapa?visao=mental` e `/mapa?visao=grafo` — o modo vive na URL pra poder ser
+favoritado e compartilhado.
 
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)

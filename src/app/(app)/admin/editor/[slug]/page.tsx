@@ -16,10 +16,13 @@ export default async function EditarResumoPage({
   const [{ data: resumo }, { data: todos }] = await Promise.all([
     supabase
       .from('resumos')
-      .select('id, slug, titulo, materia_slug, processo_slug, corpo, definicao')
+      .select('id, slug, titulo, materia_slug, processo_slug, corpo, definicao, pai_id')
       .eq('slug', slug)
       .single(),
-    supabase.from('resumos').select('titulo').order('titulo'),
+    // id, matéria e pai também: além do autocomplete de [[wikilinks]], esta
+    // lista alimenta o seletor "está dentro de", que precisa saber a árvore
+    // para não oferecer um descendente como pai.
+    supabase.from('resumos').select('id, titulo, materia_slug, pai_id').order('titulo'),
   ])
   if (!resumo) notFound()
 
@@ -37,7 +40,7 @@ export default async function EditarResumoPage({
           ver publicado
         </Link>
       </div>
-      <ResumoForm resumo={resumo} titulos={titulos} />
+      <ResumoForm resumo={resumo} titulos={titulos} candidatosPai={todos ?? []} />
     </div>
   )
 }

@@ -22,13 +22,19 @@ export default async function MapaPage({
   if (!userId) redirect('/login')
 
   const [{ data: resumos }, { data: conexoesRaw }] = await Promise.all([
-    supabase.from('resumos').select('slug, titulo, materia_slug, processo_slug, definicao'),
+    supabase
+      .from('resumos')
+      .select('id, slug, titulo, materia_slug, processo_slug, definicao, pai_id'),
     supabase
       .from('conexoes')
       .select('origem_id, destino_id, resumos!conexoes_origem_id_fkey(slug), destino:resumos!conexoes_destino_id_fkey(slug)'),
   ])
 
   const processosLiberados = PLANO_PROCESSOS[plano] ?? []
+
+  // o grafo trabalha por slug (é o que vai na URL do resumo), mas a hierarquia
+  // é gravada por id — este mapa traduz um no outro
+  const slugPorId = new Map((resumos ?? []).map((r) => [r.id, r.slug]))
 
   const nos = (resumos ?? []).map((r) => {
     const liberado = processosLiberados.includes(r.processo_slug)
@@ -38,6 +44,8 @@ export default async function MapaPage({
       materia: r.materia_slug,
       cor: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999',
       liberado,
+      // pai por slug, ou null se este resumo é assunto principal da matéria
+      pai: (r.pai_id && slugPorId.get(r.pai_id)) || null,
       // a definição de um tópico fora do plano não vai pro navegador: seria
       // entregar conteúdo pago pra quem não pagou
       definicao: liberado ? (r.definicao ?? '') : '',
@@ -82,7 +90,7 @@ export default async function MapaPage({
 
       <div className="flex-1 min-h-0">
         {visao === 'grafo' ? (
-          <GraphView nos={nos} links={links} />
+          <GraphView nos={nos} links={links} materias={listaMaterias} />
         ) : (
           <MindMapView nos={nos} materias={listaMaterias} titulo="Plataforma Grafos" />
         )}
