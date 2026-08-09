@@ -18,8 +18,9 @@ export default async function LinhaDoTempoPage() {
         <span className="text-[11.5px] text-[var(--ink-faint)] tabular-nums">
           {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
         </span>
-        <span className="hidden sm:inline text-[11.5px] text-[var(--ink-faint)] ml-2">
-          arraste para andar no tempo · roda do mouse para aproximar
+        <span className="hidden md:inline text-[11.5px] text-[var(--ink-faint)] ml-2">
+          arraste ou setas para andar · roda do mouse, duplo clique ou +/− para
+          aproximar · Home mostra tudo
         </span>
         {isAdmin ? (
           <Link
