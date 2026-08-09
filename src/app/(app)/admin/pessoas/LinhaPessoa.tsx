@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import BotaoEnviar from '@/components/BotaoEnviar'
 import { definirPlano, alternarAdmin } from './actions'
 import { PLANOS, type Pessoa } from './planos'
 
@@ -73,22 +74,24 @@ export default function LinhaPessoa({
 
           {/* Liberar e bloquear são o mesmo formulário com `ativo` diferente:
               o que muda é só o valor enviado, não a operação. */}
-          <button
-            type="submit"
+          {/* `name`/`value` também servem ao BotaoEnviar: é por eles que ele
+              descobre qual dos dois foi apertado e gira só nele. */}
+          <BotaoEnviar
             name="ativo"
             value="true"
+            carregando="Liberando…"
             className="botao botao-primario !rounded-lg !py-1 !px-3 text-[12.5px]"
           >
             Liberar
-          </button>
-          <button
-            type="submit"
+          </BotaoEnviar>
+          <BotaoEnviar
             name="ativo"
             value="false"
+            carregando="Bloqueando…"
             className="botao botao-neutro !rounded-lg !py-1 !px-3 text-[12.5px]"
           >
             Bloquear
-          </button>
+          </BotaoEnviar>
         </form>
 
         <form

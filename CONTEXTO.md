@@ -439,6 +439,38 @@ O filtro de matéria **não** vive na URL, ao contrário do `visao` do mapa: lá
 URL troca a tela inteira e vale ser favoritada, aqui cada clique num chip
 dispararia uma volta ao servidor para recarregar todos os eventos.
 
+**9e. Toda rota é dinâmica, e é por isso que existem os `loading.tsx`.**
+Nenhuma página do `(app)` é estática: todas buscam no Supabase, então o build as
+marca com `ƒ`. Sem tela de espera, clicar num link deixava a interface parada,
+sem sinal nenhum, até a página trocar — e a reação natural é clicar de novo.
+
+Os guias do Next (`node_modules/next/dist/docs/.../use-link-status.md`) são
+explícitos: prefira `loading.js` a indicador inline, porque a espera de rota é
+pré-carregada e a navegação vira instantânea. É o caminho seguido aqui. O
+`useLinkStatus` continua sem uso no projeto.
+
+Cada esqueleto imita a FORMA da página que vem — cabeçalho, grade de cartões, o
+eixo no meio da linha do tempo —, e não um "carregando" centralizado: a forma
+certa faz a troca parecer a página chegando, a palavra faz parecer que a página
+sumiu. O de `admin/` é um só para as três telas de lá, porque o `loading.tsx` de
+um segmento cobre os de baixo que não têm o próprio.
+
+A barra lateral não entra em esqueleto nenhum: ela vive no layout do grupo, e o
+ponto do `loading.tsx` é justamente que o layout continue na tela e clicável
+enquanto o miolo carrega.
+
+**9f. Botão que salva mostra que está salvando.**
+Toda escrita é server action, e a espera acontece do outro lado do mundo. O
+`components/BotaoEnviar.tsx` usa `useFormStatus` — que só enxerga o formulário
+ACIMA dele, e é por isso que é um componente separado em vez de um `pending`
+passado por prop.
+
+Ele desliga **todos** os botões do formulário durante o envio, não só o
+apertado: dois envios em voo gravariam a mesma linha duas vezes. E o par
+`name`/`value` existe para o formulário com mais de um botão de enviar, como o
+"Liberar"/"Bloquear" de `/admin/pessoas`: `useFormStatus` devolve o `FormData`
+que está indo, então dá para saber qual foi apertado e girar só nele.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
