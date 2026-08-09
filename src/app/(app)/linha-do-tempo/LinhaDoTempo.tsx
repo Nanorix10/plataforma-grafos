@@ -464,7 +464,12 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         /* `pan-y` e não `none`: o dedo continua rolando na vertical quando o
            desenho é mais alto que a caixa, e só o movimento horizontal chega
            aos nossos handlers, como deslocamento no tempo. */
-        style={{ touchAction: 'pan-y' }}
+        /* `scrollbar-gutter: stable` evita um laço de layout real: quando o
+           desenho passa da altura da caixa, aparece a barra de rolagem, que
+           estreita a caixa; mais estreita, os cartões se reempacotam e podem
+           caber em menos faixas; cabendo, a barra some e a caixa alarga de
+           novo. Com a calha sempre reservada, a largura para de oscilar. */
+        style={{ touchAction: 'pan-y', scrollbarGutter: 'stable' }}
         className="quadro relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden select-none cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acento)]"
       >
         <div className="relative" style={{ height: alturaConteudo }}>
