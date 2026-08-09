@@ -5,6 +5,7 @@ import { salvarResumo, excluirResumo } from './actions'
 import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
 import EditorCorpo from './EditorCorpo'
+import BotaoEnviar from '@/components/BotaoEnviar'
 
 function slugify(texto: string) {
   return texto
@@ -263,12 +264,9 @@ export default function ResumoForm({
       </div>
 
       <div className="flex gap-3 mt-2">
-        <button
-          type="submit"
-          className="botao botao-primario !rounded-lg py-2.5 px-6 text-sm"
-        >
+        <BotaoEnviar className="botao botao-primario !rounded-lg py-2.5 px-6 text-sm">
           Salvar
-        </button>
+        </BotaoEnviar>
         {resumo && (
           <button
             type="submit"

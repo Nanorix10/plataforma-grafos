@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
 // de `lib/arvore` e não de `lib/resumos`: este é um componente de cliente, e
 // `resumos.ts` importa `getSessao`, que depende de `next/headers`
@@ -206,6 +206,36 @@ export default function Sidebar({
   }, [menuAberto])
 
   /**
+   * `/` põe o cursor na busca, de qualquer lugar do site.
+   *
+   * A busca é a porta de entrada para tudo aqui — a árvore pode ter dezenas de
+   * resumos —, e alcançá-la custava tirar a mão do teclado e mirar. No celular
+   * o mesmo atalho abre a gaveta antes, senão o campo estaria fora da tela.
+   *
+   * A guarda de `isContentEditable` e de campo é o que impede o atalho de
+   * roubar a barra que o autor está digitando dentro do editor de resumo.
+   */
+  const buscaRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      const alvo = e.target as HTMLElement | null
+      if (
+        alvo &&
+        (alvo.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvo.tagName))
+      ) {
+        return
+      }
+      e.preventDefault()
+      setMenuAberto(true)
+      buscaRef.current?.focus()
+    }
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  }, [])
+
+  /**
    * Buscando, a árvore vira lista.
    *
    * Manter a hierarquia durante a busca obrigaria a mostrar os ancestrais de
@@ -301,15 +331,40 @@ export default function Sidebar({
           Plataforma Grafos
         </Link>
 
-        <input
-          type="search"
-          name="busca"
-          aria-label="Buscar resumo"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar resumo…"
-          className="campo text-[12.5px] !py-1.5"
-        />
+        <div className="relative">
+          <input
+            ref={buscaRef}
+            type="search"
+            name="busca"
+            aria-label="Buscar resumo"
+            aria-keyshortcuts="/"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            // Esc limpa antes de sair: com o campo preenchido, a árvore fica
+            // filtrada e some o caminho de volta para o resto dos resumos
+            onKeyDown={(e) => {
+              if (e.key !== 'Escape') return
+              if (busca) {
+                e.stopPropagation()
+                setBusca('')
+              } else {
+                e.currentTarget.blur()
+              }
+            }}
+            placeholder="Buscar resumo…"
+            className="campo text-[12.5px] !py-1.5 !pr-7"
+          />
+          {/* a dica do atalho some quando o campo está em uso, para não
+              disputar espaço com o que está sendo digitado */}
+          {busca ? null : (
+            <kbd
+              aria-hidden="true"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--ink-faint)] border border-[var(--line-forte)] rounded px-1 leading-[1.4] pointer-events-none"
+            >
+              /
+            </kbd>
+          )}
+        </div>
       </div>
 
       {/* navegação fixa */}

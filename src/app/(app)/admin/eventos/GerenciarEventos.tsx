@@ -10,6 +10,7 @@ import {
   rotuloDoEvento,
   type Evento,
 } from '@/lib/tempo'
+import BotaoEnviar from '@/components/BotaoEnviar'
 import { salvarEvento, excluirEvento } from './actions'
 
 type ResumoOpcao = { id: string; titulo: string; materia_slug: string }
@@ -264,9 +265,7 @@ export default function GerenciarEventos({
         </div>
 
         <div className="flex gap-2.5 items-center">
-          <button type="submit" className="botao botao-primario !rounded-lg px-5 py-2 text-sm">
-            {editando ? 'Salvar alterações' : 'Adicionar evento'}
-          </button>
+          <BotaoEnviar>{editando ? 'Salvar alterações' : 'Adicionar evento'}</BotaoEnviar>
           {editando ? (
             <button
               type="button"
