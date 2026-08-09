@@ -38,21 +38,25 @@ const JANELA_MINIMA = 5
    marcas invisíveis a cada quadro. */
 const JANELA_MAXIMA = 20000
 
-const ALTURA_FAIXA = 26
-/* Folga entre o eixo e a primeira faixa de cada lado. Embaixo é maior porque é
-   ali que moram os anos escritos — sem a diferença, o primeiro evento de baixo
-   sentaria em cima do "1453". */
-const FOLGA_CIMA = 14
-const FOLGA_BAIXO = 26
-const PADDING_V = 22
-const FOLGA = 12
+/* O cartão do evento tem duas linhas — título e data —, então a faixa é bem
+   mais alta do que era quando o rótulo era só um texto solto. */
+const ALTURA_CARTAO = 38
+const ALTURA_FAIXA = 46
+/* Folga entre o eixo e o primeiro cartão de cada lado. Embaixo é maior porque
+   é ali que moram os anos escritos — sem a diferença, o primeiro cartão de
+   baixo sentaria em cima do "1453". */
+const FOLGA_CIMA = 18
+const FOLGA_BAIXO = 30
+const PADDING_V = 16
+const FOLGA = 10
+const DURACAO_ANIMACAO = 420
 
 type Janela = { de: number; ate: number }
 type Lado = 'cima' | 'baixo'
 
-/** Largura aproximada do rótulo, em px, para o empacotamento não sobrepor. */
-function larguraRotulo(titulo: string) {
-  return titulo.length * 6.4 + 26
+/** Largura aproximada do cartão, em px, para o empacotamento não sobrepor. */
+function larguraCartao(titulo: string, data: string) {
+  return Math.max(titulo.length * 7.1, data.length * 6.2) + 26
 }
 
 /**
@@ -63,7 +67,7 @@ function larguraRotulo(titulo: string) {
  * densidade e erraria isso, produzindo marcas de 37 em 37 anos.
  */
 function passoDoEixo(span: number, largura: number) {
-  const alvo = Math.max(1, Math.round(largura / 90))
+  const alvo = Math.max(1, Math.round(largura / 100))
   const bruto = span / alvo
   const opcoes = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
   return opcoes.find((o) => o >= bruto) ?? 10000
@@ -72,7 +76,11 @@ function passoDoEixo(span: number, largura: number) {
 export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   const caixaRef = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
+  const [altura, setAltura] = useState(0)
   const [selecionado, setSelecionado] = useState<Evento | null>(null)
+  const [sobre, setSobre] = useState<string | null>(null)
+  /** x do ponteiro dentro da caixa, para o fio-guia que lê o ano ao vivo. */
+  const [guia, setGuia] = useState<number | null>(null)
 
   /* As matérias começam TODAS ligadas, e o chip só existe para as que têm
      evento. Uma lista fixa das cinco humanidades criaria chip morto agora (o
@@ -110,13 +118,19 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
 
   const [janela, setJanela] = useState<Janela>(() => janelaCheia(eventos))
 
-  // mede a caixa; sem largura real não dá para posicionar nada
+  // mede a caixa; a ALTURA importa tanto quanto a largura, porque é ela que
+  // decide onde fica o meio da página
   useEffect(() => {
     const el = caixaRef.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => setLargura(e.contentRect.width))
+    const ro = new ResizeObserver(([e]) => {
+      setLargura(e.contentRect.width)
+      setAltura(e.contentRect.height)
+    })
     ro.observe(el)
-    setLargura(el.getBoundingClientRect().width)
+    const r = el.getBoundingClientRect()
+    setLargura(r.width)
+    setAltura(r.height)
     return () => ro.disconnect()
   }, [])
 
@@ -125,10 +139,49 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
     (ano: number) => ((ano - janela.de) / span) * largura,
     [janela.de, span, largura]
   )
+  const anoEm = useCallback(
+    (px: number) => janela.de + (px / Math.max(1, largura)) * span,
+    [janela.de, span, largura]
+  )
+
+  /* ---- movimento animado ----
+     Os botões de era saltam de um século para outro; sem transição, o eixo
+     "pisca" para outro lugar e o aluno perde a noção de para onde foi. A
+     animação existe para preservar essa continuidade, e por isso é desligada
+     por completo em `prefers-reduced-motion`, onde ela vira só desconforto. */
+  const animRef = useRef<number | null>(null)
+  const pararAnimacao = useCallback(() => {
+    if (animRef.current !== null) cancelAnimationFrame(animRef.current)
+    animRef.current = null
+  }, [])
+  useEffect(() => pararAnimacao, [pararAnimacao])
+
+  const irPara = useCallback(
+    (destino: Janela) => {
+      pararAnimacao()
+      const menos = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (menos) return setJanela(destino)
+
+      const inicio = janela
+      const t0 = performance.now()
+      const passo = (t: number) => {
+        const p = Math.min(1, (t - t0) / DURACAO_ANIMACAO)
+        const e = 1 - Math.pow(1 - p, 3) // easeOutCubic
+        setJanela({
+          de: inicio.de + (destino.de - inicio.de) * e,
+          ate: inicio.ate + (destino.ate - inicio.ate) * e,
+        })
+        animRef.current = p < 1 ? requestAnimationFrame(passo) : null
+      }
+      animRef.current = requestAnimationFrame(passo)
+    },
+    [janela, pararAnimacao]
+  )
 
   /** Aplica zoom mantendo fixo o ano que está sob o ponteiro. */
   const aplicarZoom = useCallback(
     (fator: number, ancoraPx: number) => {
+      pararAnimacao()
       setJanela((j) => {
         const s = j.ate - j.de
         const novo = Math.min(JANELA_MAXIMA, Math.max(JANELA_MINIMA, s * fator))
@@ -138,7 +191,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         return { de: anoAncora - frac * novo, ate: anoAncora + (1 - frac) * novo }
       })
     },
-    [largura]
+    [largura, pararAnimacao]
   )
 
   /* Roda do mouse dá zoom, e por isso precisa de `preventDefault` — senão a
@@ -168,12 +221,16 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
 
   function aoPressionar(e: React.PointerEvent) {
     if (e.button !== 0) return
+    pararAnimacao()
     e.currentTarget.setPointerCapture(e.pointerId)
     arrasto.current = { x: e.clientX, de: janela.de, ate: janela.ate }
     arrastou.current = false
   }
 
   function aoMover(e: React.PointerEvent) {
+    const r = e.currentTarget.getBoundingClientRect()
+    setGuia(e.clientX - r.left)
+
     const a = arrasto.current
     if (!a || largura === 0) return
     if (Math.abs(e.clientX - a.x) > 4) arrastou.current = true
@@ -189,6 +246,32 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
     arrasto.current = null
   }
 
+  /* Teclado: a linha do tempo é uma região focável, e sem isto ela seria a
+     única parte do site que só funciona com mouse. */
+  function aoTeclar(e: React.KeyboardEvent) {
+    const passo = span * 0.18
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      pararAnimacao()
+      setJanela((j) => ({ de: j.de - passo, ate: j.ate - passo }))
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      pararAnimacao()
+      setJanela((j) => ({ de: j.de + passo, ate: j.ate + passo }))
+    } else if (e.key === '+' || e.key === '=') {
+      e.preventDefault()
+      aplicarZoom(1 / 1.4, largura / 2)
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault()
+      aplicarZoom(1.4, largura / 2)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      irPara(janelaCheia(visiveis))
+    } else if (e.key === 'Escape') {
+      setSelecionado(null)
+    }
+  }
+
   /**
    * Distribui os eventos dos DOIS lados do eixo central.
    *
@@ -198,7 +281,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
    * daquele mesmo lado — trocar de lado quebraria a alternância e, com ela, a
    * leitura de "um acima, um abaixo" que orienta o olho.
    *
-   * Refeito a cada zoom porque a conta é em PIXEL, não em ano: o rótulo tem
+   * Refeito a cada zoom porque a conta é em PIXEL, não em ano: o cartão tem
    * largura fixa na tela, então dois eventos que se sobrepõem afastados podem
    * caber lado a lado de perto.
    */
@@ -210,7 +293,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
       e: Evento
       x1: number
       x2: number
-      xRotulo: number
+      xCartao: number
       lado: Lado
       faixa: number
     }[] = []
@@ -220,25 +303,25 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
       const x1 = escala(e.ano_inicio)
       const periodo = e.ano_fim !== null
       const x2 = periodo ? escala(e.ano_fim as number) : x1
+      const larg = larguraCartao(e.titulo, rotuloDoEvento(e))
 
-      /* Período que atravessa a tela inteira teria o rótulo ancorado fora dela,
+      /* Período que atravessa a tela inteira teria o cartão ancorado fora dela,
          à esquerda — o aluno estaria DENTRO da Idade Média sem ler o nome dela.
-         Aqui o rótulo encosta na borda e continua visível enquanto a barra
-         estiver passando. O conector acompanha, e segue caindo sobre a barra. */
-      const xRotulo =
-        periodo && x1 < 4 && x2 > 4 ? Math.min(4, x2 - larguraRotulo(e.titulo)) : x1
+         Aqui o cartão encosta na borda e continua visível enquanto a barra
+         estiver passando. A haste acompanha, e segue caindo sobre a barra. */
+      const xCartao = periodo && x1 < 6 && x2 > 6 ? Math.min(6, x2 - larg) : x1
 
-      const extensao = Math.max(x2, xRotulo + larguraRotulo(e.titulo))
+      const extensao = Math.max(x2, xCartao + larg)
       // fora da tela não é desenhado nem ocupa faixa: com zoom fundo, isso é a
       // diferença entre desenhar 20 eventos e desenhar todos os do banco
-      if (extensao < -FOLGA || Math.min(x1, xRotulo) > largura + FOLGA) continue
+      if (extensao < -FOLGA || Math.min(x1, xCartao) > largura + FOLGA) continue
 
-      const inicio = Math.min(x1, xRotulo)
+      const inicio = Math.min(x1, xCartao)
       let faixa = fim[lado].findIndex((f) => inicio > f + FOLGA)
       if (faixa === -1) faixa = fim[lado].length
       fim[lado][faixa] = extensao
 
-      saida.push({ e, x1, x2, xRotulo, lado, faixa })
+      saida.push({ e, x1, x2, xCartao, lado, faixa })
       lado = lado === 'cima' ? 'baixo' : 'cima'
     }
 
@@ -249,9 +332,16 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
     }
   }, [visiveis, escala, largura])
 
-  /** Onde o eixo central mora, em px do topo da área desenhável. */
-  const centro = PADDING_V + faixasCima * ALTURA_FAIXA + FOLGA_CIMA
-  const alturaConteudo = centro + FOLGA_BAIXO + faixasBaixo * ALTURA_FAIXA + PADDING_V
+  /* ---- o eixo fica no MEIO ----
+     A altura desenhada é o DOBRO do lado mais cheio, e não a soma dos dois.
+     Assim o meio do conteúdo é sempre o eixo, mesmo com quatro faixas em cima
+     e uma embaixo — somando, a linha escorregaria para longe do centro a cada
+     zoom. E como a altura nunca é menor que a da caixa, quando tudo cabe o
+     eixo cai exatamente no meio da tela. */
+  const precisaCima = FOLGA_CIMA + faixasCima * ALTURA_FAIXA + PADDING_V
+  const precisaBaixo = FOLGA_BAIXO + faixasBaixo * ALTURA_FAIXA + PADDING_V
+  const alturaConteudo = Math.max(altura, 2 * Math.max(precisaCima, precisaBaixo))
+  const centro = alturaConteudo / 2
 
   /** Marcas do eixo, em anos redondos dentro da janela visível. */
   const marcas = useMemo(() => {
@@ -313,7 +403,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
             <button
               key={era.nome}
               type="button"
-              onClick={() => setJanela({ de: era.de, ate: era.ate })}
+              onClick={() => irPara({ de: era.de, ate: era.ate })}
               className="rounded-md px-2 py-1 text-[11.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
             >
               {era.nome}
@@ -321,13 +411,13 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
           ))}
           <button
             type="button"
-            onClick={() => setJanela(janelaCheia(visiveis))}
+            onClick={() => irPara(janelaCheia(visiveis))}
             className="rounded-md px-2 py-1 text-[11.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             Tudo
           </button>
-          {/* Zoom por botão além da roda: é o único caminho no celular, e o
-              único que funciona por teclado. */}
+          {/* Zoom por botão além da roda: é o único caminho no celular, e um
+              dos dois que funcionam por teclado (o outro é a tecla +). */}
           <button
             type="button"
             onClick={() => aplicarZoom(1 / 1.4, largura / 2)}
@@ -350,10 +440,19 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
       {/* ---- o eixo ---- */}
       <div
         ref={caixaRef}
+        tabIndex={0}
+        role="group"
+        aria-label="Linha do tempo. Setas andam no tempo, mais e menos aproximam, Home mostra tudo."
         onPointerDown={aoPressionar}
         onPointerMove={aoMover}
         onPointerUp={aoSoltar}
         onPointerCancel={aoSoltar}
+        onPointerLeave={() => setGuia(null)}
+        onDoubleClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect()
+          aplicarZoom(1 / 2, e.clientX - r.left)
+        }}
+        onKeyDown={aoTeclar}
         // fase de captura: roda ANTES do onClick do evento, que é o único
         // jeito de engolir o clique que fecha um arrasto
         onClickCapture={(e) => {
@@ -362,11 +461,11 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
             e.preventDefault()
           }
         }}
-        /* `pan-y` e não `none`: o dedo continua rolando a lista de faixas na
-           vertical (que é navegação normal da página), e só o movimento
-           horizontal chega aos nossos handlers, como deslocamento no tempo. */
+        /* `pan-y` e não `none`: o dedo continua rolando na vertical quando o
+           desenho é mais alto que a caixa, e só o movimento horizontal chega
+           aos nossos handlers, como deslocamento no tempo. */
         style={{ touchAction: 'pan-y' }}
-        className="quadro relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden select-none cursor-grab active:cursor-grabbing"
+        className="quadro relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden select-none cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acento)]"
       >
         <div className="relative" style={{ height: alturaConteudo }}>
           {/* linhas verticais dos anos, atrás de tudo */}
@@ -378,6 +477,26 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
               style={{ left: escala(ano) }}
             />
           ))}
+
+          {/* ---- fio-guia ----
+              Segue o ponteiro e lê o ano ali. Numa escala linear que vai de
+              -3500 a 2026, "onde exatamente eu estou?" é a pergunta constante,
+              e as marcas redondas sozinhas obrigam a interpolar de cabeça. */}
+          {guia !== null && largura > 0 ? (
+            <div
+              aria-hidden="true"
+              className="absolute top-0 bottom-0 pointer-events-none"
+              style={{ left: guia }}
+            >
+              <div className="absolute top-0 bottom-0 w-px bg-[var(--acento)] opacity-35" />
+              <div
+                className="absolute -translate-x-1/2 rounded px-1.5 py-0.5 text-[10.5px] tabular-nums whitespace-nowrap bg-[var(--acento)] text-[var(--page)]"
+                style={{ top: centro - 30 }}
+              >
+                {formatarAno(Math.round(anoEm(guia)))}
+              </div>
+            </div>
+          ) : null}
 
           {/* ---- o eixo central ----
               É dele que os eventos se abrem, para cima e para baixo. Os anos
@@ -395,40 +514,41 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
               className="absolute flex flex-col items-center"
               style={{ left: escala(ano), top: centro, transform: 'translateX(-50%)' }}
             >
-              <span className="w-px h-[5px] bg-[var(--line-forte)]" />
-              <span className="text-[10.5px] text-[var(--ink-faint)] tabular-nums whitespace-nowrap mt-0.5">
+              <span className="w-px h-[6px] bg-[var(--line-forte)]" />
+              <span className="text-[11px] text-[var(--ink-faint)] tabular-nums whitespace-nowrap mt-0.5">
                 {formatarAno(ano)}
               </span>
             </div>
           ))}
 
-          {colocados.map(({ e, x1, x2, xRotulo, lado, faixa }) => {
+          {colocados.map(({ e, x1, x2, xCartao, lado, faixa }) => {
             const cores = coresDoEvento(e.materia_slugs)
             const periodo = e.ano_fim !== null
             const aberto = selecionado?.id === e.id
-            const alturaCaixa = ALTURA_FAIXA - 6
+            const realce = aberto || sobre === e.id
 
-            const topoCaixa =
+            const topoCartao =
               lado === 'cima'
                 ? centro - FOLGA_CIMA - (faixa + 1) * ALTURA_FAIXA
                 : centro + FOLGA_BAIXO + faixa * ALTURA_FAIXA
 
-            // o conector sai da borda da caixa que olha para o eixo
-            const bordaProxima = lado === 'cima' ? topoCaixa + alturaCaixa : topoCaixa
-            const topoConector = lado === 'cima' ? bordaProxima : centro
-            const alturaConector = Math.max(0, Math.abs(centro - bordaProxima))
+            // a haste sai da borda do cartão que olha para o eixo
+            const bordaProxima = lado === 'cima' ? topoCartao + ALTURA_CARTAO : topoCartao
+            const topoHaste = lado === 'cima' ? bordaProxima : centro
+            const alturaHaste = Math.max(0, Math.abs(centro - bordaProxima))
 
             return (
               <div key={e.id}>
                 {/* haste ligando o evento à sua data no eixo */}
                 <div
                   aria-hidden="true"
-                  className="absolute w-px"
+                  className="absolute"
                   style={{
-                    left: xRotulo,
-                    top: topoConector,
-                    height: alturaConector,
-                    background: aberto ? 'var(--acento)' : 'var(--line-forte)',
+                    left: xCartao,
+                    top: topoHaste,
+                    height: alturaHaste,
+                    width: realce ? 2 : 1,
+                    background: realce ? 'var(--acento)' : 'var(--line-forte)',
                   }}
                 />
 
@@ -437,22 +557,26 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
                 {periodo ? (
                   <div
                     aria-hidden="true"
-                    className="absolute h-[7px] rounded-full"
+                    className="absolute rounded-full"
                     style={{
                       left: x1,
-                      width: Math.max(3, x2 - x1),
-                      top: centro - 2.5,
+                      width: Math.max(4, x2 - x1),
+                      height: realce ? 12 : 10,
+                      top: centro - (realce ? 5 : 4),
                       background: fundoDoMarcador(cores),
                     }}
                   />
                 ) : (
                   <div
                     aria-hidden="true"
-                    className="absolute w-[9px] h-[9px] rounded-full overflow-hidden"
+                    className="absolute rounded-full"
                     style={{
-                      left: x1 - 4.5,
-                      top: centro - 3.5,
+                      width: realce ? 16 : 13,
+                      height: realce ? 16 : 13,
+                      left: x1 - (realce ? 8 : 6.5),
+                      top: centro - (realce ? 7 : 5.5),
                       background: fundoDoMarcador(cores),
+                      boxShadow: realce ? '0 0 0 3px var(--acento-fraco)' : undefined,
                     }}
                   />
                 )}
@@ -460,21 +584,28 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
                 <button
                   type="button"
                   onClick={() => setSelecionado(aberto ? null : e)}
+                  onPointerEnter={() => setSobre(e.id)}
+                  onPointerLeave={() => setSobre((s) => (s === e.id ? null : s))}
+                  onFocus={() => setSobre(e.id)}
+                  onBlur={() => setSobre((s) => (s === e.id ? null : s))}
                   aria-pressed={aberto}
-                  title={`${e.titulo} — ${rotuloDoEvento(e)}`}
-                  className="absolute flex items-center rounded px-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+                  className="absolute flex flex-col justify-center rounded-lg border px-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
                   style={{
-                    left: xRotulo,
-                    top: topoCaixa,
-                    height: alturaCaixa,
-                    background: aberto ? 'var(--acento-fraco)' : undefined,
+                    left: xCartao,
+                    top: topoCartao,
+                    height: ALTURA_CARTAO,
+                    background: realce ? 'var(--raised-hover)' : 'var(--raised)',
+                    borderColor: realce ? 'var(--acento)' : 'var(--line-forte)',
                   }}
                 >
                   <span
-                    className="text-[11.5px] whitespace-nowrap"
+                    className="text-[13px] font-medium leading-tight whitespace-nowrap"
                     style={{ color: corDoRotulo(cores) }}
                   >
                     {e.titulo}
+                  </span>
+                  <span className="text-[10.5px] leading-tight text-[var(--ink-faint)] tabular-nums whitespace-nowrap">
+                    {rotuloDoEvento(e)}
                   </span>
                 </button>
               </div>
@@ -484,7 +615,7 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
           {visiveis.length === 0 ? (
             <p
               className="absolute inset-x-0 text-center text-[13px] text-[var(--ink-faint)]"
-              style={{ top: centro + FOLGA_BAIXO + 18 }}
+              style={{ top: centro + FOLGA_BAIXO + 22 }}
             >
               {eventos.length === 0
                 ? 'Nenhum evento cadastrado ainda.'
