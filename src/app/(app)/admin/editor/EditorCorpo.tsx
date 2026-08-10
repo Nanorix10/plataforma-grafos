@@ -47,7 +47,16 @@ const CORES = [
 /* Os grifos continuam pastéis claros — `.conteudo-resumo mark` força o texto
    escuro por cima deles, então seguem legíveis. */
 const MARCAS = ['#FFF3A3', '#C9EFC4', '#BFE0FF', '#FFD1DC']
-const TAMANHOS = ['14px', '16px', '18px', '22px', '28px']
+/* Atalhos da `datalist`. Agora que a faixa vai de 1 a 100, os dois extremos
+   entram na lista: sem eles, chegar a 100 exige digitar os três dígitos, e o
+   campo tem 52px de largura justamente porque ninguém quer digitar ali. */
+const TAMANHOS = ['8px', '14px', '16px', '18px', '22px', '28px', '48px', '100px']
+
+/* A faixa que o autor pediu. Vive em constante porque o número aparece em três
+   lugares — `min`, `max` e a validação do que foi digitado — e três literais
+   soltos divergiriam no primeiro ajuste. */
+const TAMANHO_MINIMO = 1
+const TAMANHO_MAXIMO = 100
 
 /* Símbolos tirados dos resumos de Física: são os que apareciam colados de
    fora, um a um. Agrupados como se lê, não em ordem de código. */
@@ -273,14 +282,18 @@ function Barra({
 
       {/* Tamanho é campo numérico livre, não uma lista fechada: os cinco
           valores de antes cobriam o que se imaginou na mesa, não o que o texto
-          pede. A `datalist` mantém os atalhos comuns a um clique, e os limites
-          (8–96) só barram o que quebraria a leitura. Vazio = tamanho padrão do
-          corpo do resumo. */}
+          pede. A `datalist` mantém os atalhos comuns a um clique. Vazio =
+          tamanho padrão do corpo do resumo.
+
+          A faixa é 1–100 porque foi o pedido, e não porque 1 e 2 sejam
+          tamanhos úteis: abaixo de uns 6px a letra deixa de ser legível na
+          tela, e o que o autor vê é uma tarja cinza. Fica valendo assim mesmo
+          — quem escreve é quem sabe o que quer, e o Ctrl+Z desfaz. */}
       <span className="inline-flex items-center gap-1 shrink-0">
         <input
           type="number"
-          min={8}
-          max={96}
+          min={TAMANHO_MINIMO}
+          max={TAMANHO_MAXIMO}
           step={1}
           list="tamanhos-de-texto"
           aria-label="Tamanho do texto, em pixels"
@@ -297,7 +310,7 @@ function Barra({
             const n = Number(v)
             // fora da faixa, guarda o que foi digitado mas não aplica —
             // é o estado passageiro de quem ainda está digitando "23"
-            if (!Number.isFinite(n) || n < 8 || n > 96) return
+            if (!Number.isFinite(n) || n < TAMANHO_MINIMO || n > TAMANHO_MAXIMO) return
             editor.chain().setFontSize(`${n}px`).run()
           }}
           // ao sair, o campo volta a espelhar o editor: se o que ficou ali era
