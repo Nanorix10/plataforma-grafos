@@ -22,7 +22,10 @@ import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
 import BarraFormula, { type Alvo } from './BarraFormula'
-import { salvarCorpoAuto } from './actions'
+import Regua from './Regua'
+import { Imagem, LARGURAS, TabelaLivre } from './imagem'
+import { estiloDaPagina } from '@/lib/pagina'
+import { salvarCorpoAuto, enviarImagem } from './actions'
 
 /* Cores de texto do resumo, uma por tema.
    A cor escolhida aqui é gravada no HTML do resumo, então acompanha o texto
@@ -210,12 +213,14 @@ function Barra({
   aoAlternarTela,
   aoAbrirFormula,
   formulaAberta,
+  aoPedirImagem,
 }: {
   editor: Editor
   telaCheia: boolean
   aoAlternarTela: () => void
   aoAbrirFormula: () => void
   formulaAberta: boolean
+  aoPedirImagem: () => void
 }) {
   const estilo = editor.isActive('heading', { level: 2 })
     ? 'h2'
@@ -439,6 +444,89 @@ function Barra({
       >
         ？ Questão
       </Bt>
+      <Bt title="Inserir imagem — ou cole com Ctrl+V, ou arraste o arquivo" largo onClick={aoPedirImagem}>
+        🖼 Imagem
+      </Bt>
+
+      {/* ---- controles da imagem selecionada ----
+          Só existem quando há uma imagem escolhida. Numa barra que já é longa,
+          quatro botões permanentes e inúteis na maior parte do tempo custariam
+          mais do que a comodidade que dão. */}
+      {editor.isActive('image') ? (
+        <>
+          <Sep />
+          <Bt
+            title="Alinhar à esquerda"
+            ativo={editor.getAttributes('image').alinhamento === 'esquerda'}
+            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'esquerda' }).run()}
+          >
+            ⇤
+          </Bt>
+          <Bt
+            title="Centralizar"
+            ativo={editor.getAttributes('image').alinhamento === 'centro'}
+            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'centro' }).run()}
+          >
+            ⇔
+          </Bt>
+          <Bt
+            title="Alinhar à direita"
+            ativo={editor.getAttributes('image').alinhamento === 'direita'}
+            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'direita' }).run()}
+          >
+            ⇥
+          </Bt>
+          {LARGURAS.map((l) => (
+            <Bt
+              key={l}
+              title={`${l}% da largura do texto`}
+              ativo={editor.getAttributes('image').largura === l}
+              largo
+              onClick={() => editor.chain().focus().updateAttributes('image', { largura: l }).run()}
+            >
+              {l}%
+            </Bt>
+          ))}
+          <Bt
+            title="Passar das margens — a imagem ocupa a folha inteira"
+            largo
+            ativo={editor.getAttributes('image').escapa === true}
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .updateAttributes('image', { escapa: !editor.getAttributes('image').escapa })
+                .run()
+            }
+          >
+            ⤢ Sair da margem
+          </Bt>
+        </>
+      ) : null}
+
+      {/* A tabela ganha a mesma liberdade da imagem: um glossário de duas
+          colunas largas respira melhor fora do recuo do texto. */}
+      {editor.isActive('table') ? (
+        <>
+          <Sep />
+          <Bt
+            title="A tabela passa das margens e ocupa a folha inteira"
+            largo
+            ativo={editor.isActive('table', { escapa: true })}
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .updateAttributes('table', {
+                  escapa: !editor.getAttributes('table').escapa,
+                })
+                .run()
+            }
+          >
+            ⤢ Sair da margem
+          </Bt>
+        </>
+      ) : null}
 
       <Sep />
 
@@ -501,6 +589,9 @@ export default function EditorCorpo({
   titulos,
   resumoId,
   corMateria,
+  margemEsq,
+  margemDir,
+  aoMudarMargens,
 }: {
   conteudoInicial: string
   titulos: string[]
@@ -510,6 +601,11 @@ export default function EditorCorpo({
      `<select>` ainda pode mudar depois de o editor montar: quem segura esse
      estado é o ResumoForm, e assim a folha se recolore junto. */
   corMateria?: string
+  /* Margens da régua. Também moram no ResumoForm, e pelo mesmo motivo da cor:
+     é ele que as envia no formulário, e a folha só as desenha. */
+  margemEsq: number
+  margemDir: number
+  aoMudarMargens: (esq: number, dir: number) => void
 }) {
   const [html, setHtml] = useState(conteudoInicial)
   const [sugestao, setSugestao] = useState<EstadoSugestao | null>(null)
@@ -519,6 +615,48 @@ export default function EditorCorpo({
   const [telaCheia, setTelaCheia] = useState(false)
   const [alvoFormula, setAlvoFormula] = useState<Alvo | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /* O editor por referência, e não pela variável do `useEditor`: os handlers de
+     colar e arrastar são montados DENTRO da configuração dele, então não podem
+     depender da constante que ele mesmo ainda vai devolver. */
+  const editorRef = useRef<Editor | null>(null)
+  const entradaImagemRef = useRef<HTMLInputElement>(null)
+  const [enviando, setEnviando] = useState(0)
+  const [erroImagem, setErroImagem] = useState<string | null>(null)
+
+  /**
+   * Sobe as imagens e insere cada uma onde o cursor está.
+   *
+   * Em série, e não em paralelo: soltar cinco arquivos de uma vez dispararia
+   * cinco uploads simultâneos competindo pela banda de subida, que costuma ser
+   * a metade lenta da conexão — e ainda inseriria as imagens fora da ordem em
+   * que foram soltas.
+   */
+  async function subirEInserir(arquivos: File[]) {
+    setErroImagem(null)
+    for (const arquivo of arquivos) {
+      setEnviando((n) => n + 1)
+      try {
+        const fd = new FormData()
+        fd.append('arquivo', arquivo)
+        const r = await enviarImagem(fd)
+        if (!r.ok) {
+          setErroImagem(r.erro)
+          continue
+        }
+        editorRef.current
+          ?.chain()
+          .focus()
+          .setImage({ src: r.url, alt: '' })
+          .createParagraphNear()
+          .run()
+      } catch {
+        setErroImagem('Não deu para enviar a imagem. Tente de novo.')
+      } finally {
+        setEnviando((n) => n - 1)
+      }
+    }
+  }
 
   const aoEstado = useCallback((estado: EstadoSugestao | null) => {
     setSugestao(estado)
@@ -590,7 +728,11 @@ export default function EditorCorpo({
       Resolucao,
       // `resizable` deixa arrastar a divisa entre colunas: uma linha do tempo
       // quer a coluna do ano estreita, e um glossário quer o termo estreito.
-      TableKit.configure({ table: { resizable: true } }),
+      /* `table: false` desliga a tabela que vem no kit, e `TabelaLivre` entra
+         no lugar: é a mesma extensão, só que com o atributo `escapa`. Deixar as
+         duas registradas daria conflito de nome de nó. */
+      TableKit.configure({ table: false }),
+      TabelaLivre.configure({ resizable: true }),
       // fórmulas renderizadas ao vivo enquanto escreve. `throwOnError: false`
       // pra que uma fórmula pela metade (normal enquanto se digita) apareça em
       // vermelho em vez de estourar o editor.
@@ -622,10 +764,39 @@ export default function EditorCorpo({
         onEstado: aoEstado,
         onIndice: aoIndice,
       }),
+      Imagem,
     ],
     content: conteudoInicial || '<p></p>',
     editorProps: {
       attributes: { class: 'conteudo-resumo focus:outline-none' },
+
+      /* Colar e arrastar imagem.
+         Até agora, colar um print aqui NÃO dava erro: o ProseMirror valida o
+         conteúdo contra o esquema e descartava em silêncio o que não
+         reconhecia, então a imagem simplesmente sumia. Estes dois handlers são
+         o que fecha esse buraco.
+
+         Os dois devolvem `true` na hora e sobem o arquivo depois: handler de
+         ProseMirror é síncrono, e esperar o upload dentro dele travaria o
+         editor. Quem avisa que há um envio em curso é o rodapé de status. */
+      handlePaste: (_view, evento) => {
+        const arquivos = Array.from(evento.clipboardData?.files ?? [])
+        const imagens = arquivos.filter((f) => f.type.startsWith('image/'))
+        if (imagens.length === 0) return false
+        evento.preventDefault()
+        void subirEInserir(imagens)
+        return true
+      },
+      handleDrop: (_view, evento) => {
+        const dt = (evento as DragEvent).dataTransfer
+        const imagens = Array.from(dt?.files ?? []).filter((f) =>
+          f.type.startsWith('image/')
+        )
+        if (imagens.length === 0) return false
+        evento.preventDefault()
+        void subirEInserir(imagens)
+        return true
+      },
     },
     onUpdate: ({ editor }) => {
       const novoHtml = editor.getHTML()
@@ -637,6 +808,9 @@ export default function EditorCorpo({
       setPalavras(editor.storage.characterCount?.words?.() ?? 0)
     },
   })
+
+  // fecha o laço: os handlers de colar/arrastar leem daqui
+  editorRef.current = editor
 
   /**
    * Grava a fórmula. Editar sempre apaga o nó antigo e insere outro, em vez de
@@ -685,10 +859,28 @@ export default function EditorCorpo({
             aoAbrirFormula={() =>
               setAlvoFormula((a) => (a ? null : { modo: 'novo', emBloco: false }))
             }
+            aoPedirImagem={() => entradaImagemRef.current?.click()}
           />
           <BarraTabela editor={editor} />
         </>
       )}
+
+      {/* O seletor de arquivo fica escondido e é acionado pelo botão da barra:
+          o `<input type="file">` nativo não é estilizável, e um botão cinza do
+          sistema no meio de uma barra desenhada à mão destoaria. */}
+      <input
+        ref={entradaImagemRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const arquivos = Array.from(e.target.files ?? [])
+          if (arquivos.length) void subirEInserir(arquivos)
+          // zera para o mesmo arquivo poder ser escolhido de novo em seguida
+          e.target.value = ''
+        }}
+      />
 
       {alvoFormula ? (
         <BarraFormula
@@ -706,21 +898,33 @@ export default function EditorCorpo({
           branca aqui deixaria o autor digitando cinza-claro sobre branco, e
           quebraria o WYSIWYG que faz o editor valer a pena. */}
       <div
-        className={`bg-[var(--page)] px-4 py-6 overflow-y-auto ${
+        className={`bg-[var(--page)] pb-6 overflow-y-auto ${
           telaCheia ? 'flex-1 min-h-0' : 'max-h-[62vh]'
         }`}
       >
+        {/* A régua acompanha a folha e rola junto com ela: presa no topo, ela
+            apontaria para uma folha que já saiu de baixo. */}
+        <Regua esq={margemEsq} dir={margemDir} aoMudar={aoMudarMargens} />
+
+        <div className="px-4">
         <div
-          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[760px] px-6 py-8 sm:px-[70px] sm:py-[58px] ${
+          /* As margens vêm da régua, em variáveis de CSS. Abaixo de `sm` elas
+             são ignoradas e vale um recuo fixo de 24px: 150px de margem numa
+             tela de 390px não deixaria coluna nenhuma. */
+          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[var(--pagina)] px-6 py-8 sm:pl-[var(--margem-esq)] sm:pr-[var(--margem-dir)] sm:py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
           /* A variável fica na folha, não no `.conteudo-resumo` do TipTap:
              aquele elemento é criado pelo ProseMirror e só aceita atributos
              pelo `editorProps`, que não reage a troca de matéria. Como
              variável de CSS herda, o efeito é o mesmo. */
-          style={{ '--cor-materia': corMateria } as CSSProperties}
+          style={{
+            '--cor-materia': corMateria,
+            ...estiloDaPagina(margemEsq, margemDir),
+          } as CSSProperties}
         >
           <EditorContent editor={editor} />
+        </div>
         </div>
       </div>
 
@@ -729,6 +933,33 @@ export default function EditorCorpo({
         <span>{palavras} palavras</span>
         <span className="opacity-40">·</span>
         <span className={status === 'erro' ? 'text-[var(--stamp)]' : undefined}>{rotuloStatus}</span>
+        {/* O envio da imagem acontece longe da vista — o arquivo sai daqui,
+            sobe, volta como URL. Sem este aviso, colar um print de 4 MB numa
+            conexão ruim pareceria não ter feito nada. */}
+        {enviando > 0 ? (
+          <>
+            <span className="opacity-40">·</span>
+            <span className="inline-flex items-center gap-1.5 text-[var(--acento)]" role="status" aria-live="polite">
+              <span className="girando" aria-hidden="true" />
+              enviando {enviando > 1 ? `${enviando} imagens` : 'imagem'}…
+            </span>
+          </>
+        ) : null}
+        {erroImagem ? (
+          <>
+            <span className="opacity-40">·</span>
+            <button
+              type="button"
+              onClick={() => setErroImagem(null)}
+              className="text-[var(--erro)] underline decoration-dotted"
+              role="status"
+              aria-live="polite"
+              title="Clique para dispensar"
+            >
+              {erroImagem}
+            </button>
+          </>
+        ) : null}
         <span className="ml-auto opacity-70">
           <code className="font-mono-plex">[[</code> linka outro resumo ·{' '}
           <code className="font-mono-plex">$x^2$</code> vira fórmula

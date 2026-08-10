@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getSessao } from '@/lib/sessao'
+import { MARGEM_PADRAO, ajustarMargens } from '@/lib/pagina'
 
 async function exigirAdmin() {
   const { supabase, userId, isAdmin } = await getSessao()
@@ -14,6 +15,10 @@ export async function salvarResumo(formData: FormData) {
   const supabase = await exigirAdmin()
 
   const id = String(formData.get('id') ?? '')
+  const margens = ajustarMargens(
+    Number(formData.get('margem_esq')) || MARGEM_PADRAO,
+    Number(formData.get('margem_dir')) || MARGEM_PADRAO
+  )
   const dados = {
     slug: String(formData.get('slug') ?? '').trim(),
     titulo: String(formData.get('titulo') ?? '').trim(),
@@ -24,6 +29,11 @@ export async function salvarResumo(formData: FormData) {
     // "" no <select> significa "na raiz da matéria" — vira null, não string
     // vazia, senão o Postgres recusa por não ser um uuid válido.
     pai_id: String(formData.get('pai_id') ?? '') || null,
+    // A régua já prende os valores enquanto o autor arrasta, mas isso é
+    // interface: `ajustarMargens` roda de novo aqui, e o `check` da migration
+    // é a terceira e última palavra.
+    margem_esq: margens.esq,
+    margem_dir: margens.dir,
   }
 
   if (!dados.slug || !dados.titulo) {
@@ -63,6 +73,51 @@ export async function salvarCorpoAuto(id: string, corpo: string) {
   if (error) return { ok: false, erro: error.message }
 
   return { ok: true }
+}
+
+/** O que o bucket aceita. Repetido aqui para a mensagem de erro ser em português. */
+const TIPOS = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml']
+const TAMANHO_MAXIMO = 5 * 1024 * 1024
+
+/**
+ * Envia uma imagem e devolve a URL pública.
+ *
+ * Server action, e não upload direto do navegador, por uma razão só: a chave
+ * que o navegador tem é a anônima, e é a policy `admin envia imagens` que
+ * decide. Passando por aqui, o upload viaja com a sessão do autor e o Postgres
+ * confere o `eh_admin()` — do lado do cliente não haveria nada a conferir.
+ *
+ * O nome do arquivo é um uuid, e não o nome original. Dois motivos: nome de
+ * arquivo vindo do Windows traz acento, espaço e parêntese, que viram escape
+ * na URL e quebram feio; e dois prints chamados "Captura de tela.png" se
+ * sobrescreveriam em silêncio.
+ */
+export async function enviarImagem(formData: FormData) {
+  const supabase = await exigirAdmin()
+
+  const arquivo = formData.get('arquivo')
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false as const, erro: 'Nenhum arquivo veio junto.' }
+  }
+  if (!TIPOS.includes(arquivo.type)) {
+    return { ok: false as const, erro: `Formato não aceito (${arquivo.type || 'desconhecido'}).` }
+  }
+  if (arquivo.size > TAMANHO_MAXIMO) {
+    const mb = (arquivo.size / 1024 / 1024).toFixed(1)
+    return { ok: false as const, erro: `Imagem de ${mb} MB — o limite é 5 MB.` }
+  }
+
+  const extensao = arquivo.type.split('/')[1]?.replace('svg+xml', 'svg') ?? 'png'
+  const caminho = `${crypto.randomUUID()}.${extensao}`
+
+  const { error } = await supabase.storage
+    .from('imagens')
+    .upload(caminho, arquivo, { contentType: arquivo.type, upsert: false })
+
+  if (error) return { ok: false as const, erro: error.message }
+
+  const { data } = supabase.storage.from('imagens').getPublicUrl(caminho)
+  return { ok: true as const, url: data.publicUrl }
 }
 
 export async function excluirResumo(formData: FormData) {

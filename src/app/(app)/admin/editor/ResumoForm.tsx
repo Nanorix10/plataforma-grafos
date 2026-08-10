@@ -6,6 +6,7 @@ import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
 import EditorCorpo from './EditorCorpo'
 import BotaoEnviar from '@/components/BotaoEnviar'
+import { MARGEM_PADRAO } from '@/lib/pagina'
 
 function slugify(texto: string) {
   return texto
@@ -25,6 +26,8 @@ type ResumoExistente = {
   corpo: string
   definicao: string
   pai_id: string | null
+  margem_esq: number
+  margem_dir: number
 }
 
 /** Resumo já existente, como candidato a receber este dentro dele. */
@@ -115,6 +118,10 @@ export default function ResumoForm({
   // a matéria é estado porque o seletor de pai depende dela: trocar de matéria
   // troca a lista de assuntos onde este resumo pode morar
   const [materia, setMateria] = useState(resumo?.materia_slug ?? '')
+  const [margens, setMargens] = useState({
+    esq: resumo?.margem_esq ?? MARGEM_PADRAO,
+    dir: resumo?.margem_dir ?? MARGEM_PADRAO,
+  })
   const [paiId, setPaiId] = useState(resumo?.pai_id ?? '')
 
   // não depende da matéria escolhida: um assunto pode segurar tópicos de
@@ -260,7 +267,16 @@ export default function ResumoForm({
           /* `materia` é estado, não `resumo.materia_slug`: trocar a matéria no
              `<select>` acima recolore a folha na hora, sem salvar antes. */
           corMateria={MATERIAS[materia as keyof typeof MATERIAS]?.cor}
+          margemEsq={margens.esq}
+          margemDir={margens.dir}
+          aoMudarMargens={(esq, dir) => setMargens({ esq, dir })}
         />
+        {/* As margens viajam no formulário como qualquer outro campo. Não entram
+            no autosave: ele grava só o `corpo` (decisão 3), e a régua é ajuste
+            de layout, não de texto — salvar junto faria um autosave atrasado
+            devolver a margem antiga por cima da que o autor acabou de arrastar. */}
+        <input type="hidden" name="margem_esq" value={margens.esq} />
+        <input type="hidden" name="margem_dir" value={margens.dir} />
       </div>
 
       <div className="flex gap-3 mt-2">
