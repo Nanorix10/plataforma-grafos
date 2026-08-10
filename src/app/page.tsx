@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
 import { BotaoTema } from '@/components/BotaoTema'
+import Marca from '@/components/Marca'
 
 const cartaoResposta = [
   { num: '01', label: 'Biologia — PAS UEM', filled: 0, cor: MATERIAS.biologia.cor },
@@ -39,7 +40,7 @@ export default function LandingPage() {
     <div>
       <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur">
         <div className="max-w-[1120px] mx-auto px-8 h-[68px] flex items-center justify-between gap-6">
-          <div className="marca font-medium text-[18px]">Plataforma Grafos</div>
+          <Marca tamanho="landing" />
           <div className="hidden md:flex gap-8 text-sm text-[var(--ink-dim)] ml-auto">
             <a href="#materias" className="hover:text-[var(--ink)]">Matérias</a>
             <a href="#planos" className="hover:text-[var(--ink)]">Planos</a>
@@ -186,7 +187,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="py-9 max-w-[1120px] mx-auto px-8 flex justify-between flex-wrap gap-3 shadow-[inset_0_1px_0_var(--line)]">
-        <div className="marca font-medium text-[15px]">Plataforma Grafos</div>
+        <Marca tamanho="medio" />
         <p className="text-[12.5px] text-[var(--ink-faint)]">Material próprio, revisado por edital · Campo Grande — MS</p>
       </footer>
     </div>

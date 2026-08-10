@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { BotaoTema } from '@/components/BotaoTema'
+import Marca from '@/components/Marca'
 
 export default function LoginPage() {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
@@ -37,7 +38,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center px-6 md:px-24">
       <BotaoTema className="fixed top-4 right-4" />
       <div className="w-full max-w-[360px]">
-        <div className="marca font-medium text-[17px] mb-9">Plataforma Grafos</div>
+        <Marca tamanho="grande" className="mb-9" />
 
         {/* Duas abas emendadas numa cápsula só, com a ativa marcada por um anel
             lilás. A versão anterior pintava a aba ativa de branco sobre cinza —
