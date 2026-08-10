@@ -366,17 +366,37 @@ button:focus-visible,
   text-transform: uppercase;
 }
 
-.conteudo-resumo h2 {
-  font-size: 1.45rem;
+/* ---- títulos: nenhum tamanho próprio, só negrito ----
+   Todo título aqui é o NOME DE UM GRAFO — o resumo é um, e cada seção dentro
+   dele é outro (ver decisão 12). Grafo não tem tamanho: "Leis de Newton" não é
+   uma coisa maior que "1ª Lei", é uma coisa que contém a outra. Escala
+   tipográfica diria o contrário, e diria errado.
+
+   Quem marca a hierarquia passa a ser o espaço em volta e o recuo do que vem
+   abaixo, não o corpo da letra. Por isso as margens continuam escalonadas
+   (1.8em / 1.5em / 1.3em) enquanto o `font-size` some: margem é ritmo, não
+   tamanho, e sem ela os títulos encostariam no texto e o resumo viraria um
+   bloco só.
+
+   `1em` e não `1rem`: dentro de uma tabela ou de uma lista o texto já pode
+   estar menor, e um título ali tem que acompanhar quem o cerca. */
+.conteudo-resumo h2,
+.conteudo-resumo h3,
+.conteudo-resumo h4 {
+  font-size: 1em;
   font-weight: 700;
+  line-height: inherit;
+  /* Chegando pelo /mapa, o link cai numa âncora dentro do resumo — e a barra do
+     caminho é fixa e tem 3rem. Sem esta folga o navegador encosta o título no
+     topo exato da janela, que é justamente onde a barra está: o aluno clica num
+     nó e chega numa seção cujo nome está escondido atrás dela. */
+  scroll-margin-top: 4.5rem;
+}
+.conteudo-resumo h2 {
   margin-top: 1.8em;
-  line-height: 1.3;
 }
 .conteudo-resumo h3 {
-  font-size: 1.15rem;
-  font-weight: 700;
   margin-top: 1.5em;
-  line-height: 1.35;
 }
 /* ---- listas ----
    A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
@@ -549,12 +569,24 @@ button:focus-visible,
   color: var(--cor-materia, inherit);
 }
 
-/* Duas exceções, onde a cor da matéria atrapalharia em vez de ajudar:
+/* Três exceções, onde a cor da matéria atrapalharia em vez de ajudar:
    o grifo já força texto escuro sobre pastel claro, e o wikilink já é lilás.
    Sem isto, um termo em negrito dentro de qualquer um dos dois trocaria a cor
-   do fundo/link por baixo e voltaria a ficar ilegível. */
+   do fundo/link por baixo e voltaria a ficar ilegível.
+
+   A terceira é a cor que o AUTOR escolheu. A regra `strong` acima vale por
+   herança, e herança sempre perde para uma regra que casa — então, sem esta
+   linha, pintar um trecho de vermelho deixaria de fora justamente as palavras
+   em negrito dentro dele, que são as que o autor mais quer destacar. O mesmo
+   dentro de um título.
+
+   `span[style*="color"]` e não `[style*="color"]` porque a segunda forma casa
+   também com `background-color`, e aí um `<figure>` com estilo embutido
+   entraria na regra sem ter nada a ver. Span com estilo é exatamente o que o
+   TextStyleKit grava quando o autor escolhe uma cor, e mais nada. */
 .conteudo-resumo mark strong,
-.conteudo-resumo a strong {
+.conteudo-resumo a strong,
+.conteudo-resumo span[style*='color'] strong {
   color: inherit;
 }
 .conteudo-resumo code {
@@ -573,9 +605,9 @@ button:focus-visible,
   text-decoration-color: var(--acento);
 }
 
+/* O tamanho e o peso do h4 vieram para junto dos outros dois, lá em cima.
+   Aqui sobra só a margem, que é o que ainda distingue um nível do outro. */
 .conteudo-resumo h4 {
-  font-size: 1rem;
-  font-weight: 700;
   margin-top: 1.3em;
 }
 /* Os grifos continuam sendo pastéis claros (o editor grava a cor no próprio

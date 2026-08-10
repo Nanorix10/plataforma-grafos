@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { MATERIAS } from '@/lib/materias'
 import { PLANO_PROCESSOS } from '@/lib/wikilinks'
 import { getSessao } from '@/lib/sessao'
+import { extrairTitulos } from '@/lib/titulos'
 import GraphView from './GraphView'
 import MindMapView from './MindMapView'
 
@@ -24,7 +25,11 @@ export default async function MapaPage({
   const [{ data: resumos }, { data: conexoesRaw }] = await Promise.all([
     supabase
       .from('resumos')
-      .select('id, slug, titulo, materia_slug, processo_slug, definicao, pai_id'),
+      // `corpo` entra por causa dos nós de título (decisão 12). Ele é lido AQUI,
+      // no servidor, e só a lista de títulos desce para o navegador — o texto
+      // dos resumos nunca vai junto. Fosse o contrário, o mapa entregaria o
+      // conteúdo inteiro do site a quem só queria ver o desenho.
+      .select('id, slug, titulo, materia_slug, processo_slug, definicao, pai_id, corpo'),
     supabase
       .from('conexoes')
       .select('origem_id, destino_id, resumos!conexoes_origem_id_fkey(slug), destino:resumos!conexoes_destino_id_fkey(slug)'),
@@ -36,21 +41,74 @@ export default async function MapaPage({
   // é gravada por id — este mapa traduz um no outro
   const slugPorId = new Map((resumos ?? []).map((r) => [r.id, r.slug]))
 
-  const nos = (resumos ?? []).map((r) => {
+  type NoMapa = {
+    id: string
+    titulo: string
+    materia: string
+    cor: string
+    liberado: boolean
+    pai: string | null
+    definicao: string
+    tipo: 'resumo' | 'titulo'
+  }
+
+  const nos: NoMapa[] = []
+
+  for (const r of resumos ?? []) {
     const liberado = processosLiberados.includes(r.processo_slug)
-    return {
+    const cor = MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999'
+
+    nos.push({
       id: r.slug,
       titulo: r.titulo,
       materia: r.materia_slug,
-      cor: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999',
+      cor,
       liberado,
       // pai por slug, ou null se este resumo é assunto principal da matéria
       pai: (r.pai_id && slugPorId.get(r.pai_id)) || null,
       // a definição de um tópico fora do plano não vai pro navegador: seria
       // entregar conteúdo pago pra quem não pagou
       definicao: liberado ? (r.definicao ?? '') : '',
+    tipo: 'resumo',
+    })
+
+    // Resumo fora do plano não abre os títulos. Os nomes das seções JÁ SÃO
+    // conteúdo — o sumário de "Dinâmica" entrega a estrutura da aula inteira —
+    // e o nó do resumo continua aparecendo com o cadeado, que é o que interessa
+    // mostrar a quem ainda não pagou.
+    if (!liberado) continue
+
+    /* A pilha traduz nível em parentesco. Um h4 pendura no h3 aberto mais
+       recente, e não no resumo; ao encontrar um h2 novo, tudo o que estava
+       aberto em nível igual ou mais fundo se fecha. É o mesmo raciocínio de um
+       sumário, e é o que faz "1ª Lei" cair dentro de "Leis de Newton".
+
+       Nível pulado (um h2 seguido direto de um h4) não quebra nada: a pilha só
+       desempilha o que for mais fundo, então o h4 pendura no h2 mesmo. Salto de
+       nível acontece em texto real e não é erro do autor. */
+    const abertos: { nivel: number; id: string }[] = []
+
+    for (const t of extrairTitulos(r.corpo)) {
+      while (abertos.length > 0 && abertos[abertos.length - 1].nivel >= t.nivel) {
+        abertos.pop()
+      }
+
+      const id = `${r.slug}#${t.ancora}`
+      nos.push({
+        id,
+        titulo: t.texto,
+        materia: r.materia_slug,
+        cor,
+        liberado: true,
+        pai: abertos[abertos.length - 1]?.id ?? r.slug,
+        // seção não tem definição própria; o balão fica para o resumo
+        definicao: '',
+        tipo: 'titulo',
+      })
+
+      abertos.push({ nivel: t.nivel, id })
     }
-  })
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const links = (conexoesRaw ?? []).map((c: any) => ({
@@ -71,7 +129,8 @@ export default async function MapaPage({
           <b className="text-[var(--ink)] font-medium">
             {visao === 'grafo' ? 'Mapa de conexões' : 'Mapa mental'}
           </b>{' '}
-          · {nos.length} tópicos ·{' '}
+          · {nos.filter((n) => n.tipo === 'resumo').length} resumos ·{' '}
+          {nos.filter((n) => n.tipo === 'titulo').length} seções ·{' '}
           {visao === 'grafo'
             ? `${links.length} ligações`
             : `${new Set(nos.map((n) => n.materia)).size} matérias`}

@@ -28,6 +28,7 @@ import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
 import { salvarCorpoAuto, enviarImagem } from './actions'
+import { parDeTemas, primeiroHex } from '@/lib/cor'
 
 /* Cores de texto do resumo, uma por tema.
    A cor escolhida aqui é gravada no HTML do resumo, então acompanha o texto
@@ -276,10 +277,14 @@ function Barra({
         }}
         className="h-[28px] text-[12.5px] bg-transparent border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
       >
+        {/* "Grafo" e não "Título": cada um deles vira um nó no /mapa, pendurado
+            no resumo e nos de nível acima (decisão 12). O nome antigo sugeria
+            uma escala de tamanho que não existe mais — os três saem no corpo do
+            texto, só em negrito. O valor gravado continua sendo h2/h3/h4. */}
         <option value="p">Texto normal</option>
-        <option value="h2">Título 1</option>
-        <option value="h3">Título 2</option>
-        <option value="h4">Título 3</option>
+        <option value="h2">Grafo 1</option>
+        <option value="h3">Grafo 2</option>
+        <option value="h4">Grafo 3</option>
       </select>
 
       {/* Tamanho é campo numérico livre, não uma lista fechada: os cinco
@@ -372,6 +377,31 @@ function Barra({
             style={{ background: cor }}
           />
         ))}
+
+        {/* Cor livre. As sete bolinhas acima continuam porque são um clique só
+            para o caso comum; este é para quando nenhuma delas serve.
+            O que vai gravado é o par `light-dark()` derivado em `lib/cor.ts` —
+            a cor fica no HTML do resumo para sempre e precisa ler nos dois
+            temas. O campo nativo só entende `#rrggbb`, então o valor mostrado é
+            a ponta clara do par que o texto já tem. */}
+        <label
+          title="Qualquer cor"
+          className="relative w-[14px] h-[14px] rounded-full border border-black/15 shrink-0 cursor-pointer overflow-hidden focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[var(--acento)]"
+          style={{
+            background:
+              'conic-gradient(#F04A5E, #E8C24A, #5FBF6A, #4AA8E8, #8E6FE0, #F04A5E)',
+          }}
+        >
+          <span className="sr-only">Escolher qualquer cor do texto</span>
+          <input
+            type="color"
+            value={primeiroHex(editor.getAttributes('textStyle').color, '#9184D9')}
+            onChange={(e) =>
+              editor.chain().focus().setColor(parDeTemas(e.target.value)).run()
+            }
+            className="absolute inset-0 opacity-0 cursor-pointer"
+          />
+        </label>
       </div>
 
       {/* marca-texto */}
