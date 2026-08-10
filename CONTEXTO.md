@@ -471,6 +471,45 @@ apertado: dois envios em voo gravariam a mesma linha duas vezes. E o par
 "Liberar"/"Bloquear" de `/admin/pessoas`: `useFormStatus` devolve o `FormData`
 que está indo, então dá para saber qual foi apertado e girar só nele.
 
+**9g. `/conta` existe porque não havia saída — literalmente.**
+O site não tinha "sair" em lugar nenhum. Quem entrava ficava logado para
+sempre, e trocar de conta exigia apagar cookie na mão. Em computador
+compartilhado isso não é incômodo, é o resumo de um aluno aberto para outro.
+
+O `sair()` é **server action**, não `signOut()` no navegador: o que precisa
+sumir é o cookie, e o cookie de sessão é `httpOnly` — o JavaScript da página
+não o enxerga. É também o único contexto em que o `setAll` de
+`lib/supabase/server.ts` funciona de verdade; no Server Component ele cai no
+`try/catch` vazio (ver decisão 6).
+
+A tela mostra e-mail, plano, e **todos** os vestibulares com o liberado
+marcado. Listar só os liberados esconderia o que o aluno ganha ao trocar de
+plano — e, para quem está sem acesso, a lista viria vazia e a tela não diria
+nada. O estado vai por texto ao lado do ícone, não só por cor.
+
+O aluno **não pode mudar o próprio plano**, e isso não é esquecimento: não há
+policy de update para si mesmo em `planos_usuarios` (decisão 1b). A tela leva
+aos planos da landing; quem libera continua sendo o admin, depois do Pix.
+
+Na barra lateral, o rótulo "plano: nenhum" virou link para cá. Era informação
+sem saída: dizia que o aluno não tem acesso e não oferecia onde resolver.
+
+**9h. A marca vive em `components/Marca.tsx`, e a logo tem um encaixe pronto.**
+O nome estava escrito à mão em cinco lugares — landing (topo e rodapé), login e
+as duas versões da barra lateral. Agora é um componente com quatro tamanhos.
+
+Dentro dele há `Simbolo`, que hoje devolve `null` de propósito: **a logo é do
+autor e ele mesmo vai desenhá-la em SVG**. Uma logo genérica de encher espaço
+seria pior do que nenhuma, porque pareceria decidida. O arquivo carrega as
+instruções do que o SVG precisa ter (`viewBox` sem tamanho fixo,
+`fill="currentColor"` para acompanhar os dois temas, nada de `<text>`) e a
+observação de que o favicon é outro caminho — `src/app/icon.svg`, que o Next
+reconhece sozinho e que NÃO deve usar `currentColor`.
+
+As cinco sobras do template do Next (`public/file.svg`, `globe`, `next`,
+`vercel`, `window`) saíram: nenhuma era referenciada, e o site as servia
+publicamente.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito

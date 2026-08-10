@@ -9,6 +9,7 @@ import { MATERIAS } from '@/lib/materias'
 import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 import { alternarVisao } from './acoes'
 import { BotaoTema } from '@/components/BotaoTema'
+import Marca from '@/components/Marca'
 
 type Grupo = { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }
 
@@ -22,6 +23,33 @@ function Chevron({ aberto }: { aberto: boolean }) {
       aria-hidden
     >
       <path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/**
+ * Ícone da conta: um busto, desenhado à mão em SVG.
+ *
+ * SVG e não o emoji 👤, que é o que o resto do rodapé ainda usa nos botões de
+ * admin: emoji desenha diferente em cada sistema (no Windows sai colorido e
+ * quadrado demais) e não acompanha a cor do texto, então some ou berra
+ * conforme o tema. `currentColor` resolve os dois de uma vez.
+ */
+function IconePessoa() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="5.2" r="2.6" />
+      <path d="M2.9 13.4c0-2.5 2.3-4.2 5.1-4.2s5.1 1.7 5.1 4.2" />
     </svg>
   )
 }
@@ -291,8 +319,8 @@ export default function Sidebar({
             />
           </svg>
         </button>
-        <Link href="/resumos" className="marca font-medium text-sm truncate">
-          Plataforma Grafos
+        <Link href="/resumos" className="min-w-0">
+          <Marca tamanho="peq" />
         </Link>
         <BotaoTema className="ml-auto" />
       </div>
@@ -326,9 +354,9 @@ export default function Sidebar({
       <div className="px-3 pt-3.5 pb-2.5">
         <Link
           href="/resumos"
-          className="marca block font-medium text-[14px] mb-3.5 px-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
+          className="block mb-3.5 px-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
         >
-          Plataforma Grafos
+          <Marca tamanho="peq" />
         </Link>
 
         <div className="relative">
@@ -461,11 +489,28 @@ export default function Sidebar({
           </form>
         ) : null}
 
+        {/* A conta virou um LINK, não mais um rótulo solto.
+            "plano: nenhum" era informação sem saída: dizia ao aluno que ele não
+            tem acesso e não oferecia um lugar para resolver isso. Agora o mesmo
+            texto leva à tela onde ele vê o que está liberado, encontra o
+            caminho dos planos e — o que não existia em lugar nenhum do site —
+            consegue sair da conta. */}
         <div className="flex items-center gap-1">
-          <div className="text-[10.5px] text-[var(--ink-faint)] px-0.5">
-            plano: {plano}
-            {isAdmin && ' · admin'}
-          </div>
+          <Link
+            href="/conta"
+            aria-current={pathname === '/conta' ? 'page' : undefined}
+            className={`flex-1 min-w-0 flex items-center gap-2 px-1.5 py-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+              pathname === '/conta'
+                ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento-claro)]'
+                : 'text-[var(--ink-faint)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
+            }`}
+          >
+            <IconePessoa />
+            <span className="text-[10.5px] truncate">
+              plano: {plano}
+              {isAdmin && ' · admin'}
+            </span>
+          </Link>
           <BotaoTema className="ml-auto -my-1" />
         </div>
       </div>
