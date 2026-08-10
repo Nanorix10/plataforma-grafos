@@ -745,6 +745,43 @@ as palavras em negrito dentro dele — as que o autor mais quer destacar. A regr
 é `span[style*='color'] strong`, e não `[style*='color']`, porque a segunda
 casaria também com `background-color` e arrastaria `<figure>` para dentro.
 
+**12c. O grafo pode dividir a linha com a explicação.**
+Botão `T¶` na barra do editor, que grava `data-corrido="sim"` no título. É o
+formato de origem dos resumos — `**Termo:** definição;` —, e depois da decisão
+12 o grafo já era igual a esse termo em tudo menos numa coisa: o termo dividia a
+linha, o grafo ainda a ocupava sozinho.
+
+**O título continua sendo um bloco `h2/h3/h4` separado do parágrafo**, e isso é
+o que sustenta o resto: `lib/titulos.ts` segue lendo só o título ao montar o nó,
+o nível continua dizendo quem pendura em quem, e o leitor de tela continua
+anunciando um cabeçalho. Se a explicação fosse para dentro do título, o nó do
+mapa passaria a se chamar "Leis de Newton todo corpo permanece em repouso ou…".
+Fazer do grafo uma marca dentro do parágrafo (como o negrito) foi descartado
+pelo mesmo motivo: marca não tem nível, e sem nível não há árvore.
+
+Quem junta as duas linhas é o `float` do `globals.css`. `display: run-in` está
+morto nos navegadores, e pôr os dois em `inline` custaria as margens — caixa
+inline não tem margem vertical, e o espaçamento do resumo inteiro sai de margem.
+
+**A regra que vai quebrar se alguém mexer:** a margem de cima do título corrido
+e a do elemento seguinte têm que ser IGUAIS, e por isso o valor está escrito
+duas vezes em vez de herdado. A conta: a "coruja" (`> * + *`) põe todo o
+espaçamento na margem de CIMA, então a margem de baixo do anterior é sempre 0;
+**float não colapsa margem com ninguém**, e bloco no fluxo normal colapsa. Com
+os dois valores iguais, os dois pousam na mesma linha; diferentes, o texto
+começa acima ou abaixo do título e o efeito se desfaz.
+
+E o `clear: both` vai no SEGUNDO vizinho, nunca no primeiro — o primeiro é
+justamente a explicação, que tem que subir. Limpar um só basta.
+
+Conferido medindo no Chrome, e não no olho: título e explicação com `top`
+idêntico (diferença 0px), primeira linha ao lado do título e as seguintes de
+volta à margem, bloco posterior abaixo. **Vale o aviso para quem for repetir o
+teste:** uma página solta sem o *preflight* do Tailwind dá resultado errado — as
+margens que o navegador dá de graça a `p` e `h1..h6` (15px) desalinham o par e
+empurram a última linha. O primeiro teste caiu exatamente nessa e acusou um
+defeito que não existia.
+
 ## Imagem: feito em agosto/2026
 
 O site já exibe imagem. Colar (Ctrl+V), arrastar o arquivo e o botão da barra

@@ -24,6 +24,7 @@ import { Questao, Resolucao } from './questaoResolvida'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import Regua from './Regua'
 import { Imagem, TabelaLivre } from './imagem'
+import { TituloCorrido } from './tituloCorrido'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
@@ -72,12 +73,17 @@ const SIMBOLOS: { grupo: string; itens: string[] }[] = [
 
 function Bt({
   ativo,
+  desativado,
   onClick,
   title,
   largo,
   children,
 }: {
   ativo?: boolean
+  /* Desligado em vez de escondido: sumir com o botão encolheria a barra e
+     empurraria todos os seguintes de lugar a cada vez que o cursor entrasse ou
+     saísse de um título. Alvo que se move é alvo que se erra. */
+  desativado?: boolean
   onClick: () => void
   title: string
   largo?: boolean
@@ -87,10 +93,15 @@ function Bt({
     <button
       type="button"
       title={title}
+      disabled={desativado}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`${largo ? 'px-2' : 'w-[28px]'} h-[28px] rounded text-[13px] leading-none flex items-center justify-center shrink-0 ${
-        ativo ? 'bg-[var(--sel)] text-[var(--ink)]' : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
+        desativado
+          ? 'text-[var(--ink-faint)] opacity-45 cursor-default'
+          : ativo
+            ? 'bg-[var(--sel)] text-[var(--ink)]'
+            : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
       }`}
     >
       {children}
@@ -286,6 +297,26 @@ function Barra({
         <option value="h3">Grafo 2</option>
         <option value="h4">Grafo 3</option>
       </select>
+
+      {/* Junta o grafo à explicação numa linha só, no formato em que os resumos
+          sempre foram escritos: "Termo: definição". Só faz sentido com o cursor
+          dentro de um grafo, então fora dele o botão fica apagado. */}
+      <Bt
+        title="Grafo na mesma linha da explicação"
+        ativo={editor.isActive('heading', { corrido: true })}
+        desativado={estilo === 'p'}
+        onClick={() =>
+          editor
+            .chain()
+            .focus()
+            .updateAttributes('heading', {
+              corrido: !editor.getAttributes('heading').corrido,
+            })
+            .run()
+        }
+      >
+        T¶
+      </Bt>
 
       {/* Tamanho é campo numérico livre, não uma lista fechada: os cinco
           valores de antes cobriam o que se imaginou na mesa, não o que o texto
@@ -703,7 +734,12 @@ export default function EditorCorpo({
     // evita erro de hidratação: o editor só monta no cliente
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      /* `heading: false` desliga o título que vem no kit, e `TituloCorrido`
+         entra no lugar: é a mesma extensão, só que com o atributo `corrido`.
+         Mesmo arranjo (e mesmo motivo) do `table: false` mais abaixo — duas
+         extensões com o mesmo nome de nó não convivem. */
+      StarterKit.configure({ heading: false }),
+      TituloCorrido,
       TextStyleKit,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
