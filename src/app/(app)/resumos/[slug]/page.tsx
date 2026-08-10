@@ -8,6 +8,7 @@ import { MATERIAS } from '@/lib/materias'
 import { renderizarWikilinks, PLANO_PROCESSOS } from '@/lib/wikilinks'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
+import { ancorarTitulos } from '@/lib/titulos'
 import { getSessao } from '@/lib/sessao'
 import { estiloDaPagina } from '@/lib/pagina'
 
@@ -59,12 +60,15 @@ export default async function ResumoPage({
 
   const materia = MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]
   // A ordem importa, e é sempre a mesma: do estrutural para o miúdo.
-  // As gavetas de resolução primeiro, porque contam `<div>` para achar onde
-  // fecham e o KaTeX enche o HTML deles; os wikilinks depois; as fórmulas por
-  // último, já que o KaTeX gera muito HTML e passar as outras regexes por cima
-  // dele seria trabalho à toa.
+  // As âncoras primeiro, no HTML ainda cru — é a MESMA entrada que o /mapa lê
+  // para montar os nós de título (decisão 12), e ler documentos diferentes é o
+  // que faria o link do mapa cair no topo da página em silêncio.
+  // As gavetas de resolução depois, porque contam `<div>` para achar onde
+  // fecham e o KaTeX enche o HTML deles; os wikilinks em seguida; as fórmulas
+  // por último, já que o KaTeX gera muito HTML e passar as outras regexes por
+  // cima dele seria trabalho à toa.
   const corpoHtml = renderizarMatematica(
-    renderizarWikilinks(renderizarQuestoes(resumo.corpo), tituloParaSlug)
+    renderizarWikilinks(renderizarQuestoes(ancorarTitulos(resumo.corpo)), tituloParaSlug)
   )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

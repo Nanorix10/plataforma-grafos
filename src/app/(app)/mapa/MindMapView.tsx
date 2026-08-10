@@ -17,16 +17,26 @@ type No = {
   definicao: string
   /** id do resumo que contém este; null = assunto principal da matéria */
   pai: string | null
+  /** `titulo` é uma seção de dentro de um resumo (decisão 12), não um resumo. */
+  tipo: 'resumo' | 'titulo'
 }
 
-/** Um item da árvore: a raiz, uma matéria ou um resumo. */
+/** Um item da árvore: a raiz, uma matéria, um resumo ou um título dele. */
 type Item = {
   nome: string
-  tipo: 'raiz' | 'materia' | 'resumo'
+  tipo: 'raiz' | 'materia' | 'resumo' | 'titulo'
   cor: string
   no?: No
   filhos?: Item[]
 }
+
+/**
+ * Quem leva a algum lugar quando clicado.
+ *
+ * Resumo e título são as duas pontas navegáveis — o título abre o resumo na
+ * âncora dele. Raiz e matéria não abrem nada, e nunca abriram.
+ */
+const ehDestino = (t: Item['tipo']) => t === 'resumo' || t === 'titulo'
 
 const LARGURA_CARTAO = 176
 const ALTURA_CARTAO = 30
@@ -76,7 +86,7 @@ export default function MindMapView({
       const filhos = (filhosDe.get(n.id) ?? []).filter((f) => !vistos.has(f.id))
       return {
         nome: n.titulo,
-        tipo: 'resumo' as const,
+        tipo: n.tipo,
         cor,
         no: n,
         filhos: filhos.map((f) => ramo(f, cor)),
@@ -135,24 +145,35 @@ export default function MindMapView({
       .data(arvore.descendants())
       .join('g')
       .attr('transform', (d) => `translate(${d.y},${d.x})`)
-      .attr('cursor', (d) => (d.data.tipo === 'resumo' && d.data.no?.liberado ? 'pointer' : 'default'))
+      .attr('cursor', (d) => (ehDestino(d.data.tipo) && d.data.no?.liberado ? 'pointer' : 'default'))
 
     // cartão
+    //
+    // O título é VAZADO: mesma caixa do resumo, sem preenchimento. É a diferença
+    // entre "isto é um resumo, tem página própria" e "isto é uma seção lá
+    // dentro". Distinguir por tamanho estava fora de questão — foi justamente o
+    // tamanho que saiu dos títulos no corpo do texto (decisão 12), e reintroduzi-lo
+    // aqui faria o mapa contradizer a página.
     itemSel
       .append('rect')
       .attr('x', (d) => (d.data.tipo === 'raiz' ? -LARGURA_CARTAO / 2 : -10))
       .attr('y', -ALTURA_CARTAO / 2)
-      .attr('width', (d) => (d.data.tipo === 'raiz' ? LARGURA_CARTAO : LARGURA_CARTAO))
+      .attr('width', LARGURA_CARTAO)
       .attr('height', ALTURA_CARTAO)
       .attr('rx', 6)
-      .attr('fill', (d) =>
-        d.data.tipo === 'resumo' ? 'var(--raised)' : d.data.cor
-      )
+      .attr('fill', (d) => {
+        if (d.data.tipo === 'titulo') return 'none'
+        return d.data.tipo === 'resumo' ? 'var(--raised)' : d.data.cor
+      })
       .attr('fill-opacity', (d) => {
         if (d.data.tipo === 'resumo') return d.data.no?.liberado ? 1 : 0.45
         return d.data.tipo === 'raiz' ? 1 : 0.14
       })
-      .attr('stroke', (d) => (d.data.tipo === 'resumo' ? 'var(--line-forte)' : d.data.cor))
+      .attr('stroke', (d) => {
+        if (d.data.tipo === 'titulo') return d.data.no?.cor ?? 'var(--line-forte)'
+        return d.data.tipo === 'resumo' ? 'var(--line-forte)' : d.data.cor
+      })
+      .attr('stroke-opacity', (d) => (d.data.tipo === 'titulo' ? 0.45 : 1))
       .attr('stroke-width', (d) => (d.data.tipo === 'raiz' ? 0 : 1.4))
       .attr('stroke-dasharray', (d) =>
         d.data.tipo === 'resumo' && !d.data.no?.liberado ? '3,2' : 'none'
@@ -164,8 +185,10 @@ export default function MindMapView({
       .attr('x', (d) => (d.data.tipo === 'raiz' ? 0 : 0))
       .attr('dy', '0.34em')
       .attr('text-anchor', (d) => (d.data.tipo === 'raiz' ? 'middle' : 'start'))
-      .attr('font-size', (d) => (d.data.tipo === 'resumo' ? '11.5px' : '12.5px'))
-      .attr('font-weight', (d) => (d.data.tipo === 'resumo' ? 400 : 600))
+      // Título e resumo saem no MESMO corpo de letra. Só raiz e matéria, que são
+      // guarda-chuvas e não levam a lugar nenhum, ficam maiores.
+      .attr('font-size', (d) => (ehDestino(d.data.tipo) ? '11.5px' : '12.5px'))
+      .attr('font-weight', (d) => (ehDestino(d.data.tipo) ? 400 : 600))
       .attr('font-family', 'var(--fonte-texto), sans-serif')
       .attr('fill', (d) => {
         // o cartão da raiz é preenchido de lilás; texto escuro em cima dele
@@ -197,7 +220,7 @@ export default function MindMapView({
       .text('🔒')
 
     // ---------- acessibilidade e interação ----------
-    const resumoSel = itemSel.filter((d) => d.data.tipo === 'resumo')
+    const resumoSel = itemSel.filter((d) => ehDestino(d.data.tipo))
 
     resumoSel
       .attr('tabindex', (d) => (d.data.no?.liberado ? 0 : -1))

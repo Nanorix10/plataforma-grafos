@@ -677,6 +677,74 @@ entrariam fora de ordem.
 Não há `remotePatterns` no `next.config.ts` e não faz falta: o corpo do resumo é
 HTML cru com `<img>`, não `next/image`.
 
+**12. Todo título é um grafo, e por isso não tem tamanho.**
+O editor deixou de chamar `h2/h3/h4` de "Título 1/2/3" e passou a chamar de
+**Grafo 1/2/3**. Não é troca de rótulo: cada um deles vira um NÓ no `/mapa`,
+pendurado no resumo que o contém e nos títulos de nível acima. O resumo é um
+grafo, e cada seção dentro dele é outro.
+
+Disso decorre o que se vê na página: **os três saem no corpo do texto, só em
+negrito**. Grafo não tem tamanho — "Leis de Newton" não é uma coisa *maior* que
+"1ª Lei", é uma coisa que *contém* a outra, e escala tipográfica diria a
+primeira. O que marca hierarquia agora é a margem acima (1.8em / 1.5em / 1.3em),
+que é ritmo e não tamanho. `font-size: 1em` e não `1rem`, para o título
+acompanhar quem o cerca quando estiver dentro de uma tabela ou lista.
+
+**Isto NÃO contradiz a decisão 9**, e a diferença importa: lá o que se recusa é
+*inferir* hierarquia dos `[[wikilinks]]`, que formam um grafo sem raiz cuja
+forma mudaria a cada resumo novo. Um sumário não é inferência — é estrutura que
+o autor escreveu à mão, na ordem e no nível que quis, exatamente como o
+`pai_id`. São a mesma espécie de dado em dois lugares diferentes.
+
+**Nada disso vai para o banco.** Os nós de título são derivados na leitura, em
+`lib/titulos.ts`, a partir do `corpo` que já existia. Sem tabela, sem trigger,
+sem coluna: o sumário JÁ estava escrito no HTML, e materializá-lo criaria uma
+segunda cópia para manter em dia a cada tecla do autor. O preço é que o `/mapa`
+passa a carregar o `corpo` de todos os resumos — no servidor, e só a lista de
+títulos desce para o navegador.
+
+Quatro detalhes que não dá para adivinhar lendo o código:
+
+- **`extrairTitulos` e `ancorarTitulos` são o mesmo cálculo.** A primeira diz ao
+  mapa para onde apontar, a segunda grava o `id` na página. Se divergirem, o
+  link cai no topo do resumo **em silêncio** — navegador não reclama de âncora
+  que não existe. Por isso as duas passam pelo mesmo `percorrer`, e por isso as
+  duas rodam sobre o `corpo` CRU, antes de questões, wikilinks e fórmulas.
+- **Título repetido ganha sufixo** (`exemplo`, `exemplo-2`). "Exemplo" e
+  "Resumo" aparecem três vezes no mesmo documento; sem isso, os três nós
+  levariam ao primeiro.
+- **A pilha de níveis tolera salto.** Um `h2` seguido direto de um `h4` pendura
+  o `h4` no `h2`, porque a pilha só desempilha o que for mais fundo. Salto
+  acontece em texto real e não é erro do autor.
+- **Resumo fora do plano não abre os títulos.** Os nomes das seções já são
+  conteúdo — o sumário de "Dinâmica" entrega a estrutura da aula inteira. O nó
+  do resumo continua na tela com o cadeado, que é o que interessa mostrar.
+
+No desenho, o título é **vazado** e o resumo é **preenchido** — nas duas visões,
+com a mesma regra, para quem aprendeu a ler uma não precisar reaprender na
+outra. Distinguir por tamanho estava fora de questão: foi justamente o tamanho
+que saiu dos títulos no corpo do texto, e reintroduzi-lo no mapa faria o desenho
+contradizer a página.
+
+**12b. A cor que o autor escolhe agora ganha da cor da matéria.**
+Ao lado das sete bolinhas prontas há um seletor livre. As bolinhas ficam porque
+são um clique só para o caso comum; o seletor é para quando nenhuma serve.
+
+O que se grava continua sendo o par `light-dark(claro, escuro)` da decisão 4b —
+a cor mora no HTML do resumo para sempre e precisa ler nos dois temas. Como o
+autor escolhe UMA cor, o par é derivado em `lib/cor.ts`. **O cabeçalho daquele
+arquivo é a leitura obrigatória de quem for mexer**: ele mede os seis pares
+escritos à mão e mostra que só o matiz e o brilho seguem regra; a saturação foi
+ajustada no olho, par a par, e o fator ×0,7 do código é aproximação declarada,
+não reprodução. Cor derivada não sai idêntica à do `materias.ts`.
+
+A armadilha que isso destravou: `.conteudo-resumo strong` e os títulos pintam de
+`--cor-materia`, e **herança sempre perde para uma regra que casa**. Sem a linha
+nova em `globals.css`, pintar um trecho de vermelho deixaria de fora justamente
+as palavras em negrito dentro dele — as que o autor mais quer destacar. A regra
+é `span[style*='color'] strong`, e não `[style*='color']`, porque a segunda
+casaria também com `background-color` e arrastaria `<figure>` para dentro.
+
 ## Imagem: feito em agosto/2026
 
 O site já exibe imagem. Colar (Ctrl+V), arrastar o arquivo e o botão da barra

@@ -31,6 +31,8 @@ type No = {
   definicao: string
   /** id do resumo que contém este; null = assunto principal da matéria */
   pai: string | null
+  /** `titulo` é uma seção de dentro de um resumo (decisão 12), não um resumo. */
+  tipo: 'resumo' | 'titulo'
 }
 type Link = { origem: string; destino: string }
 type Materia = { slug: string; nome: string; cor: string }
@@ -41,14 +43,22 @@ type NoSim = SimulationNodeDatum & {
   cor: string
   liberado: boolean
   definicao: string
-  tipo: 'materia' | 'resumo'
+  tipo: 'materia' | 'resumo' | 'titulo'
   grau: number
   filhos: number
   expandido: boolean
 }
 type LinkSim = SimulationLinkDatum<NoSim> & { tipo: 'contem' | 'cita' }
 
-/** Nó com poucas conexões fica pequeno; um tópico central fica grande. */
+/**
+ * Nó com poucas conexões fica pequeno; um tópico central fica grande.
+ *
+ * O título entra nesta mesma conta sem cláusula própria, e sai pequeno por
+ * consequência: `grau` conta as citações `[[...]]`, e quem cita é sempre um
+ * resumo inteiro, nunca uma seção. Um título só cresce se tiver subtítulos.
+ * Aqui o tamanho mede alcance, não nível — um h4 muito citado por dentro
+ * ficaria maior que o h2 vizinho, e estaria certo.
+ */
 function raio(d: NoSim) {
   if (d.tipo === 'materia') return 13
   return 7 + Math.sqrt(d.grau + d.filhos) * 4.5
@@ -169,7 +179,7 @@ export default function GraphView({
           cor: n.cor,
           liberado: n.liberado,
           definicao: n.definicao,
-          tipo: 'resumo' as const,
+          tipo: n.tipo,
           grau: grausPorId.get(n.id) ?? 0,
           filhos: (filhosDe.get(n.id) ?? []).length,
           expandido: expandidos.has(n.id),
@@ -203,7 +213,7 @@ export default function GraphView({
     const simLinks: LinkSim[] = [
       // "contém": a espinha da árvore, escrita à mão pelo autor
       ...simNodes
-        .filter((n) => n.tipo === 'resumo')
+        .filter((n) => n.tipo !== 'materia')
         .map((n) => {
           const original = porId.get(n.id)
           const paiId = original?.pai ?? idMateria(original?.materia ?? '')
@@ -262,12 +272,21 @@ export default function GraphView({
       .append('circle')
       .attr('r', raio)
       .attr('fill', (d) => d.cor)
-      .attr('fill-opacity', (d) =>
-        d.tipo === 'materia' ? 0.22 : d.liberado ? 0.9 : 0.18
-      )
+      // O título é vazado, como no mapa mental: a mesma diferença entre "tem
+      // página própria" e "é uma seção lá dentro", dita do mesmo jeito nas duas
+      // visões — quem aprende a ler numa não precisa reaprender na outra.
+      .attr('fill-opacity', (d) => {
+        if (d.tipo === 'titulo') return 0.12
+        return d.tipo === 'materia' ? 0.22 : d.liberado ? 0.9 : 0.18
+      })
       // o anel em volta do nó é o fundo do próprio mapa: ele "recorta" o nó
-      // das arestas que passam por trás
-      .attr('stroke', (d) => (d.tipo === 'materia' ? d.cor : d.liberado ? 'var(--canvas)' : 'var(--ink-faint)'))
+      // das arestas que passam por trás. No título o anel é da cor da matéria,
+      // porque sem preenchimento é ele que dá a cor ao nó.
+      .attr('stroke', (d) => {
+        if (d.tipo === 'titulo') return d.cor
+        return d.tipo === 'materia' ? d.cor : d.liberado ? 'var(--canvas)' : 'var(--ink-faint)'
+      })
+      .attr('stroke-opacity', (d) => (d.tipo === 'titulo' ? 0.55 : 1))
       .attr('stroke-width', (d) => (d.tipo === 'materia' ? 2 : d.liberado ? 2 : 1))
       .attr('stroke-dasharray', (d) => (d.tipo === 'resumo' && !d.liberado ? '3,2' : 'none'))
 
@@ -325,7 +344,7 @@ export default function GraphView({
 
     // acessível por teclado e leitor de tela: cada nó vira um destino real
     noSel
-      .attr('tabindex', (d) => (d.tipo === 'resumo' && d.liberado ? 0 : -1))
+      .attr('tabindex', (d) => (d.tipo !== 'materia' && d.liberado ? 0 : -1))
       .attr('role', (d) => (d.tipo === 'materia' ? 'group' : 'link'))
       .attr('aria-label', (d) =>
         d.tipo === 'materia'
