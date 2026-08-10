@@ -610,6 +610,47 @@ A tabela do `TableKit` é desligada (`table: false`) e entra `TabelaLivre` no
 lugar, que é a mesma extensão com o atributo `escapa`. Registrar as duas daria
 conflito de nome de nó.
 
+**11c. A imagem é `<figure>`, e o painel tem quase tudo o que o Docs tem.**
+`@tiptap/extension-image` foi **removido do projeto**: ele grava um `<img>`
+solto, e legenda pede `<figcaption>` com um pai, e "texto ao redor" pede o
+`float` num elemento que ENVOLVA a imagem. Os dois são estrutura, não atributo.
+No lugar entrou um nó próprio em `admin/editor/imagem.ts`.
+
+**A regra que manda em tudo ali:** a página do aluno renderiza HTML cru, sem
+React — então tudo o que se vê tem de sair do HTML gravado. Modos fechados
+(quebra, alinhamento, escapa, recolorir) vão em `data-*` que o CSS lê; valores
+contínuos (largura, giro, brilho, borda) vão em `style` embutido, porque
+seletor de atributo não cobre número livre. Os `data-*` dos contínuos também
+são gravados — é o que o `parseHTML` relê ao reabrir, já que ninguém decompõe
+uma string de `style`.
+
+**As alças de redimensionar são uma SOBREPOSIÇÃO, não um NodeView**
+(`AlcasImagem.tsx`). Um NodeView criaria duas renderizações da mesma imagem — a
+do React, que o autor vê, e a do `renderHTML`, que o aluno recebe — e elas
+divergiriam no primeiro ajuste, levando o WYSIWYG junto. A camada de alças é
+medida por cima da figura de verdade e some quando ela é desmarcada. Só as
+alças da direita puxam: as da esquerda exigiriam mover a imagem enquanto ela
+cresce, e numa figura centralizada o desenho fugiria do ponteiro.
+
+**O que o Docs tem e aqui NÃO tem, de propósito:**
+
+- **Atrás do texto / à frente do texto.** Exigem posição absoluta por cima do
+  texto, que só funciona com página de largura fixa. O resumo é uma coluna que
+  muda de largura com a régua e com a tela — a imagem cairia em cima da frase
+  errada em metade dos aparelhos.
+- **Fixar posição na página.** Não há páginas: o resumo é uma rolagem só.
+- **Recortar e máscara de forma.** Pedem uma interface de recorte própria; a
+  altura fixa com `object-fit: cover` cobre o caso simples.
+
+Os ajustes de cor são **filtros de CSS**, então não tocam no arquivo: dá para
+voltar atrás sempre, e a mesma imagem serve a dois resumos com ajustes
+diferentes. O preço é que o aluno baixa a original.
+
+Uma armadilha do `float`: sem `clear: both` no fim de `.conteudo-resumo`, uma
+figura com texto ao redor no final do resumo vaza para fora e sobe por cima dos
+backlinks. E abaixo de 640px o `float` é desligado — numa coluna de celular
+sobrariam três palavras por linha ao lado da imagem.
+
 **11b. Imagem: upload por server action, largura em porcentagem.**
 O bucket `imagens` é **público** porque a imagem é servida direto no `<img>` da
 página; URL assinada teria de ser gerada a cada leitura e venceria no meio da

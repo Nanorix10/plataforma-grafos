@@ -23,7 +23,9 @@ import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import Regua from './Regua'
-import { Imagem, LARGURAS, TabelaLivre } from './imagem'
+import { Imagem, TabelaLivre } from './imagem'
+import PainelImagem from './PainelImagem'
+import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
 import { salvarCorpoAuto, enviarImagem } from './actions'
 
@@ -461,61 +463,8 @@ function Barra({
         🖼 Imagem
       </Bt>
 
-      {/* ---- controles da imagem selecionada ----
-          Só existem quando há uma imagem escolhida. Numa barra que já é longa,
-          quatro botões permanentes e inúteis na maior parte do tempo custariam
-          mais do que a comodidade que dão. */}
-      {editor.isActive('image') ? (
-        <>
-          <Sep />
-          <Bt
-            title="Alinhar à esquerda"
-            ativo={editor.getAttributes('image').alinhamento === 'esquerda'}
-            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'esquerda' }).run()}
-          >
-            ⇤
-          </Bt>
-          <Bt
-            title="Centralizar"
-            ativo={editor.getAttributes('image').alinhamento === 'centro'}
-            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'centro' }).run()}
-          >
-            ⇔
-          </Bt>
-          <Bt
-            title="Alinhar à direita"
-            ativo={editor.getAttributes('image').alinhamento === 'direita'}
-            onClick={() => editor.chain().focus().updateAttributes('image', { alinhamento: 'direita' }).run()}
-          >
-            ⇥
-          </Bt>
-          {LARGURAS.map((l) => (
-            <Bt
-              key={l}
-              title={`${l}% da largura do texto`}
-              ativo={editor.getAttributes('image').largura === l}
-              largo
-              onClick={() => editor.chain().focus().updateAttributes('image', { largura: l }).run()}
-            >
-              {l}%
-            </Bt>
-          ))}
-          <Bt
-            title="Passar das margens — a imagem ocupa a folha inteira"
-            largo
-            ativo={editor.getAttributes('image').escapa === true}
-            onClick={() =>
-              editor
-                .chain()
-                .focus()
-                .updateAttributes('image', { escapa: !editor.getAttributes('image').escapa })
-                .run()
-            }
-          >
-            ⤢ Sair da margem
-          </Bt>
-        </>
-      ) : null}
+      {/* Os controles da imagem NÃO ficam aqui: são trinta, e moram no
+          `PainelImagem`, que abre embaixo da barra quando há uma selecionada. */}
 
       {/* A tabela ganha a mesma liberdade da imagem: um glossário de duas
           colunas largas respira melhor fora do recuo do texto. */}
@@ -634,6 +583,8 @@ export default function EditorCorpo({
      depender da constante que ele mesmo ainda vai devolver. */
   const editorRef = useRef<Editor | null>(null)
   const entradaImagemRef = useRef<HTMLInputElement>(null)
+  /* A "mesa" onde a folha rola. As alças da imagem se medem em relação a ela. */
+  const mesaRef = useRef<HTMLDivElement>(null)
   const [enviando, setEnviando] = useState(0)
   const [erroImagem, setErroImagem] = useState<string | null>(null)
 
@@ -660,7 +611,7 @@ export default function EditorCorpo({
         editorRef.current
           ?.chain()
           .focus()
-          .setImage({ src: r.url, alt: '' })
+          .insertContent({ type: 'image', attrs: { src: r.url, alt: '' } })
           .createParagraphNear()
           .run()
       } catch {
@@ -875,6 +826,15 @@ export default function EditorCorpo({
             aoPedirImagem={() => entradaImagemRef.current?.click()}
           />
           <BarraTabela editor={editor} />
+          {/* O painel só existe com uma imagem escolhida — fora disso seriam
+              trinta controles sem alvo, ocupando a altura que a folha usa. */}
+          {editor.isActive('image') ? (
+            <PainelImagem
+              editor={editor}
+              aoEnviarErro={setErroImagem}
+              aoMudarEnvio={(d) => setEnviando((n) => n + d)}
+            />
+          ) : null}
         </>
       )}
 
@@ -911,10 +871,16 @@ export default function EditorCorpo({
           branca aqui deixaria o autor digitando cinza-claro sobre branco, e
           quebraria o WYSIWYG que faz o editor valer a pena. */}
       <div
-        className={`bg-[var(--page)] pb-6 overflow-y-auto ${
+        ref={mesaRef}
+        className={`relative bg-[var(--page)] pb-6 overflow-y-auto ${
           telaCheia ? 'flex-1 min-h-0' : 'max-h-[62vh]'
         }`}
       >
+        {/* As alças ficam AQUI, e não dentro da folha: elas são medidas em
+            relação a esta caixa, que é a que rola. */}
+        {editor && editor.isActive('image') ? (
+          <AlcasImagem editor={editor} containerRef={mesaRef} />
+        ) : null}
         {/* A régua acompanha a folha e rola junto com ela: presa no topo, ela
             apontaria para uma folha que já saiu de baixo. */}
         <Regua esq={margemEsq} dir={margemDir} aoMudar={aoMudarMargens} />

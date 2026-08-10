@@ -615,9 +615,96 @@ button:focus-visible,
   margin-bottom: 1.2em;
 }
 
-/* A largura vem em PORCENTAGEM da coluna, não em pixels: pixel amarraria a
-   imagem à largura da folha do dia em que foi inserida, e bastaria arrastar a
-   régua — ou o aluno abrir no celular — para ela estourar. */
+/* ---- a figura ----
+   A imagem vive dentro de `<figure>` porque legenda e "texto ao redor" são
+   estrutura, não atributo: `<figcaption>` precisa de um pai, e o `float` tem de
+   pegar num elemento que ENVOLVA a imagem, senão o texto contorna o retângulo
+   errado quando há borda ou espaçamento.
+
+   A largura, o giro, a borda e os ajustes de cor saem em `style` embutido,
+   escritos pelo editor — são valores contínuos, que seletor de atributo não
+   teria como cobrir. Aqui ficam só os MODOS. */
+.conteudo-resumo .figura {
+  margin: 1.2em 0;
+  /* o espaçamento em volta que o painel controla; 0 quando não foi mexido */
+  --margem-figura: 0px;
+}
+
+/* Bloco: a figura ocupa a linha, e o alinhamento decide de que lado ela encosta. */
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='esquerda'] {
+  margin-right: auto;
+  width: fit-content;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='centro'] {
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='direita'] {
+  margin-left: auto;
+  width: fit-content;
+}
+
+/* Em linha: a figura anda no meio da frase, como se fosse uma letra grande. */
+.conteudo-resumo .figura[data-quebra='emLinha'] {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.35em;
+}
+
+/* Texto ao redor: `float` de verdade, que é o único jeito de o texto contornar
+   a imagem em HTML. O `clear` vem no fim do resumo, mais abaixo. */
+.conteudo-resumo .figura[data-quebra='aoRedorEsq'] {
+  float: left;
+  margin: 0.3em var(--margem-figura, 1em) 0.6em 0;
+  max-width: 60%;
+}
+.conteudo-resumo .figura[data-quebra='aoRedorDir'] {
+  float: right;
+  margin: 0.3em 0 0.6em var(--margem-figura, 1em);
+  max-width: 60%;
+}
+/* No celular a coluna não comporta texto contornando: sobrariam três palavras
+   por linha. Abaixo de 640px o `float` é desligado e a figura vira bloco. */
+@media (max-width: 640px) {
+  .conteudo-resumo .figura[data-quebra='aoRedorEsq'],
+  .conteudo-resumo .figura[data-quebra='aoRedorDir'] {
+    float: none;
+    max-width: 100%;
+    margin: 1.2em auto;
+  }
+}
+
+/* O espaçamento em volta que o painel controla, nos modos que não são float. */
+.conteudo-resumo .figura[data-margem]:not([data-quebra^='aoRedor']) {
+  padding: var(--margem-figura);
+}
+
+.conteudo-resumo .figura figcaption {
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  line-height: 1.45;
+  color: var(--ink-faint);
+  text-align: center;
+  margin-top: 0.5em;
+  text-wrap: pretty;
+}
+
+/* O último bloco do resumo não pode ficar ao lado de uma figura flutuante:
+   sem isto, uma imagem no fim vaza para fora do resumo e sobe por cima dos
+   backlinks. */
+.conteudo-resumo::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* ---- compatibilidade ----
+   As primeiras imagens foram gravadas como `<img>` solto, com a largura em
+   `data-largura="100"` querendo dizer 100 POR CENTO. O editor converte ao
+   reabrir, mas o resumo publicado é lido direto do banco — sem estas quatro
+   regras, aquelas imagens apareceriam em tamanho natural até alguém salvar o
+   resumo de novo. */
 .conteudo-resumo img[data-largura='25'] {
   width: 25%;
 }
@@ -630,7 +717,6 @@ button:focus-visible,
 .conteudo-resumo img[data-largura='100'] {
   width: 100%;
 }
-
 .conteudo-resumo img[data-alinhamento='esquerda'] {
   margin-right: auto;
 }
