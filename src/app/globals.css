@@ -596,6 +596,81 @@ button:focus-visible,
   outline: none;
 }
 
+/* ---- imagens ----
+   O site não exibia imagem nenhuma até aqui: não era lacuna de conteúdo, era
+   ausência de infraestrutura. Estas regras são a metade visual dela.
+
+   `display: block` e não inline: a imagem do resumo é uma figura, não uma
+   letra grande no meio da frase — e é o bloco que permite centralizar e
+   escapar das margens. */
+.conteudo-resumo img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  border-radius: var(--raio-peq);
+  /* a moldura de 1px separa a imagem do papel quando ela tem fundo claro no
+     tema escuro, que é o caso de todo print de PDF e de todo diagrama */
+  box-shadow: 0 0 0 1px var(--line-forte);
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
+}
+
+/* A largura vem em PORCENTAGEM da coluna, não em pixels: pixel amarraria a
+   imagem à largura da folha do dia em que foi inserida, e bastaria arrastar a
+   régua — ou o aluno abrir no celular — para ela estourar. */
+.conteudo-resumo img[data-largura='25'] {
+  width: 25%;
+}
+.conteudo-resumo img[data-largura='50'] {
+  width: 50%;
+}
+.conteudo-resumo img[data-largura='75'] {
+  width: 75%;
+}
+.conteudo-resumo img[data-largura='100'] {
+  width: 100%;
+}
+
+.conteudo-resumo img[data-alinhamento='esquerda'] {
+  margin-right: auto;
+}
+.conteudo-resumo img[data-alinhamento='centro'] {
+  margin-left: auto;
+  margin-right: auto;
+}
+.conteudo-resumo img[data-alinhamento='direita'] {
+  margin-left: auto;
+}
+
+/* ---- sair das margens ----
+   A resposta ao "quando eu quiser algo maior": o elemento anula o recuo do
+   texto com margem negativa do tamanho EXATO das margens da folha, e passa a
+   ocupar a página inteira.
+
+   Funciona porque o recuo do texto é `padding` do container e as margens vivem
+   em `--margem-esq`/`--margem-dir` — as mesmas variáveis no editor e na página
+   do aluno, que é o que mantém o WYSIWYG de pé.
+
+   A mesma regra atende imagem e tabela de propósito: são as duas coisas que o
+   autor pediu que tivessem liberdade, e uma regra só não tem como divergir. */
+.conteudo-resumo [data-escapa='sim'] {
+  width: auto;
+  max-width: none;
+  margin-left: calc(var(--margem-esq, 0px) * -1);
+  margin-right: calc(var(--margem-dir, 0px) * -1);
+}
+
+/* No celular as margens da régua são ignoradas (o recuo é fixo de 1.5rem),
+   então o escape precisa anular ESSE valor. Sem esta regra, um `escapa` puxaria
+   a imagem 150px para fora da tela. */
+@media (max-width: 767px) {
+  .conteudo-resumo [data-escapa='sim'] {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    border-radius: 0;
+  }
+}
+
 /* ---- subscrito e sobrescrito ----
    Os resumos de Física vinham com `v₀` e `x²` em caracteres Unicode, que só
    existem para alguns símbolos (não há `q` subscrito) e não acompanham o

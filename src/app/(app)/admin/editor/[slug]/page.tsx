@@ -16,7 +16,9 @@ export default async function EditarResumoPage({
   const [{ data: resumo }, { data: todos }] = await Promise.all([
     supabase
       .from('resumos')
-      .select('id, slug, titulo, materia_slug, processo_slug, corpo, definicao, pai_id')
+      .select(
+        'id, slug, titulo, materia_slug, processo_slug, corpo, definicao, pai_id, margem_esq, margem_dir'
+      )
       .eq('slug', slug)
       .single(),
     // id, matéria e pai também: além do autocomplete de [[wikilinks]], esta

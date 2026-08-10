@@ -9,6 +9,7 @@ import { renderizarWikilinks, PLANO_PROCESSOS } from '@/lib/wikilinks'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { getSessao } from '@/lib/sessao'
+import { estiloDaPagina } from '@/lib/pagina'
 
 export default async function ResumoPage({
   params,
@@ -104,7 +105,14 @@ export default async function ResumoPage({
         ) : null}
       </header>
 
-      <article className="max-w-[720px] mx-auto px-6 md:px-10 py-10 md:py-14">
+      {/* A largura e as margens são as que o autor arrastou na régua do editor.
+          É o que fecha o WYSIWYG: sem isto, a folha do editor mostraria uma
+          coluna e o aluno leria outra. Abaixo de `md` as margens são ignoradas
+          e vale um recuo fixo — 150px numa tela de celular não sobraria texto. */}
+      <article
+        className="max-w-[var(--pagina)] mx-auto px-6 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] py-10 md:py-14"
+        style={estiloDaPagina(resumo.margem_esq ?? 150, resumo.margem_dir ?? 150)}
+      >
         {/* A etiqueta é contornada na cor da matéria, e o texto vai na mesma
             cor. Ela já foi a ÚNICA peça colorida da página, quando o título
             ficava neutro; agora a cor da matéria vale para todo título do

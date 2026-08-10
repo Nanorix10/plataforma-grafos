@@ -577,33 +577,86 @@ essa mesma coluna, e a tela de pessoas segue valendo para os casos manuais.
 > Providers → Email), não do código. Com ela ligada, quem se cadastra só entra
 > depois de clicar no link recebido; desligada, entra na hora.
 
-## Próximo passo combinado: suporte a imagem
+**11. A folha tem régua, e imagem e tabela podem sair das margens.**
+`lib/pagina.ts` é a fonte única: folha de **920px**, margem padrão **150** de
+cada lado — o que devolve exatamente a coluna de 620px que o editor já tinha,
+então nenhum resumo existente mudou de aparência. A folga até 880px é o que dá
+para onde crescer; sem ela, a régua só saberia apertar.
 
-O site **não exibe imagem nenhuma** hoje, e isso não é lacuna de conteúdo — é
-ausência de infraestrutura. Não há `@tiptap/extension-image`, botão no editor,
-bucket no Storage, regra de CSS para `img` nem `remotePatterns` no
-`next.config.ts`.
+As margens são **duas colunas em `resumos`** (`margem_esq`, `margem_dir`), e não
+uma "largura do texto": a régua tem dois marcadores independentes, e uma largura
+única só saberia centralizar.
 
-Armadilha a saber: colar uma imagem no editor hoje **não dá erro** — o
-ProseMirror valida o conteúdo contra o esquema e descarta em silêncio o que não
-reconhece. Quem colar vai ver a imagem sumir sem nenhuma mensagem.
+Três guardas em série, e é de propósito: `ajustarMargens` prende enquanto o
+autor arrasta, roda de novo na server action, e o `check`
+`resumos_margens_validas` é a palavra final. Mesmo princípio dos ciclos e do
+RLS — a interface ajuda, o banco decide.
 
-Consequência imediata: a questão de colisão em `quantidade-de-movimento` diz "a
-situação ilustrada a seguir" e a ilustração não tem para onde ir. Não adianta
-tentar recolocar pelo editor.
+A régua é desenhada na **largura real** da folha, não em miniatura: régua
+reduzida obriga a converter "arrastei 3px, mexi quanto?" na cabeça. O arrasto
+escuta no `window` e não no marcador — o ponteiro sai de um alvo de 13px no
+primeiro movimento rápido, e o marcador escaparia da mão.
 
-O que falta construir, de uma vez:
+**Abaixo de `sm`/`md` as margens são ignoradas** e vale um recuo fixo de 24px:
+150px numa tela de 390px não deixaria coluna nenhuma.
 
-1. `@tiptap/extension-image` + botão na barra do `EditorCorpo`
-2. Bucket no Supabase Storage, com RLS deixando só admin subir e todos lerem
-3. Server action de upload em `admin/editor/actions.ts`
-4. Regra de `img` em `.conteudo-resumo` (largura máxima, cantos, legenda)
+**O escape.** `data-escapa="sim"` anula o recuo com margem negativa do tamanho
+exato das margens, e o elemento ocupa a folha inteira. Uma regra só de CSS
+atende imagem e tabela — são as duas coisas que o autor pediu que tivessem
+liberdade, e regra única não tem como divergir. No celular a regra é outra
+(`-1.5rem`), senão o escape puxaria a imagem 150px para fora da tela.
 
-Para tirar as imagens do Google Docs, o atalho é que **`.docx` é um zip**:
-baixando o documento como Word, as imagens ficam todas em `word/media/`, já
-separadas. Não precisa salvar uma a uma, e não vale baixar pelo MCP do Drive —
-o conteúdo vem em base64 para dentro da conversa, o que é inviável para o
+A tabela do `TableKit` é desligada (`table: false`) e entra `TabelaLivre` no
+lugar, que é a mesma extensão com o atributo `escapa`. Registrar as duas daria
+conflito de nome de nó.
+
+**11b. Imagem: upload por server action, largura em porcentagem.**
+O bucket `imagens` é **público** porque a imagem é servida direto no `<img>` da
+página; URL assinada teria de ser gerada a cada leitura e venceria no meio da
+aula. Isso não afrouxa o conteúdo — o resumo continua barrado por plano, e o que
+fica público é um arquivo em caminho com uuid.
+
+O upload passa por **server action**, não pelo navegador: a chave do cliente é a
+anônima, e quem decide é a policy `admin envia imagens` — do lado do cliente não
+haveria nada a conferir. O nome do arquivo é um uuid, e não o original: nome
+vindo do Windows traz acento, espaço e parêntese, e dois prints "Captura de
+tela.png" se sobrescreveriam em silêncio.
+
+**A largura da imagem é porcentagem da coluna, nunca pixel.** Pixel amarraria a
+imagem à largura da folha do dia em que foi inserida — bastaria arrastar a régua,
+ou o aluno abrir no celular, para estourar.
+
+Colar e arrastar são `handlePaste`/`handleDrop`, que devolvem `true` na hora e
+sobem o arquivo depois: handler de ProseMirror é síncrono, e esperar o upload
+dentro dele travaria o editor. Quem avisa é o rodapé de status — sem ele, colar
+um print de 4 MB numa conexão ruim pareceria não ter feito nada. Os uploads vão
+**em série**: cinco arquivos soltos de uma vez disputariam a banda de subida e
+entrariam fora de ordem.
+
+Não há `remotePatterns` no `next.config.ts` e não faz falta: o corpo do resumo é
+HTML cru com `<img>`, não `next/image`.
+
+## Imagem: feito em agosto/2026
+
+O site já exibe imagem. Colar (Ctrl+V), arrastar o arquivo e o botão da barra
+funcionam, com alinhamento, quatro larguras e a saída das margens — ver decisões
+11 e 11b. A armadilha antiga (colar não dava erro, o ProseMirror descartava em
+silêncio) está fechada.
+
+Ficou de fora de propósito: **redimensionar arrastando o canto** e **legenda**.
+As duas pedem um NodeView do TipTap, que é um pedaço à parte; as quatro larguras
+prontas cobrem o caso comum, e a legenda dá para escrever como parágrafo logo
+abaixo enquanto isso.
+
+Continua valendo o atalho para tirar as imagens do Google Docs: **`.docx` é um
+zip**. Baixando o documento como Word, as imagens ficam todas em `word/media/`,
+já separadas. Não precisa salvar uma a uma, e não vale baixar pelo MCP do Drive
+— o conteúdo vem em base64 para dentro da conversa, o que é inviável para o
 documento mestre de 13 MB.
+
+E segue pendente o caso que motivou tudo: a questão de colisão em
+`quantidade-de-movimento` diz "a situação ilustrada a seguir" e a ilustração
+ainda não foi colocada. Agora dá — é só abrir o resumo no editor e colar.
 
 ## Publicação
 
