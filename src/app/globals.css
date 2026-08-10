@@ -398,6 +398,52 @@ button:focus-visible,
 .conteudo-resumo h3 {
   margin-top: 1.5em;
 }
+
+/* ---- grafo corrido: título e explicação na mesma linha ----
+   O formato de origem dos resumos, `**Termo:** definição;`. Ligado por grafo,
+   no botão "T¶" do editor, que grava `data-corrido="sim"`.
+
+   `float` é o único jeito de fazer isto em CSS puro. `display: run-in` está
+   morto nos navegadores, e deixar os dois em `inline` custaria as margens —
+   caixa inline não tem margem vertical, e o espaçamento do resumo inteiro sai
+   de margem (a "coruja" `> * + *` lá em cima).
+
+   **As duas margens abaixo têm que ser IGUAIS, e é isso que alinha as duas
+   linhas.** A conta: `> * + *` põe todo o espaçamento na margem de CIMA, então
+   a margem de baixo do elemento anterior é sempre 0. Float não colapsa margem
+   com ninguém, então o título flutuado começa em (fim do anterior + a própria
+   margem de cima); o parágrafo, que ficou no fluxo normal, começa em (fim do
+   anterior + a margem de cima DELE). Iguais, os dois pousam na mesma linha.
+   Diferentes, o texto começa acima ou abaixo do título e o efeito se desfaz —
+   por isso o valor está escrito duas vezes de propósito, e não herdado.
+
+   Vale o espaçamento de parágrafo (0.9em) e não o de título (1.8em): corrido,
+   o grafo É um parágrafo que começa em negrito, e a hierarquia continua sendo
+   dita pelo nível — no mapa e para o leitor de tela. */
+.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] {
+  float: left;
+  margin-top: 0.9em;
+  margin-right: 0.4em;
+  max-width: 100%;
+}
+.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] + * {
+  margin-top: 0.9em;
+}
+
+/* Abrindo o resumo, não há o que espaçar acima — mas os dois continuam tendo
+   que casar, senão a primeira linha do resumo nasce torta. */
+.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim']:first-child,
+.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim']:first-child + * {
+  margin-top: 0;
+}
+
+/* Limpa o float no SEGUNDO vizinho, não no primeiro — o primeiro é justamente
+   a explicação, que tem que subir. Sem isto, um título que quebre em duas
+   linhas continuaria empurrando o bloco seguinte para o lado dele. Limpar um
+   só basta: o que vier depois já começa abaixo. */
+.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] + * + * {
+  clear: both;
+}
 /* ---- listas ----
    A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
    são tópicos que se desdobram em subtópicos por 4 ou 5 níveis, no padrão
