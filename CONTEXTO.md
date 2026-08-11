@@ -751,6 +751,32 @@ formato de origem dos resumos — `**Termo:** definição;` —, e depois da dec
 12 o grafo já era igual a esse termo em tudo menos numa coisa: o termo dividia a
 linha, o grafo ainda a ocupava sozinho.
 
+**12c-bis. Quem liga o modo, na prática, é o `:`.**
+O botão exigia que o autor lembrasse dele. Os dois pontos, não: no formato de
+origem eles são exatamente onde o nome do assunto acaba, e o autor já os digita.
+Uma regra de digitação em `tituloCorrido.ts` liga o modo corrido, abre o
+parágrafo da explicação e leva o cursor para lá.
+
+Só dentro de um grafo (prosa comum é cheia de dois pontos), só com o cursor no
+fim (senão um `:` corrigido no meio partiria o título em dois) e só uma vez
+(com o modo já ligado, o parágrafo existe). Quando a quebra não era desejada —
+"Capítulo 3: Dinâmica" — o Backspace desfaz: o TipTap liga `undoInputRule` a
+ele por padrão, e o `:` volta a ser texto comum. O botão `T¶` fica, porque é
+ele que DESLIGA o modo e que serve a quem escreveu o título antes de decidir.
+
+**O `:` fica gravado no título, como texto** — é o que o autor digitou e o que
+o documento de origem tem. Inventá-lo no CSS (`::after`) faria a página mostrar
+caractere que não está no HTML, que é a armadilha da decisão 1 de novo. Quem o
+tira do RÓTULO do nó é `lib/titulos.ts`: no mapa não há definição do outro lado,
+e o nó se chamaria "Leis de Newton:", com um sinal apontando para nada. Some só
+quando encerra o título, então "Razão 3:4" continua inteiro — e as âncoras não
+mudam, porque `comoAncora` já descartava o caractere.
+
+Uma armadilha do TipTap que custou uma leitura do `node_modules`: quando a regra
+roda, **o caractere digitado ainda NÃO está no documento** (`textBefore` é o
+texto do bloco MAIS o que se digitou, e só para casar). Cabe ao handler inserir
+o `:`; sem isso a regra dispara e o caractere some.
+
 **O título continua sendo um bloco `h2/h3/h4` separado do parágrafo**, e isso é
 o que sustenta o resto: `lib/titulos.ts` segue lendo só o título ao montar o nó,
 o nível continua dizendo quem pendura em quem, e o leitor de tela continua

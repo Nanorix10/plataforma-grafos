@@ -35,6 +35,16 @@ const CADA_TITULO = /<h([234])\b([^>]*)>([\s\S]*?)<\/h\1>/gi
  * O `[[Fulano]]` perde os colchetes: no corpo do resumo eles são a marcação do
  * wikilink e viram link na leitura, mas no rótulo de um nó do mapa sairiam como
  * dois colchetes literais no meio do desenho.
+ *
+ * **O dois-pontos do fim também cai, e pela mesma razão.** No corpo ele é
+ * pontuação de verdade — separa o termo da definição em `**Termo:** definição`,
+ * que é como o editor grava um grafo corrido. No mapa não há definição do outro
+ * lado: o nó se chamaria "Leis de Newton:", com um sinal apontando para nada.
+ * Some só quando encerra o título, então "Razão 3:4" continua inteiro.
+ *
+ * Isto não mexe nas âncoras — `comoAncora` já descartava o caractere e apagava
+ * o traço sobrando —, mas a limpeza mora aqui de propósito: rótulo e âncora
+ * saem do MESMO texto, que é a garantia que o cabeçalho deste arquivo exige.
  */
 function textoLimpo(html: string): string {
   return html
@@ -47,6 +57,8 @@ function textoLimpo(html: string): string {
     .replace(/&#3[59];/g, "'")
     .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s*:+$/, '')
     .trim()
 }
 
