@@ -1,3 +1,4 @@
+import { InputRule } from '@tiptap/core'
 import { Heading } from '@tiptap/extension-heading'
 
 /**
@@ -37,5 +38,66 @@ export const TituloCorrido = Heading.extend({
         renderHTML: (attrs) => (attrs.corrido ? { 'data-corrido': 'sim' } : {}),
       },
     }
+  },
+
+  /**
+   * Digitar `:` no fim de um grafo fecha o título e abre a explicação.
+   *
+   * O botão `T¶` continua existindo, mas exige que o autor lembre dele. Este é
+   * o gesto: o formato de origem é `**Termo:** definição`, e nele os dois
+   * pontos são justamente onde o nome do assunto acaba. Quem escreve já digita
+   * esse caractere — ele só não fazia nada. Agora ele liga o modo corrido, abre
+   * o parágrafo da explicação e deixa o cursor lá, que é o que o autor ia fazer
+   * na mão em seguida.
+   *
+   * Três guardas, e nenhuma é preciosismo:
+   *
+   * - **Só dentro de um grafo.** Prosa comum é cheia de dois pontos, e uma
+   *   regra que valesse no parágrafo quebraria toda frase enumerativa em duas.
+   * - **Só com o cursor no fim.** Corrigir um `:` no meio de um título já
+   *   escrito partiria o texto ao meio, e o autor perderia a metade da direita
+   *   dentro de um parágrafo que ele não pediu.
+   * - **Só uma vez.** Com o modo já ligado, o parágrafo da explicação existe;
+   *   um segundo `:` só enfiaria um parágrafo vazio entre os dois.
+   *
+   * **O `:` fica gravado no título, como texto.** É o que o autor digitou e é o
+   * que o resumo de origem tem — inventar o caractere no CSS (`::after`) faria
+   * a página mostrar um caractere que não está no documento, e cairia na mesma
+   * armadilha do wikilink virar nó (decisão 1): o que a página mostra tem que
+   * sair do HTML gravado. Quem tira o dois-pontos do RÓTULO do nó é
+   * `lib/titulos.ts`, no mapa, onde ele seria pontuação órfã.
+   *
+   * A saída, quando a quebra não era desejada ("Capítulo 3: Dinâmica"), é o
+   * Backspace: o TipTap liga `undoInputRule` a ele por padrão, e uma tecla
+   * devolve o `:` como texto comum. Por isso a regra não precisa de exceção
+   * para título que já contenha dois pontos no meio.
+   */
+  addInputRules() {
+    return [
+      // O `#` do kit continua valendo; sem o `parent` ele seria substituído.
+      ...(this.parent?.() ?? []),
+      new InputRule({
+        find: /^(.+):$/,
+        handler: ({ state, chain }) => {
+          const { $from } = state.selection
+
+          if ($from.parent.type.name !== this.name) return null
+          if ($from.parent.attrs.corrido) return null
+          if ($from.parentOffset !== $from.parent.content.size) return null
+
+          chain()
+            // O caractere ainda NÃO está no documento: a regra casa contra o
+            // texto do bloco + o que se digitou, e cabe ao handler inserir.
+            .insertContent({ type: 'text', text: ':' })
+            .updateAttributes(this.name, { corrido: true })
+            // No fim de um bloco, `splitBlock` cria o tipo padrão — parágrafo —,
+            // que é exatamente o vizinho que o `float` do corrido espera.
+            .splitBlock()
+            .run()
+
+          return
+        },
+      }),
+    ]
   },
 })

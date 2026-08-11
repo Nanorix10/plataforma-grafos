@@ -300,9 +300,13 @@ function Barra({
 
       {/* Junta o grafo à explicação numa linha só, no formato em que os resumos
           sempre foram escritos: "Termo: definição". Só faz sentido com o cursor
-          dentro de um grafo, então fora dele o botão fica apagado. */}
+          dentro de um grafo, então fora dele o botão fica apagado.
+
+          Digitar `:` no fim do grafo faz o mesmo sozinho (ver `tituloCorrido`).
+          O botão fica: é ele que DESLIGA o modo, e é o caminho para quem já
+          escreveu o título antes de decidir juntar as duas linhas. */}
       <Bt
-        title="Grafo na mesma linha da explicação"
+        title="Grafo na mesma linha da explicação — ou digite “:” no fim do grafo"
         ativo={editor.isActive('heading', { corrido: true })}
         desativado={estilo === 'p'}
         onClick={() =>
