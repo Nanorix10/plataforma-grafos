@@ -690,6 +690,21 @@ primeira. O que marca hierarquia agora é a margem acima (1.8em / 1.5em / 1.3em)
 que é ritmo e não tamanho. `font-size: 1em` e não `1rem`, para o título
 acompanhar quem o cerca quando estiver dentro de uma tabela ou lista.
 
+**O peso é 800 no título e 500 no `strong`, e a distância entre os dois é a
+decisão.** Se o negrito marca o grafo, ele não pode marcar mais nada — e era
+o que estava acontecendo: 700 contra 600 leem quase igual no desenho da
+Nunito, então o resumo virava um borrão de negrito onde o nó do mapa não se
+distinguia de um termo qualquer. Agora o peso responde uma pergunta só: isto
+é um nó ou não é? Os dois valores são um par; mexer num sem o outro fecha a
+distância de novo.
+
+O `strong` não desce a peso normal porque ele é a única marca que sobra
+dentro de grifo e de wikilink — nos dois a cor da matéria é anulada de
+propósito (senão o termo brigaria com o pastel e com o lilás). Sem peso E sem
+cor, o destaque ali sumiria. Vale notar que a Nunito entra como fonte
+variável, então 800 e 500 são desenhos de verdade, não o negrito sintético
+que o navegador improvisa engrossando o traço.
+
 **Isto NÃO contradiz a decisão 9**, e a diferença importa: lá o que se recusa é
 *inferir* hierarquia dos `[[wikilinks]]`, que formam um grafo sem raiz cuja
 forma mudaria a cada resumo novo. Um sumário não é inferência — é estrutura que

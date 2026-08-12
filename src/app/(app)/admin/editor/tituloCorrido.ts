@@ -93,6 +93,13 @@ export const TituloCorrido = Heading.extend({
             // No fim de um bloco, `splitBlock` cria o tipo padrão — parágrafo —,
             // que é exatamente o vizinho que o `float` do corrido espera.
             .splitBlock()
+            // E a explicação começa em texto normal. Sem isto ela sairia em
+            // negrito: o plugin do `termoNegrito` liga o negrito em toda linha
+            // VAZIA, e o parágrafo recém-aberto é exatamente isso. Ele só
+            // desiste quando alguém já decidiu — é o teste `storedMarks !==
+            // null` de lá —, e `unsetMark` numa seleção vazia é o que grava
+            // essa decisão.
+            .unsetMark('bold')
             .run()
 
           return

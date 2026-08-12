@@ -343,8 +343,9 @@ button:focus-visible,
   margin-top: 0.9em;
 }
 /* Os títulos internos do resumo também vão de Nunito — sem isso eles
-   herdariam a Fraunces da regra global `h1, h2, h3` e o resumo ficaria com
-   duas famílias misturadas. Peso 700 pra compensar a Nunito ser mais leve. */
+   herdariam a fonte de interface da regra global `h1, h2, h3` e o resumo
+   ficaria com duas famílias misturadas. O peso vem mais abaixo, junto da
+   conta que o separa do `strong`. */
 .conteudo-resumo h2,
 .conteudo-resumo h3,
 .conteudo-resumo h4 {
@@ -379,12 +380,23 @@ button:focus-visible,
    bloco só.
 
    `1em` e não `1rem`: dentro de uma tabela ou de uma lista o texto já pode
-   estar menor, e um título ali tem que acompanhar quem o cerca. */
+   estar menor, e um título ali tem que acompanhar quem o cerca.
+
+   **800 aqui e 500 no `strong`, e a distância é o ponto.** Se o título é o
+   nome de um grafo e o resto do resumo também é negrito, o negrito deixa de
+   significar coisa alguma — era o que acontecia com 700 contra 600, que no
+   desenho da Nunito leem quase igual. Agora o peso responde uma pergunta só:
+   isto é um nó do mapa ou não é? Os dois valores andam juntos; mexer num sem
+   o outro fecha a distância de novo.
+
+   A Nunito entra como fonte VARIÁVEL (o `next/font` não fixa lista de pesos
+   no `layout.tsx`), então 800 e 500 são desenhos de verdade, e não o negrito
+   sintético que o navegador inventa engrossando o traço. */
 .conteudo-resumo h2,
 .conteudo-resumo h3,
 .conteudo-resumo h4 {
   font-size: 1em;
-  font-weight: 700;
+  font-weight: 800;
   line-height: inherit;
   /* Chegando pelo /mapa, o link cai numa âncora dentro do resumo — e a barra do
      caminho é fixa e tem 3rem. Sem esta folga o navegador encosta o título no
@@ -610,8 +622,15 @@ button:focus-visible,
   color: var(--cor-materia, inherit);
 }
 
+/* 500, e não 600: o negrito comum tem que ficar ABAIXO do título (800), senão
+   os dois viram a mesma marca e o negrito para de querer dizer "grafo".
+   Ver a conta inteira na regra dos títulos, mais acima.
+
+   Não desce a peso normal porque `strong` é a ÚNICA marca que sobra dentro de
+   grifo e de wikilink — nos dois a cor da matéria é anulada logo abaixo, de
+   propósito. Sem peso e sem cor, o termo destacado ali sumiria por completo. */
 .conteudo-resumo strong {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--cor-materia, inherit);
 }
 
