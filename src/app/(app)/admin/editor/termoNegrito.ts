@@ -80,6 +80,16 @@ export const TermoNegrito = Extension.create({
           const bold = state.schema.marks.bold
           if (!bold) return
 
+          // Título fica de fora, pela mesma razão que o plugin acima já o
+          // deixa: h2/h3/h4 se destacam sozinhos, e `<strong>` ali não
+          // acrescenta nada — só embrulha o texto do nó do mapa. A guarda
+          // estava só no plugin, e a regra ficou pegando os dois casos.
+          //
+          // Sair sem produzir passo NÃO cancela a digitação: o TipTap só
+          // considera a regra casada se ela mexer na transação, e passa para a
+          // seguinte. É `tituloCorrido` quem atende o `:` dentro de um grafo.
+          if (state.selection.$from.parent.type.name === 'heading') return
+
           const inicio = range.from
           const fimDoTermo = range.to
           if (fimDoTermo <= inicio) return
