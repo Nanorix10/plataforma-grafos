@@ -31,30 +31,59 @@
      fixa um dos dois — é isso que o botão de tema alterna. */
   color-scheme: light dark;
 
-  /* --- superfícies --- */
-  --page: light-dark(#F4F5F7, #0E0F18); /* fundo atrás de tudo */
-  --paper: light-dark(#FFFFFF, #161826); /* fundo do conteúdo */
-  --panel: light-dark(#F7F8FA, #1A1C29); /* barras laterais e cabeçalhos */
-  --sel: light-dark(#ECEEF2, #232532); /* item selecionado ou sob o cursor */
-  --raised: light-dark(#F7F8FA, #232532); /* cartão sobre o conteúdo */
-  --raised-hover: light-dark(#ECEEF2, #2A2D3C); /* o mesmo cartão sob o cursor */
-  --canvas: light-dark(#FBFBFC, #12131E); /* área do mapa */
+  /* --- superfícies ---
+     Todos os neutros são MORNOS, e isso é a decisão de conforto: o vermelho
+     fica acima do azul em cada um deles. Antes era o contrário — o escuro
+     nascia de um azul-violeta (#0E0F18, #161826) e o claro do branco puro —,
+     e azul frio é literalmente a ponta fria do espectro. Um site onde o aluno
+     passa a tarde inteira não pode ter a temperatura de uma tela de sistema.
+
+     O acolhimento vem do fundo, não de enfeite: nenhum elemento novo entrou
+     na tela para isso, só a luz mudou de temperatura.
+
+     A dose é curta de propósito. Puxar mais o amarelo cairia no bege de
+     "papel envelhecido", que briga com o lilás do acento e viraria outro
+     site — o pedido era conforto, não uma identidade nova. */
+  --page: light-dark(#F3F1EC, #12111A); /* fundo atrás de tudo */
+  --paper: light-dark(#FCFAF6, #1A1822); /* fundo do conteúdo */
+  --panel: light-dark(#F6F3ED, #1E1B26); /* barras laterais e cabeçalhos */
+  --sel: light-dark(#EBE7DF, #272332); /* item selecionado ou sob o cursor */
+  --raised: light-dark(#FAF7F1, #272332); /* cartão sobre o conteúdo */
+  --raised-hover: light-dark(#F1EDE5, #2E2937); /* o mesmo cartão sob o cursor */
+  --canvas: light-dark(#FAF8F4, #16141E); /* área do mapa */
 
   /* Verde de "deu certo" — acesso liberado, pagamento confirmado. Escurece no
-     claro para passar de 4,5:1 sobre o papel branco. */
-  --ok: light-dark(#2E7D50, #8FAE94);
+     claro para passar de 4,5:1; o valor caiu mais um passo (#2E7D50 → #2A7248)
+     quando o papel deixou de ser branco puro, senão ele ficava em 4,09:1 sobre
+     `--sel`. */
+  --ok: light-dark(#2A7248, #8FAE94);
 
   /* --- texto ---
      No claro a escala inverte: o texto principal é o mais ESCURO. Os tons
-     foram escolhidos para manter as mesmas relações de contraste do escuro. */
-  --ink: light-dark(#16181D, #E9E9ED); /* principal — 15,8:1 no claro, 14,8:1 no escuro */
-  --ink-soft: light-dark(#3A3F4C, #CFD3E5); /* um passo abaixo do principal, para texto longo */
-  --ink-dim: light-dark(#565B6B, #B2B6CA); /* secundário — 7,4:1 / 9,4:1 */
-  --ink-faint: light-dark(#767C8C, #75798C); /* rótulos — 4,7:1 / 4,6:1, só em 12px+ */
+     foram escolhidos para manter as mesmas relações de contraste do escuro.
 
-  /* --- traços --- */
-  --line: light-dark(#E6E8EC, #292B31); /* divisórias */
-  --line-forte: light-dark(#C9CDD6, #3F424D); /* borda de campo e de cartão */
+     A tinta acompanhou a temperatura das superfícies. Texto frio sobre fundo
+     morno é o desencontro que faz uma tela parecer "quase certa" sem que se
+     saiba dizer por quê.
+
+     Os números abaixo são o pior fundo de cada tema (`--sel`, onde o rótulo
+     cai sobre item selecionado), medidos — não estimados. */
+  --ink: light-dark(#1A1814, #EBE8E4); /* principal — 14,4:1 / 12,5:1 */
+  --ink-soft: light-dark(#3E3B33, #D3CFD9); /* um passo abaixo do principal, para texto longo — 9,1:1 / 10,0:1 */
+  --ink-dim: light-dark(#5A564B, #B6B2C0); /* secundário — 5,9:1 / 7,4:1 */
+  /* Este passou a PASSAR. Estava em #767C8C/#75798C, que o comentário antigo
+     dava como 4,7:1 e 4,6:1 — medido, era 3,6:1 no claro e 3,5:1 no escuro
+     sobre `--sel`, abaixo do mínimo da WCAG AA. É o token dos rótulos, das
+     datas e dos contadores: o texto miúdo que já é o mais difícil de ler era
+     também o de menor contraste do sistema. */
+  --ink-faint: light-dark(#6C6759, #918C9E); /* rótulos — 4,6:1 / 4,7:1, só em 12px+ */
+
+  /* --- traços ---
+     Mornos pela mesma razão dos fundos: uma divisória azulada sobre papel
+     morno aparece como uma linha CINZA-AZUL, e não como o fio neutro que ela
+     deveria ser. */
+  --line: light-dark(#E7E3DA, #2C2830); /* divisórias */
+  --line-forte: light-dark(#CFC9BC, #454049); /* borda de campo e de cartão */
 
   /* --- destaque ---
      O lilás do escuro ficaria lavado sobre branco, então o claro usa o mesmo
@@ -94,9 +123,14 @@
   --t-grande: 1.375rem; /* 22px — título de seção */
   --t-titulo: 1.75rem; /* 28px — título de página */
 
-  /* --- raio e sombra --- */
-  --raio: 8px;
-  --raio-peq: 6px;
+  /* --- raio e sombra ---
+     12 e 9, e não 8 e 6. Canto é a parte do desenho que o olho lê como
+     "postura": quanto mais reto, mais formal. A folga a mais custa nada e
+     tira do site o ar de painel de controle. Não vai além disso — raio muito
+     grande faz cartão de texto virar balão de aplicativo de conversa, e o que
+     está dentro deles é matéria de prova. */
+  --raio: 12px;
+  --raio-peq: 9px;
   /* No escuro a sombra sozinha não separa camadas — o que separa é a linha de
      1px. Por isso toda elevação começa por um anel, nos dois temas; o claro
      acrescenta a sombra de verdade, que ali funciona. */
@@ -105,7 +139,7 @@
      separa seus dois valores por vírgula — e uma lista de sombras também usa
      vírgula, então as duas coisas não cabem na mesma função. */
   --sombra-profunda: light-dark(
-    0 12px 28px rgba(22, 24, 29, 0.13),
+    0 12px 28px rgba(26, 24, 20, 0.13),
     0 16px 40px rgba(0, 0, 0, 0.5)
   );
   --sombra-alta: 0 0 0 1px var(--line-forte), var(--sombra-profunda);
@@ -124,6 +158,11 @@ body {
   color: var(--ink);
   font-family: var(--fonte-texto), sans-serif;
   font-size: var(--t-base);
+  /* O corpo do resumo já tinha 1.7; a interface ficava no padrão do
+     navegador, perto de 1.2 para bloco de texto. Toda tela que não é resumo
+     — /conta, /admin/pessoas, a landing — lia apertada por isso. 1.6 é a
+     mesma folga em todo lugar, sem alcançar o 1.7 da leitura longa. */
+  line-height: 1.6;
 }
 
 /* Títulos em peso médio, não em negrito. Sobre fundo escuro o texto parece
@@ -305,7 +344,7 @@ button:focus-visible,
    escuro. A cor sai de um token porque a linha do gradiente se repete quatro
    vezes aqui, e `light-dark()` em cada uma seria fácil de mudar pela metade. */
 .quadro {
-  --risco: light-dark(rgba(22, 24, 29, 0.055), rgba(233, 233, 237, 0.04));
+  --risco: light-dark(rgba(26, 24, 20, 0.055), rgba(235, 232, 228, 0.04));
   background-color: var(--canvas);
   background-image:
     linear-gradient(to right, var(--risco) 1px, transparent 1px),
@@ -336,8 +375,10 @@ button:focus-visible,
   line-height: 1.7;
   /* Um passo mais suave que o `--ink`, nos dois sentidos: no claro é clarear
      um pouco o preto, no escuro é tirar o brilho do branco. Texto longo no
-     extremo da escala cansa a vista e faz as letras "vibrarem". */
-  color: light-dark(#23262C, #CFD3E5);
+     extremo da escala cansa a vista e faz as letras "vibrarem".
+     Morno como o resto da tinta, senão a superfície mais importante do site
+     seria justamente a única que continuaria fria. */
+  color: light-dark(#26231D, #D5D1DB);
 }
 .conteudo-resumo > * + * {
   margin-top: 0.9em;
@@ -680,7 +721,7 @@ button:focus-visible,
    isso vira texto quase branco sobre amarelo-claro, ilegível. */
 .conteudo-resumo mark {
   background: #FFF3A3;
-  color: #16181D;
+  color: #1A1814;
   padding: 0.05em 0.15em;
   border-radius: 2px;
 }

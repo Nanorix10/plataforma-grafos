@@ -62,8 +62,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Uma cor de barra do navegador para cada tema, casando com `--paper`.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#161826" },
+    { media: "(prefers-color-scheme: light)", color: "#FCFAF6" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A1822" },
   ],
   colorScheme: "light dark",
 };

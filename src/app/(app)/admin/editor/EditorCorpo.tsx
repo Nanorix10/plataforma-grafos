@@ -39,13 +39,17 @@ import { parDeTemas, primeiroHex } from '@/lib/cor'
    Os matizes são os das matérias, pra que o destaque dentro do resumo
    converse com o marcador da disciplina. */
 const CORES = [
-  'light-dark(#16181D, #E9E9ED)', /* padrão: o próprio texto */
+  /* "Padrão" tem que ser o valor que `.conteudo-resumo` já usa, e não o
+     `--ink` da interface: são tons diferentes de propósito (texto longo lê um
+     passo abaixo do extremo da escala), então o antigo #16181D/#E9E9ED
+     pintava de "cor do texto" um texto que não era o do resumo. */
+  'light-dark(#26231D, #D5D1DB)', /* padrão: o próprio texto */
   'light-dark(#C2334D, #E08088)',
   'light-dark(#1F5F9E, #7FA8CF)',
   'light-dark(#3F7848, #8FAE94)',
   'light-dark(#9E2E70, #C576A6)',
   'light-dark(#A65224, #C98663)',
-  'light-dark(#565B6B, #B2B6CA)',
+  'light-dark(#5A564B, #B6B2C0)', /* o cinza de apoio, acompanhando `--ink-dim` */
 ]
 
 /* Os grifos continuam pastéis claros — `.conteudo-resumo mark` força o texto
