@@ -41,7 +41,14 @@ export default function LoginPage() {
     <main className="min-h-dvh flex items-center px-6 md:px-24">
       <BotaoTema className="fixed top-4 right-4" />
       <div className="w-full max-w-[360px]">
-        <Marca tamanho="grande" className="mb-9" />
+        {/* A `Marca` é um <span inline-flex> (para o símbolo e o nome ficarem
+            lado a lado quando a logo existir), e a cápsula de abas abaixo
+            também é inline. Dois elementos inline caem na MESMA linha, e a
+            cápsula subia por cima do nome — `mb-9` num inline empurra a linha,
+            não o vizinho. O invólucro de bloco é o que separa os dois. */}
+        <div className="mb-9">
+          <Marca tamanho="grande" />
+        </div>
 
         {/* Duas abas emendadas numa cápsula só, com a ativa marcada por um anel
             lilás. A versão anterior pintava a aba ativa de branco sobre cinza —
