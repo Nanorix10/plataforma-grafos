@@ -38,6 +38,11 @@ const numeros = [
 export default function LandingPage() {
   return (
     <div>
+      {/* Primeiro alvo do Tab, invisível até receber foco. Sem ele, quem navega
+          por teclado atravessa a barra inteira antes de chegar ao texto. */}
+      <a href="#conteudo" className="pular-para-conteudo">
+        Pular para o conteúdo
+      </a>
       <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur">
         <div className="max-w-[1120px] mx-auto px-8 h-[68px] flex items-center justify-between gap-6">
           <Marca tamanho="landing" />
@@ -55,6 +60,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      <main id="conteudo" tabIndex={-1}>
       <header className="pt-24 pb-22 max-w-[1120px] mx-auto px-8 grid md:grid-cols-[1.2fr_0.8fr] gap-12 items-end">
         <div>
           <div className="text-xs tracking-[0.08em] uppercase text-[var(--acento-claro)] mb-4.5">
@@ -133,7 +139,7 @@ export default function LandingPage() {
               />
               <div>
                 <h3 className="font-medium text-[15px] mb-1.5">{MATERIAS[m.slug].nome}</h3>
-                <span className="text-[11.5px] text-[var(--ink-faint)]">{m.processos}</span>
+                <span className="text-xs text-[var(--ink-faint)]">{m.processos}</span>
               </div>
             </div>
           ))}
@@ -166,7 +172,7 @@ export default function LandingPage() {
               )}
               <div>
                 <div className="font-medium text-[17px]">{p.nome}</div>
-                <div className="text-[11.5px] text-[var(--ink-faint)] mt-0.5">{p.proc}</div>
+                <div className="text-xs text-[var(--ink-faint)] mt-0.5">{p.proc}</div>
               </div>
               <div className="text-[30px] font-medium">
                 R$ 00<span className="text-[13px] text-[var(--ink-faint)] font-normal">/mês</span>
@@ -185,6 +191,8 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      </main>
 
       <footer className="py-9 max-w-[1120px] mx-auto px-8 flex justify-between flex-wrap gap-3 shadow-[inset_0_1px_0_var(--line)]">
         <Marca tamanho="medio" />

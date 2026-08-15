@@ -224,7 +224,8 @@ export default function BarraFormula({
           onChange={(e) => {
             if (e.target.value) setLatex(e.target.value)
           }}
-          className="h-[28px] text-[12px] bg-[var(--raised)] border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
+          aria-label="Começar de um exemplo"
+          className="h-[28px] text-[12px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
         >
           <option value="">Começar de um exemplo…</option>
           {EXEMPLOS.map((ex) => (

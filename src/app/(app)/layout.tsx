@@ -11,6 +11,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
+      {/* Aqui o atalho vale mais do que na landing: a barra lateral é a árvore
+          inteira de resumos, e sem ele o Tab passa por todos os assuntos de
+          todas as matérias antes de chegar ao texto da página. */}
+      <a href="#conteudo" className="pular-para-conteudo">
+        Pular para o conteúdo
+      </a>
       <Sidebar
         grupos={grupos}
         isAdmin={isAdmin}
@@ -21,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* `pt-12` reserva a altura da barra do celular, que é `fixed` e ficaria
           por cima do começo do conteúdo. A partir de `lg` a barra some e o
           espaço não faz mais sentido. */}
-      <main className="flex-1 min-w-0 pt-12 lg:pt-0">{children}</main>
+      <main id="conteudo" tabIndex={-1} className="flex-1 min-w-0 pt-12 lg:pt-0">{children}</main>
     </div>
   )
 }

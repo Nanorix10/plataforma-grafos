@@ -35,7 +35,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center px-6 md:px-24">
+    /* `dvh` e não `vh`: no celular a barra do navegador entra e sai da tela, e
+       `100vh` é sempre a altura SEM ela — o cartão de login nascia empurrado
+       para fora por alguns pixels. */
+    <main className="min-h-dvh flex items-center px-6 md:px-24">
       <BotaoTema className="fixed top-4 right-4" />
       <div className="w-full max-w-[360px]">
         <Marca tamanho="grande" className="mb-9" />
@@ -120,6 +123,6 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
-    </div>
+    </main>
   )
 }

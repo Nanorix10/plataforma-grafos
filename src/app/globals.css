@@ -352,6 +352,50 @@ button:focus-visible,
   background-size: 26px 26px;
 }
 
+/* O primeiro alvo do Tab em cada página, fora da tela até receber foco. Quem
+   navega por teclado ou leitor de tela não deve ter de atravessar a barra
+   lateral inteira — que aqui é a árvore de resumos, dezenas de links — para
+   chegar ao texto. */
+.pular-para-conteudo {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--raised);
+  color: var(--acento);
+  border: 1px solid var(--acento);
+  border-radius: var(--raio-peq);
+  font-size: var(--t-base);
+  font-weight: 500;
+}
+.pular-para-conteudo:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+/* Tira o atraso de ~300ms que o navegador guarda no celular esperando um
+   possível toque duplo de zoom. O zoom por pinça continua — o que sai é a
+   espera antes de CADA toque. */
+html {
+  touch-action: manipulation;
+}
+
+/* Título não termina com uma palavra órfã na última linha. Vale para os
+   títulos de interface; o corpo do resumo fica de fora, porque ali o texto é
+   do autor e reequilibrar linha a linha muda o desenho do parágrafo. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+/* E o corpo do resumo fica DE FORA de verdade: os h2/h3/h4 de lá são os
+   grafos (decisão 12), e no modo corrido eles dividem a linha com a
+   explicação por `float` — reequilibrar a largura deles brigaria com a conta
+   de margem que faz as duas linhas pousarem juntas. */
+.conteudo-resumo :where(h1, h2, h3, h4) {
+  text-wrap: initial;
+}
+
 /* Quem pediu menos movimento no sistema não recebe animação nenhuma. */
 @media (prefers-reduced-motion: reduce) {
   *,

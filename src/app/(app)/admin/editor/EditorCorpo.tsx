@@ -290,7 +290,13 @@ function Barra({
           if (v === 'p') c.setParagraph().run()
           else c.setHeading({ level: Number(v.slice(1)) as 2 | 3 | 4 }).run()
         }}
-        className="h-[28px] text-[12.5px] bg-transparent border border-[var(--line)] rounded px-1.5 outline-none cursor-pointer"
+        aria-label="Estilo do bloco"
+        /* Fundo e cor explícitos, e não `bg-transparent`: no modo escuro do
+           Windows a LISTA aberta de um <select> herda o tema do sistema, e o
+           campo transparente deixava texto claro sobre fundo claro. E o anel
+           de foco volta — `outline-none` sozinho tirava o único sinal de que
+           o teclado está aqui. */
+        className="h-[28px] text-[12.5px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
       >
         {/* "Grafo" e não "Título": cada um deles vira um nó no /mapa, pendurado
             no resumo e nos de nível acima (decisão 12). O nome antigo sugeria
