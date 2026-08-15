@@ -93,12 +93,15 @@ export const TituloCorrido = Heading.extend({
             // No fim de um bloco, `splitBlock` cria o tipo padrão — parágrafo —,
             // que é exatamente o vizinho que o `float` do corrido espera.
             .splitBlock()
-            // E a explicação começa em texto normal. Sem isto ela sairia em
-            // negrito: o plugin do `termoNegrito` liga o negrito em toda linha
-            // VAZIA, e o parágrafo recém-aberto é exatamente isso. Ele só
-            // desiste quando alguém já decidiu — é o teste `storedMarks !==
-            // null` de lá —, e `unsetMark` numa seleção vazia é o que grava
-            // essa decisão.
+            // E a explicação começa em texto normal.
+            //
+            // Isto entrou para desligar o negrito automático de linha vazia do
+            // `termoNegrito`, que já não existe. Fica porque ainda tem um caso
+            // seu: se o autor tinha ligado o negrito à mão dentro do título, o
+            // `splitBlock` levaria a marca junto para o parágrafo novo, e a
+            // explicação nasceria em negrito — que é justamente o que a
+            // decisão 12 não quer, já que negrito ali passaria a competir com
+            // o grafo.
             .unsetMark('bold')
             .run()
 
