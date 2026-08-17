@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { mensagemDeErro } from '@/lib/erros-auth'
 import { BotaoTema } from '@/components/BotaoTema'
 import Marca from '@/components/Marca'
 
@@ -64,7 +65,7 @@ export default function LoginPage() {
     setCarregando(false)
 
     if (error) {
-      setErro(error.message)
+      setErro(mensagemDeErro(error))
       return
     }
     router.push('/resumos')
@@ -146,10 +147,27 @@ export default function LoginPage() {
           ))}
         </div>
 
+        {/* `method="post"` num formulário que só o JavaScript envia parece
+            inútil, e é a diferença entre um erro e um vazamento.
+
+            O envio normal passa por `handleSubmit`, que chama `preventDefault`
+            e nada nativo acontece. Mas se o React não hidratar — chunk que
+            falhou, JS bloqueado, rede que caiu no meio — o handler não existe e
+            o navegador envia o formulário do jeito dele. Sem `method`, o padrão
+            é GET: e-mail e SENHA viram parâmetros na barra de endereço, e vão
+            parar no histórico do navegador e no cabeçalho `Referer`.
+
+            Não é hipótese: aconteceu aqui, com um servidor velho servindo chunk
+            morto, e a URL virou `/login?email=…&senha=…`.
+
+            Com POST os campos vão no corpo. A rota não trata POST e o aluno vê
+            uma falha — que é o certo quando o site está quebrado. Falhar à
+            vista é melhor do que funcionar vazando. */}
         <form
           id={PAINEL}
           role="tabpanel"
           aria-labelledby={`aba-${modo}`}
+          method="post"
           onSubmit={handleSubmit}
           className="flex flex-col gap-4"
         >
