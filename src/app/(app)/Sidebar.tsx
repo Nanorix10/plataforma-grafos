@@ -223,6 +223,21 @@ export default function Sidebar({
    */
   const [menuAberto, setMenuAberto] = useState(false)
 
+  /**
+   * Os links de resumo que a árvore está mostrando AGORA, na ordem da tela.
+   *
+   * Lido do DOM, e não de um estado paralelo, de propósito: quem decide o que
+   * aparece é a filtragem da árvore, com os ramos abertos e fechados do
+   * momento. Uma segunda lista em `useState` teria que reproduzir essa mesma
+   * lógica e divergiria dela no primeiro ramo que alguém recolhesse — e aí a
+   * seta levaria a um resumo que não está na tela.
+   */
+  function resultadosDaBusca() {
+    const raiz = document.getElementById('barra-lateral')
+    if (!raiz) return []
+    return [...raiz.querySelectorAll<HTMLAnchorElement>('a[href^="/resumos/"]')]
+  }
+
   // Esc fecha, como em qualquer camada sobreposta
   useEffect(() => {
     if (!menuAberto) return
@@ -345,6 +360,27 @@ export default function Sidebar({
         onClick={(e) => {
           if ((e.target as HTMLElement).closest('a')) setMenuAberto(false)
         }}
+        /* ↑/↓ andam pelos resultados depois que o foco entrou na lista, por
+           delegação — um handler só em vez de um por link, que seriam dezenas.
+           Só age quando o foco JÁ está num resumo; em cima de qualquer outra
+           coisa da barra as setas seguem sendo as do navegador. Do último volta
+           ao campo de busca, que é de onde se veio e o único lugar onde
+           continuar descendo não faria sentido. */
+        onKeyDown={(e) => {
+          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+          const atual = document.activeElement as HTMLElement | null
+          if (!atual?.matches('a[href^="/resumos/"]')) return
+          const lista = resultadosDaBusca()
+          const i = lista.indexOf(atual as HTMLAnchorElement)
+          if (i < 0) return
+          e.preventDefault()
+          if (e.key === 'ArrowUp' && i === 0) {
+            buscaRef.current?.focus()
+            return
+          }
+          const destino = lista[e.key === 'ArrowDown' ? i + 1 : i - 1]
+          destino?.focus()
+        }}
         className={`w-[262px] shrink-0 flex flex-col bg-[var(--panel)] border-r border-[var(--line)]
           fixed inset-y-0 left-0 z-50 transition-transform duration-200
           ${menuAberto ? 'translate-x-0' : '-translate-x-full'}
@@ -371,12 +407,45 @@ export default function Sidebar({
             // Esc limpa antes de sair: com o campo preenchido, a árvore fica
             // filtrada e some o caminho de volta para o resto dos resumos
             onKeyDown={(e) => {
-              if (e.key !== 'Escape') return
-              if (busca) {
+              if (e.key === 'Escape') {
+                if (busca) {
+                  e.stopPropagation()
+                  setBusca('')
+                } else {
+                  e.currentTarget.blur()
+                }
+                return
+              }
+              /* Enter abre o primeiro resultado. Sem isto, o gesto de todo
+                 mundo — digitar e apertar Enter — não fazia nada: a árvore
+                 filtrava e o campo ficava esperando um clique de mouse, que é
+                 exatamente a mão que o atalho `/` veio tirar do caminho.
+
+                 `.click()` no link em vez de `router.push`: o `<Link>` do Next
+                 já intercepta o clique e navega no cliente, então o caminho
+                 percorrido é o mesmo de quem clicou — sem uma segunda rota de
+                 navegação que possa divergir da primeira. */
+              if (e.key === 'Enter') {
+                const primeiro = resultadosDaBusca()[0]
+                if (!primeiro) return
+                e.preventDefault()
+                primeiro.click()
+                return
+              }
+              /* Seta pra baixo entrega o foco à lista. Daí em diante quem
+                 manda é o handler da `<aside>`, e o Enter passa a ser o do
+                 próprio link — nativo, sem código nosso no meio. */
+              if (e.key === 'ArrowDown') {
+                const primeiro = resultadosDaBusca()[0]
+                if (!primeiro) return
+                e.preventDefault()
+                /* `stopPropagation` é obrigatório aqui, e custou um teste para
+                   aparecer: sem ele o evento borbulha até a `<aside>`, cujo
+                   handler lê `document.activeElement` DEPOIS deste `focus()`
+                   já ter mudado — vê o foco num link, e move mais um. O
+                   resultado é a primeira seta pular o primeiro resumo. */
                 e.stopPropagation()
-                setBusca('')
-              } else {
-                e.currentTarget.blur()
+                primeiro.focus()
               }
             }}
             placeholder="Buscar resumo…"
