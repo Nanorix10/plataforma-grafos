@@ -60,15 +60,31 @@ export const AUTOR = {
   ],
 
   /**
-   * ⏳ FALTA: a foto. Caminho reservado em `public/img/`.
+   * A foto da seção.
    *
-   * Decidido com o Davi: mesa de estudo sem pessoa — caderno aberto com resumo
-   * escrito à mão, caneta, luz morna de fim de tarde. Sem rosto: vende o ritual
-   * de estudar, não envelhece, e não corre o risco de o aluno não se
-   * identificar com quem aparece.
+   * Decidido com o Davi: mesa de estudo **sem pessoa** — vende o ritual de
+   * estudar, não envelhece, e não corre o risco de o aluno não se identificar
+   * com quem aparece. Sem rosto também elimina a questão de gerar a imagem de
+   * alguém que não existe numa página que vende credibilidade.
    *
-   * `null` até o arquivo existir. A seção se recompõe sem ela em vez de deixar
-   * um retângulo cinza no lugar, que é pior que ausência.
+   * **Por que clara, e não a primeira tentativa.** A primeira saiu quase
+   * noturna, e o tema claro do site tem `--paper` quase branco: uma foto escura
+   * viraria um bloco preto no meio da página. A escolhida tem madeira clara e
+   * papel creme, então convive com os dois temas — o que era exatamente o
+   * critério, já que a landing tem que funcionar nos três estados de tema.
+   *
+   * WebP de 84 KB a 960px de largura, que é o dobro da coluna em que ela é
+   * exibida (~440px). O `next/image` reduz mais conforme a tela pede.
+   *
+   * O tipo continua aceitando `null`: se a foto sair, a seção volta a se
+   * recompor em uma coluna em vez de deixar um retângulo vazio.
    */
-  foto: null as { src: string; alt: string; largura: number; altura: number } | null,
+  foto: {
+    src: '/img/mesa-de-estudo.webp',
+    /* Alt descreve o que a foto MOSTRA, não "foto de estudo". Quem usa leitor
+       de tela recebe a cena, que é o que o vidente recebe. */
+    alt: 'Caderno espiral aberto sobre uma mesa de madeira clara, com páginas de anotações escritas à mão, uma caneta apoiada e uma xícara de café ao lado, junto a uma janela',
+    largura: 960,
+    altura: 1280,
+  } as { src: string; alt: string; largura: number; altura: number } | null,
 }
