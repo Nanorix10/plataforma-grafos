@@ -1,5 +1,6 @@
 import Hero from '@/components/landing/Hero'
 import Faixa from '@/components/landing/Faixa'
+import ComoFunciona from '@/components/landing/ComoFunciona'
 import Materias from '@/components/landing/Materias'
 import Planos from '@/components/landing/Planos'
 
@@ -13,7 +14,7 @@ import Planos from '@/components/landing/Planos'
  *
  * A ordem das seções É o argumento de venda, e ler esta função tem que
  * mostrar isso de uma vez: o que é (Hero) → o tamanho (Faixa) → o que tem
- * dentro (Materias) → quanto custa (Planos).
+ * dentro (ComoFunciona) → o acervo (Materias) → quanto custa (Planos).
  *
  * Barra e rodapé não estão aqui: são moldura do site aberto e vivem em
  * `(site)/layout.tsx`.
@@ -23,6 +24,7 @@ export default function LandingPage() {
     <>
       <Hero />
       <Faixa />
+      <ComoFunciona />
       <Materias />
       <Planos />
     </>
