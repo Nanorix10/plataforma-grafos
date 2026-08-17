@@ -122,6 +122,26 @@
   --t-medio: 1.0625rem; /* 17px — corpo do resumo */
   --t-grande: 1.375rem; /* 22px — título de seção */
   --t-titulo: 1.75rem; /* 28px — título de página */
+  /* Sétimo degrau, e o único que escala com a tela. Existe só para o h1 da
+     landing, que é a primeira coisa que um desconhecido lê do produto — nas
+     outras telas quem chegou já sabe onde está, e 28px basta.
+
+     Fluido porque é a única tipografia do site que atravessa de 390px a
+     1120px sem quebrar de layout: fixo em 48px estoura no celular, fixo em
+     38px some no monitor. O `clamp` reproduz exatamente o par que a landing
+     já usava à mão (38px → 48px), então nada muda de aparência — o que muda é
+     o valor deixar de ser inventado dentro do componente. */
+  --t-hero: clamp(2.375rem, 4.6vw, 3rem); /* 38→48px — só o h1 da landing */
+
+  /* --- ritmo vertical das seções públicas ---
+     A landing tinha cinco espaçamentos diferentes (pt-24, pb-22, py-20, py-14,
+     py-9) para o que é uma coisa só: a distância entre um assunto e o próximo.
+     Cinco valores parecidos não leem como cinco intenções, leem como nenhuma.
+
+     Um valor só, e ele também encolhe no celular — 80px de respiro numa tela
+     de 390px empurra a seção seguinte para fora do primeiro alcance do polegar
+     e faz a página parecer vazia. */
+  --ritmo-secao: clamp(3.5rem, 7vw, 5rem); /* 56→80px */
 
   /* --- raio e sombra ---
      12 e 9, e não 8 e 6. Canto é a parte do desenho que o olho lê como
