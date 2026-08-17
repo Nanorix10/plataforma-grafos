@@ -6,6 +6,21 @@ import { createClient } from '@/lib/supabase/client'
 import { BotaoTema } from '@/components/BotaoTema'
 import Marca from '@/components/Marca'
 
+/**
+ * As duas abas, como DADO e no escopo do módulo.
+ *
+ * Fora do componente de propósito: uma função de componente definida dentro do
+ * render é remontada a cada pintura (é o que o `react-hooks/static-components`
+ * acusa em `admin/editor/Regua.tsx`), e aqui isso custaria o foco no meio da
+ * navegação por setas — justamente o que este bloco veio consertar.
+ */
+const ABAS = [
+  { id: 'entrar', rotulo: 'Entrar' },
+  { id: 'cadastrar', rotulo: 'Criar conta' },
+] as const
+
+const PAINEL = 'painel-acesso'
+
 export default function LoginPage() {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
   const [erro, setErro] = useState<string | null>(null)
@@ -73,29 +88,71 @@ export default function LoginPage() {
 
         {/* Duas abas emendadas numa cápsula só, com a ativa marcada por um anel
             lilás. A versão anterior pintava a aba ativa de branco sobre cinza —
-            no escuro esse contraste inverte e a aba ativa é que sumiria. */}
-        <div role="tablist" className="inline-flex overflow-hidden rounded-lg border border-[var(--line-forte)] mb-7">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={modo === 'entrar'}
-            onClick={() => setModo('entrar')}
-            className={`px-4.5 py-2 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${modo === 'entrar' ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
-          >
-            Entrar
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={modo === 'cadastrar'}
-            onClick={() => setModo('cadastrar')}
-            className={`px-4.5 py-2 text-[13px] border-l border-[var(--line-forte)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${modo === 'cadastrar' ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
-          >
-            Criar conta
-          </button>
+            no escuro esse contraste inverte e a aba ativa é que sumiria.
+
+            As SETAS andam entre elas, e isso não é enfeite de acessibilidade:
+            o `role="tablist"` já estava aqui e as setas não faziam nada, então
+            o leitor de tela anunciava "aba, 1 de 2, use as setas" e as setas
+            não respondiam. A promessa saía do site e quem ficava sem saída era
+            justamente quem dependia dela.
+
+            Duas peças do padrão que não dá pra adivinhar lendo o CSS:
+
+            - **Tabindex rotativo.** Só a aba ATIVA é alcançável por Tab (`0`);
+              a outra sai da ordem (`-1`). É o que faz o Tab atravessar a
+              cápsula de uma vez, em vez de parar duas vezes — dentro dela quem
+              anda é a seta. Sem isso, seta e Tab fariam a mesma coisa e a seta
+              não teria por que existir.
+            - **`aria-controls` nos dois, apontando pro MESMO painel.** Aqui não
+              existem dois conteúdos: o formulário é um só e o que muda é o que
+              o envio faz. Então o painel é único, e quem troca é o
+              `aria-labelledby` dele — dizendo qual aba o está rotulando agora. */}
+        <div
+          role="tablist"
+          aria-label="Entrar ou criar conta"
+          onKeyDown={(e) => {
+            const atual = ABAS.findIndex((a) => a.id === modo)
+            const destino =
+              e.key === 'ArrowRight' ? (atual + 1) % ABAS.length
+              : e.key === 'ArrowLeft' ? (atual - 1 + ABAS.length) % ABAS.length
+              : e.key === 'Home' ? 0
+              : e.key === 'End' ? ABAS.length - 1
+              : null
+            if (destino === null) return
+            e.preventDefault()
+            const proxima = ABAS[destino]
+            setModo(proxima.id)
+            // O foco acompanha a seleção: neste padrão a aba que a seta alcança
+            // é a que fica ativa E focada, senão o anel de foco ficaria para
+            // trás numa aba que já não é a escolhida.
+            document.getElementById(`aba-${proxima.id}`)?.focus()
+          }}
+          className="inline-flex overflow-hidden rounded-lg border border-[var(--line-forte)] mb-7"
+        >
+          {ABAS.map((aba, i) => (
+            <button
+              key={aba.id}
+              id={`aba-${aba.id}`}
+              type="button"
+              role="tab"
+              aria-selected={modo === aba.id}
+              aria-controls={PAINEL}
+              tabIndex={modo === aba.id ? 0 : -1}
+              onClick={() => setModo(aba.id)}
+              className={`px-4.5 py-2 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${i > 0 ? 'border-l border-[var(--line-forte)]' : ''} ${modo === aba.id ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
+            >
+              {aba.rotulo}
+            </button>
+          ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form
+          id={PAINEL}
+          role="tabpanel"
+          aria-labelledby={`aba-${modo}`}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+        >
           <div>
             <label htmlFor="email" className="block text-xs text-[var(--ink-soft)] mb-1.5">
               E-mail
