@@ -8,15 +8,36 @@ import Marca from '@/components/Marca'
 
 export default function LoginPage() {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
-  const [email, setEmail] = useState('')
-  const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
-  async function handleSubmit(e: React.FormEvent) {
+  /**
+   * O que vai pro Supabase sai do FORMULÁRIO, não de `useState`.
+   *
+   * Antes os dois campos eram controlados e o envio mandava o estado. Quem
+   * preenche por fora — autofill do Chrome, cofre do Android, 1Password —
+   * escreve o `value` do DOM sem passar pelo `onChange` do React, então o
+   * estado continuava vazio enquanto a tela mostrava e-mail e senha
+   * preenchidos. O `required` olha o DOM, via preenchido, e deixava enviar:
+   * o aluno via os campos cheios e recebia "missing email or phone".
+   *
+   * Isso contradizia o próprio projeto — os `autoComplete` abaixo existem
+   * justamente pra o gerenciador de senhas preencher, e o formulário jogava
+   * fora o que ele preenchia.
+   *
+   * Campo não controlado resolve na raiz: o `<input>` é a única cópia do
+   * valor, então não há estado pra dessincronizar, seja qual for o caminho
+   * que preencheu. Conferido com Playwright, escrevendo no DOM pelo setter
+   * nativo sem disparar `input` — que é o pior caso que um preenchedor faz.
+   */
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const dados = new FormData(e.currentTarget)
+    const email = String(dados.get('email') ?? '')
+    const senha = String(dados.get('senha') ?? '')
+
     setErro(null)
     setCarregando(true)
 
@@ -89,8 +110,6 @@ export default function LoginPage() {
               spellCheck={false}
               autoCapitalize="none"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               className="campo text-sm"
               placeholder="voce@email.com"
             />
@@ -108,8 +127,6 @@ export default function LoginPage() {
               autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
               required
               minLength={6}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
               className="campo text-sm"
               placeholder="mínimo 6 caracteres"
             />
