@@ -54,9 +54,41 @@ const nunito = Nunito({
   preload: false, // ver a nota em plexMono
 });
 
+/**
+ * O cartão que aparece quando alguém compartilha o link.
+ *
+ * Antes o site servia só `description`, e nenhuma tag Open Graph. Compartilhar
+ * no WhatsApp entregava um link pelado — sem título, sem imagem, sem uma linha
+ * dizendo o que era. Num produto vendido para estudante, onde a divulgação
+ * acontece justamente em grupo de WhatsApp e story de Instagram, esse cartão é
+ * a vitrine que a maioria vê ANTES de decidir se clica.
+ *
+ * A imagem sai de `src/app/opengraph-image.jpg` — o Next reconhece o nome
+ * sozinho e emite as tags de tamanho e tipo junto, sem configuração.
+ *
+ * `metadataBase` é obrigatório para o Next transformar caminho relativo em URL
+ * absoluta; sem ele o `og:image` sai relativo e nenhuma rede social resolve.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL("https://plataforma-grafos.vercel.app"),
   title: "Plataforma Grafos — Preparação PASSE · PAS · UnB",
   description: "Resumos interligados para PASSE, PAS UEM e PAS UnB.",
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Plataforma Grafos",
+    title: "Plataforma Grafos — Preparação PASSE · PAS · UnB",
+    /* Mais longa que a `description` de propósito: aqui há espaço para dizer o
+       diferencial, e o cartão é lido por quem ainda não sabe o que é o site. */
+    description:
+      "Resumos interligados por matéria e por processo seletivo, lidos no próprio site. PASSE UFMS, PAS UEM e PAS UnB.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Plataforma Grafos — Preparação PASSE · PAS · UnB",
+    description:
+      "Resumos interligados por matéria e por processo seletivo, lidos no próprio site.",
+  },
 };
 
 export const viewport: Viewport = {
