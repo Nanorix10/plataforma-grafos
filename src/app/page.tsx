@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
+import { NUMEROS_DA_FAIXA } from '@/lib/numeros'
+import { PLANOS_A_VENDA, precoLegivel } from '@/lib/planos'
 import { BotaoTema } from '@/components/BotaoTema'
 import Marca from '@/components/Marca'
 
@@ -23,17 +25,10 @@ const materiasGrid: { slug: keyof typeof MATERIAS; processos: string }[] = [
   { slug: 'arte', processos: 'PASSE · PAS UEM' },
 ]
 
-/**
- * A faixa de números é a única superfície saturada do site inteiro. Ela existe
- * pra quebrar a sequência de seções escuras iguais no meio da rolagem — sem
- * ela a landing lê como uma parede só.
- */
-const numeros = [
-  { valor: '24', label: 'matérias cobertas' },
-  { valor: '3', label: 'processos seletivos' },
-  { valor: '180+', label: 'resumos interligados' },
-  { valor: 'Campo Grande', label: 'MS, material próprio' },
-]
+/* A faixa de números é a única superfície saturada do site inteiro. Ela existe
+   pra quebrar a sequência de seções escuras iguais no meio da rolagem — sem
+   ela a landing lê como uma parede só. Os valores vêm de `lib/numeros.ts`;
+   o cabeçalho daquele arquivo diz o que eles são e o que NÃO são. */
 
 export default function LandingPage() {
   return (
@@ -70,7 +65,12 @@ export default function LandingPage() {
             Estude com quem já corrigiu a prova mil vezes.
           </h1>
           <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[460px] mb-8">
-            Resumos organizados por matéria e por processo seletivo, interligados entre si — liberados assim que você assina, direto no site.
+            {/* Não promete liberação instantânea. Hoje o acesso é liberado à
+                mão depois do Pix (decisão 1b do CONTEXTO.md), e a frase antiga
+                — "liberados assim que você assina" — prometia o que o sistema
+                ainda não faz. O que ficou é verdade agora e continua verdade
+                depois do Mercado Pago. */}
+            Resumos organizados por matéria e por processo seletivo, interligados entre si — lidos no próprio site, sem baixar nada e sempre na versão mais recente.
           </p>
           <div className="flex items-center gap-5 flex-wrap">
             <a
@@ -114,7 +114,7 @@ export default function LandingPage() {
 
       <section className="bg-[var(--faixa)] py-14">
         <div className="max-w-[1120px] mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {numeros.map((n) => (
+          {NUMEROS_DA_FAIXA.map((n) => (
             <div key={n.label}>
               <div className="text-[32px] font-medium text-[var(--faixa-ink)]">{n.valor}</div>
               <div className="text-[13px] text-[var(--faixa-dim)] mt-1">{n.label}</div>
@@ -152,13 +152,9 @@ export default function LandingPage() {
           <h2 className="text-[30px] font-medium">Escolha o acesso pelo processo seletivo que você está fazendo.</h2>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
-          {[
-            { nome: 'Acesso PASSE', proc: 'UFMS', destaque: false },
-            { nome: 'Acesso Completo', proc: 'PASSE + PAS UEM + PAS UnB', destaque: true },
-            { nome: 'Acesso PAS', proc: 'UEM + UnB', destaque: false },
-          ].map((p) => (
+          {PLANOS_A_VENDA.map((p) => (
             <div
-              key={p.nome}
+              key={p.slug}
               className={`bg-[var(--raised)] rounded-2xl p-7 flex flex-col gap-4.5 ${
                 p.destaque
                   ? 'shadow-[0_0_0_1px_var(--acento),var(--sombra-profunda)]'
@@ -172,11 +168,22 @@ export default function LandingPage() {
               )}
               <div>
                 <div className="font-medium text-[17px]">{p.nome}</div>
-                <div className="text-xs text-[var(--ink-faint)] mt-0.5">{p.proc}</div>
+                <div className="text-xs text-[var(--ink-faint)] mt-0.5">{p.processosLegiveis}</div>
               </div>
+              {/* Enquanto `preco` for null o cartão diz "A definir" e não um
+                  `R$ 00` de mentira — que é o pior jeito de mentir numa página
+                  de venda, porque parece decidido e barato ao mesmo tempo. */}
               <div className="text-[30px] font-medium">
-                R$ 00<span className="text-[13px] text-[var(--ink-faint)] font-normal">/mês</span>
+                {precoLegivel(p.preco)}
+                {p.preco !== null && (
+                  <span className="text-[13px] text-[var(--ink-faint)] font-normal">/mês</span>
+                )}
               </div>
+              {/* O botão diz o que ACONTECE ao clicar. Enquanto a liberação for
+                  manual (ver decisão 1b do CONTEXTO.md), ele não pode dizer
+                  "Assinar": quem clica em Assinar espera pagar, e o que vem é
+                  um cadastro que não menciona pagamento e não abre acesso
+                  nenhum. Quando o webhook do Mercado Pago existir, aí sim. */}
               <Link
                 href="/login"
                 className={`mt-auto text-center py-2.5 rounded-lg text-[13px] font-medium ${
@@ -185,7 +192,7 @@ export default function LandingPage() {
                     : 'border border-[var(--line-forte)] hover:bg-[var(--sel)]'
                 }`}
               >
-                Assinar
+                Criar conta
               </Link>
             </div>
           ))}

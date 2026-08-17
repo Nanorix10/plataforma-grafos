@@ -1,18 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
-import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { PLANO_PROCESSOS, PLANOS } from '@/lib/planos'
 import { PROCESSOS } from '@/lib/processos'
 import BotaoEnviar from '@/components/BotaoEnviar'
 import { sair } from './actions'
-
-/** Como cada plano se chama para o aluno. O slug do banco é nome de código. */
-const NOME_DO_PLANO: Record<string, string> = {
-  passe: 'PASSE',
-  pas: 'PAS',
-  completo: 'Acesso Completo',
-  nenhum: 'Sem acesso',
-}
 
 export default async function ContaPage() {
   const { supabase, userId, plano, ativo, isAdminReal } = await getSessao()
@@ -66,7 +58,7 @@ export default async function ContaPage() {
           <div>
             <div className="rotulo mb-1">Plano</div>
             <p className="text-[15px] font-medium">
-              {NOME_DO_PLANO[plano] ?? plano}
+              {PLANOS[plano]?.nome ?? plano}
             </p>
           </div>
           <span

@@ -1,4 +1,4 @@
-import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { PLANO_PROCESSOS } from '@/lib/planos'
 import { PROCESSOS } from '@/lib/processos'
 
 /**

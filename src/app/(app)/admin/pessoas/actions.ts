@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
-import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { PLANO_PROCESSOS } from '@/lib/planos'
 
 async function exigirAdmin() {
   const { supabase, userId, isAdminReal } = await getSessao()

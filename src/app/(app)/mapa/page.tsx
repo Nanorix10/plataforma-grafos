@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { MATERIAS } from '@/lib/materias'
-import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { PLANO_PROCESSOS } from '@/lib/planos'
 import { getSessao } from '@/lib/sessao'
 import { extrairTitulos } from '@/lib/titulos'
 import GraphView from './GraphView'
