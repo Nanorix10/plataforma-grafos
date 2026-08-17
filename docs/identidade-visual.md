@@ -1,0 +1,306 @@
+# Identidade visual — Plataforma Grafos
+
+Este documento descreve a **linguagem visual** do site: o que precisa se manter
+quando estrutura, textos e layout mudarem.
+
+> **Como ler.** Os valores aqui são os que estão em `src/app/globals.css`, medidos
+> no CSS computado — não são intenção nem proposta. Quando este arquivo e o
+> `globals.css` divergirem, **o CSS ganha**, e o certo é corrigir este arquivo.
+> A razão está no ADR `docs/adr/0001-identidade-visual.md`.
+>
+> As decisões que sustentam cada escolha vivem no `CONTEXTO.md` (seção "Decisões
+> que não dá pra adivinhar lendo o código"), e este documento aponta para elas em
+> vez de repeti-las.
+
+---
+
+## 1. Filosofia
+
+**Contorno, não preenchimento.** Botão e destaque usam `border` + cor de texto,
+não fundo sólido (`.botao-primario` em `globals.css`). Combina com "material de
+estudo" e não com "produto SaaS agressivo". A exceção é o cartão em destaque,
+que ganha o anel de acento.
+
+**Profundidade por superfície, e o anel antes da sombra.** A elevação vem de qual
+token de fundo o elemento usa (`--page` → `--canvas` → `--paper` → `--raised` →
+`--sel`), não de sombra pesada. E toda elevação começa por um **anel de 1px**
+(`--sombra`), nos dois temas: no escuro a sombra sozinha não separa camadas. O
+claro acrescenta a sombra de verdade por cima.
+
+**O acento é escasso.** O lilás marca só o que é acionável ou é literalmente a
+marca. Se tudo tem acento, nada tem.
+
+**Neutro morno, e isso é conforto medido.** Em todos os neutros o vermelho fica
+acima do azul. Antes era o contrário — o escuro nascia de um azul-violeta —, e
+azul frio é a ponta fria do espectro. Um site onde o aluno passa a tarde não pode
+ter a temperatura de uma tela de sistema. A dose é curta de propósito: puxar mais
+o amarelo cairia no bege de papel envelhecido, que brigaria com o lilás.
+
+**Três famílias, com papéis que não se cruzam.** Interface, leitura longa e dado
+são coisas diferentes e cada uma tem a sua fonte. Não entra uma quarta.
+
+**Os motivos vêm do conteúdo.** Grafo e cartão-resposta, e nada além. Ícone ou
+ilustração solta que não nasça do que o produto já é não pertence aqui.
+
+---
+
+## 2. Cor
+
+### O mecanismo: `light-dark()`, e uma cópia só
+
+Cada token traz os dois valores lado a lado:
+
+```css
+--page: light-dark(#F3F1EC, #12111A);
+```
+
+A alternativa seria repetir a paleta num `@media (prefers-color-scheme)` **e** de
+novo num seletor `[data-tema]` — três cópias que divergem no primeiro ajuste.
+Assim é impossível mudar um tema e esquecer o outro. Ver decisão **4b** do
+`CONTEXTO.md`.
+
+Sem escolha do aluno, o aparelho decide (`color-scheme: light dark`). Com escolha,
+`<html data-tema="claro|escuro">` fixa um. O botão (`components/BotaoTema.tsx`)
+cicla **claro → escuro → seguir o aparelho**; o terceiro estado existe porque, com
+só dois, quem clica uma vez fica preso e não volta a acompanhar o celular quando
+ele troca sozinho ao anoitecer.
+
+### Superfícies
+
+| Token | Claro | Escuro | Para quê |
+|---|---|---|---|
+| `--page` | `#F3F1EC` | `#12111A` | fundo atrás de tudo |
+| `--paper` | `#FCFAF6` | `#1A1822` | fundo do conteúdo, a superfície mais comum |
+| `--panel` | `#F6F3ED` | `#1E1B26` | barra lateral, cabeçalho |
+| `--canvas` | — | — | área com textura de fundo (usada por `.quadro`) |
+| `--raised` / `--raised-hover` | — | — | cartão e botão secundário, e o hover deles |
+| `--sel` | `#EBE7DF` | `#272332` | item selecionado ou sob o cursor |
+
+### Texto, linha e acento
+
+| Token | Para quê |
+|---|---|
+| `--ink` | título, ou texto que precisa de leitura máxima |
+| `--ink-soft` | corpo enfatizado |
+| `--ink-dim` | corpo padrão |
+| `--ink-faint` | legenda, metadado, apoio |
+| `--line` / `--line-forte` | divisória sutil / borda que precisa aparecer |
+| `--acento` | `#5B4BC4` claro, `#9184D9` escuro — algo é acionável |
+| `--acento-claro` | texto no hover do acionável |
+| `--acento-fraco` | fundo no hover do acionável |
+| `--ok` / `--erro` | confirmação / erro |
+
+Dois apelidos existem só para a migração e devem sair quando a última referência
+sumir: `--acento-escuro` (aponta para `--acento-claro`) e `--stamp` (aponta para
+`--acento`, e era o vermelho-carimbo do desenho antigo).
+
+### A faixa: a única superfície saturada
+
+`--faixa: #262A60`, `--faixa-ink: #F3F5FE`, `--faixa-dim: #C7C8F0`.
+
+**Não mudam com o tema**, e é decisão: clareá-la no tema claro tiraria justamente
+o respiro de cor que ela existe para dar. É a exceção declarada à regra de que
+todo token usa `light-dark()`.
+
+**Regra dura: no máximo um elemento em `--faixa` por tela.** Dois pontos gritando
+na mesma rolagem anulam um ao outro. Na dúvida entre `--faixa` e `--acento`, use
+`--acento`.
+
+### A cor da matéria
+
+`lib/materias.ts` traz o par claro/escuro de cada uma das 12 matérias, e o valor
+desce por `--cor-materia`. Ela pinta **título e `<strong>`** — o que o olho procura
+ao varrer o resumo — e nunca o texto corrido. Ver decisão **4c**.
+
+Três coisas que não dá para adivinhar:
+
+- **Resumo bloqueado não recebe cor.** Fica em `--ink-faint`: cor cheia o faria
+  parecer disponível e desmentiria o cadeado ao lado.
+- **Cada título usa a cor da PRÓPRIA matéria**, não a do bloco onde está.
+- **A cor nunca é a única pista.** O ponto de matéria na barra lateral continua
+  existindo, para quem não distingue os matizes.
+
+> As 12 matérias passam em WCAG AA (≥4,5:1) nos dois temas sobre `--paper`,
+> `--panel` e `--raised`. As mais apertadas são Redação (4,53) e Física (4,81).
+> **Quem mexer num tom está mexendo em texto de 12,5px, não num ponto de 6px** —
+> refaça a conta.
+
+### A regra que fecha a seção
+
+Se um componente precisa de um tom que não está no `:root`, **o tom entra no
+`:root` primeiro**. Antes deste sistema havia 27 cores soltas pelo código.
+
+---
+
+## 3. Tipografia
+
+### As três famílias
+
+| Variável | Família | Papel |
+|---|---|---|
+| `--fonte-texto` | **Inter** | interface e prosa da UI |
+| `--fonte-resumo` | **Nunito** | corpo do resumo — o texto que o aluno lê por horas |
+| `--fonte-mono` | **IBM Plex Mono** | número, código e fórmula. Nunca em frase |
+
+Vêm por `next/font`, não por `@import` no CSS: o import encadeia três viagens de
+rede antes do primeiro texto. Ver decisão **7**.
+
+A **Nunito é separada de propósito**: a interface pode mudar de cara sem afetar a
+leitura, e vice-versa. A Fraunces e a Work Sans saíram no redesenho escuro — a
+serifa dava ar de revista quando o pedido é material de estudo.
+
+**Não introduzir uma quarta família.**
+
+### A escala: sete degraus, e nada entre eles
+
+```css
+--t-mini:   0.75rem;   /* 12px — rótulo, contador */
+--t-peq:    0.8125rem; /* 13px — apoio, item de menu */
+--t-base:   0.9375rem; /* 15px — interface */
+--t-medio:  1.0625rem; /* 17px — corpo do resumo */
+--t-grande: 1.375rem;  /* 22px — título de seção */
+--t-titulo: 1.75rem;   /* 28px — título de página */
+--t-hero:   clamp(2.375rem, 4.6vw, 3rem); /* 38→48px — só o h1 da landing */
+```
+
+**Diferenças de 0,5px não são percebidas como intenção, só como desleixo.** Se um
+tamanho parece faltar, quase sempre o certo é usar o degrau vizinho — foi assim
+que os `30px` e `32px` da landing colapsaram em `--t-titulo`.
+
+`--t-hero` é o único que escala com a tela, e existe só para o `h1` da landing: é
+a primeira coisa que um desconhecido lê. Nas outras telas quem chegou já sabe onde
+está.
+
+### Peso
+
+Peso **500** é o peso de destaque da interface. Evite 700/800 na UI.
+
+**No corpo do resumo a regra é outra, e é o oposto:** título em **800**, `<strong>`
+em **500**, e a distância entre os dois É a decisão. Se o negrito marca o grafo,
+ele não pode marcar mais nada. Os dois valores são um par; mexer num sem o outro
+fecha a distância de novo. Ver decisão **12** — e note que ali o título **não tem
+tamanho**: hierarquia é ritmo de margem, porque grafo não é "maior", é "contém".
+
+---
+
+## 4. Forma
+
+```css
+--raio: 12px;      /* cartão, botão, painel — o padrão */
+--raio-peq: 9px;   /* badge, tag, chip */
+```
+
+**12 e 9, e não 8 e 6.** Canto é a parte do desenho que o olho lê como postura:
+quanto mais reto, mais formal. A folga a mais tira do site o ar de painel de
+controle. Não vai além disso — raio grande faz cartão de texto virar balão de
+aplicativo de conversa, e o que está dentro deles é matéria de prova.
+
+Nunca 0 (não é "hairline newspaper") nem pill (não é "app consumer").
+
+```css
+--sombra:          0 0 0 1px var(--line-forte);          /* anel, uso corriqueiro */
+--sombra-profunda: light-dark(0 12px 28px …, 0 16px 40px …);
+--sombra-alta:     var(--sombra), var(--sombra-profunda); /* destaque, raro */
+```
+
+`--sombra-profunda` vive num token próprio porque `light-dark()` separa seus dois
+valores por vírgula, e uma lista de sombras também usa vírgula: as duas coisas não
+cabem na mesma função.
+
+---
+
+## 5. Ritmo
+
+```css
+--ritmo-secao: clamp(3.5rem, 7vw, 5rem); /* 56→80px */
+```
+
+A distância entre um assunto e o próximo nas páginas públicas. Um valor só: cinco
+espaçamentos parecidos não leem como cinco intenções, leem como nenhuma. Encolhe
+no celular porque 80px numa tela de 390px empurra a seção seguinte fora do
+primeiro alcance do polegar.
+
+No corpo do resumo o espaçamento é feito pela "coruja" (`> * + *`), que põe tudo
+na margem de **cima** — a de baixo do anterior é sempre 0. Quem mexer ali precisa
+ler a decisão **12c**: o título corrido depende dessas margens serem iguais.
+
+---
+
+## 6. Motivos de marca
+
+Três elementos que vêm do próprio nome e conteúdo do produto. A marca cresce a
+partir deles, e não somando ícone genérico por cima.
+
+### Grafo
+
+O nome do produto, literal: nós conectados representam assuntos interligados. É o
+que o site inteiro já é por dentro (`pai_id` contém, `conexoes` cita).
+
+**Como textura** (`components/marca/Grafo.tsx`): sobre `--canvas`, atrás do
+conteúdo, nunca como ilustração central. Arestas em `--line-forte`, maioria dos
+nós em `--ink-faint`, **poucos** em `--acento`, opacidade ~38%.
+
+**Como demonstração** (`components/landing/GrafoInterativo.tsx`): aí ele é o
+protagonista, porque a função dele é ensinar. Usa as duas linhas do `/mapa` — e
+essa correspondência é obrigatória:
+
+| Linha | Significa | Onde mora |
+|---|---|---|
+| cheia | **contém** — estrutura escrita à mão | `resumos.pai_id` |
+| tracejada | **cita** — referência achada no `[[wikilink]]` | tabela `conexoes` |
+
+Quem aprende a ler uma delas na landing não pode ter que reaprender dentro do
+produto.
+
+**O desenho é fixo, escrito à mão, em ambos.** Layout aleatório mudaria a cada
+carregamento, e marca que muda de forma não é marca. E nenhum dos dois usa d3: a
+landing é a página que todo visitante baixa, e a decisão **10** vale mais aqui do
+que dentro do `/mapa`.
+
+### Cartão-resposta
+
+Bolhas de múltipla escolha (A/B/C/D/E). Referência direta à linguagem de
+vestibular, que já é o produto — e o elemento mais diferenciado disponível:
+nenhum concorrente do nicho tem isso. Pode aparecer como painel, ícone ou
+elemento de espera. Qualquer forma de "preencher uma bolha" pertence à marca.
+
+### Faixa
+
+Cor fixa, para destaque pontual. Ver a regra dura na seção 2.
+
+### O que a marca ainda NÃO tem
+
+**A logo.** `components/Marca.tsx` tem o encaixe pronto e `Simbolo` devolve `null`
+de propósito: **a logo é do autor e ele mesmo vai desenhá-la.** Uma logo genérica
+de encher espaço seria pior do que nenhuma, porque pareceria decidida. As
+instruções do que o SVG precisa ter estão no cabeçalho daquele arquivo.
+
+O **ícone de aba** (`src/app/icon.svg`) é outra coisa e já existe: três nós e duas
+arestas, uma cor cravada, forma cheia. Regras diferentes das da logo, e o motivo
+está no arquivo.
+
+---
+
+## 7. Movimento
+
+Quase nada se move, e isso é a escolha. Nenhuma animação de entrada por rolagem,
+nenhum pulso, nenhuma física. O que muda é o que o dedo ou a tecla causou.
+
+Transições existem só para troca de estado (cor, borda), em 120–150ms, e o
+`globals.css` já as desliga sob `prefers-reduced-motion`.
+
+---
+
+## 8. A regra de ouro
+
+Todo elemento novo tem que responder **sim** a pelo menos uma:
+
+1. Usa um token da lista acima, sem inventar cor nem tamanho novo?
+2. É contorno, e não preenchimento sólido — a menos que seja o elemento em
+   destaque da tela?
+3. Nasce do grafo, do cartão-resposta, ou é neutro o bastante para não competir
+   com os dois?
+
+E uma que não é negociável: **contraste é medido, não estimado.** Este projeto já
+teve comentário no CSS afirmando um contraste que a medição desmentiu. Todo par
+novo de cor e fundo vai medido nos dois temas antes de entrar.
