@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
 
 /**
@@ -107,8 +107,84 @@ function vizinhosDe(id: string | null) {
   return s
 }
 
+/** Limites do `viewBox`, com folga para o rótulo não sair pela borda. */
+const LIMITE = { minX: 34, maxX: 526, minY: 26, maxY: 356 }
+const prender = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+
 export default function GrafoInterativo() {
   const [escolhido, setEscolhido] = useState<string | null>('newton')
+
+  /**
+   * Onde cada nó está AGORA. Começa no desenho de `NOS` e muda quando alguém
+   * arrasta.
+   *
+   * Estado, e não persistido em lugar nenhum: recarregar devolve o desenho
+   * original. Isto é marca antes de ser brinquedo, e marca não pode ficar
+   * torta porque um visitante puxou um nó para o canto — o próximo a chegar
+   * tem que ver a mesma figura.
+   */
+  const [pos, setPos] = useState<Record<string, { x: number; y: number }>>(() =>
+    Object.fromEntries(NOS.map((n) => [n.id, { x: n.x, y: n.y }]))
+  )
+
+  const svgRef = useRef<SVGSVGElement>(null)
+  /**
+   * Marca que houve arrasto, para o `click` que vem depois ser engolido.
+   *
+   * Mesmo padrão da linha do tempo (decisão 9d): soltar o dedo em cima de um
+   * nó dispara um `click`, e sem esta marca empurrar um nó trocaria a
+   * explicação por acidente. O limiar de 4px é o que separa "arrastei" de
+   * "cliquei e a mão tremeu".
+   */
+  const arrastou = useRef(false)
+  const arrastando = useRef<string | null>(null)
+
+  /** Converte pixel de tela para coordenada do `viewBox`. */
+  function paraSvg(e: React.PointerEvent) {
+    const r = svgRef.current?.getBoundingClientRect()
+    if (!r) return null
+    const escala = 560 / r.width // o viewBox tem 560 de largura
+    return { x: (e.clientX - r.left) * escala, y: (e.clientY - r.top) * escala }
+  }
+
+  function aoPegar(e: React.PointerEvent, id: string) {
+    // Só o botão principal arrasta; o direito é menu de contexto.
+    if (e.button !== 0) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    arrastando.current = id
+    arrastou.current = false
+  }
+
+  function aoMover(e: React.PointerEvent) {
+    const id = arrastando.current
+    if (!id) return
+    const p = paraSvg(e)
+    if (!p) return
+    if (!arrastou.current) {
+      const o = pos[id]
+      if (Math.abs(p.x - o.x) < 4 && Math.abs(p.y - o.y) < 4) return
+      arrastou.current = true
+    }
+    setPos((atual) => ({
+      ...atual,
+      [id]: {
+        x: prender(p.x, LIMITE.minX, LIMITE.maxX),
+        y: prender(p.y, LIMITE.minY, LIMITE.maxY),
+      },
+    }))
+  }
+
+  function aoSoltar(e: React.PointerEvent) {
+    if (arrastando.current && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    arrastando.current = null
+  }
+
+  const mexido = NOS.some((n) => pos[n.id].x !== n.x || pos[n.id].y !== n.y)
+  const restaurar = () =>
+    setPos(Object.fromEntries(NOS.map((n) => [n.id, { x: n.x, y: n.y }])))
+
   const aceso = vizinhosDe(escolhido)
   const legenda = escolhido ? explicar(escolhido) : null
 
@@ -127,16 +203,31 @@ export default function GrafoInterativo() {
 
   return (
     <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
-      <div className="quadro rounded-[var(--raio)] p-4 shadow-[var(--sombra)]">
+      <div className="quadro relative rounded-[var(--raio)] p-4 shadow-[var(--sombra)]">
+          {/* Só aparece depois que alguém mexeu — um botão que não tem o que
+              desfazer é ruído permanente numa seção que deve ficar quieta. */}
+          {mexido && (
+            <button
+              type="button"
+              onClick={restaurar}
+              className="absolute right-3 top-3 z-10 text-[length:var(--t-mini)] text-[var(--ink-faint)] hover:text-[var(--ink)] border border-[var(--line-forte)] rounded-[var(--raio-peq)] px-2 py-1 bg-[var(--paper)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
+            >
+              Arrumar de volta
+            </button>
+          )}
         <svg
+          ref={svgRef}
           viewBox="0 0 560 380"
           className="w-full h-auto"
           role="group"
-          aria-label="Grafo de exemplo: toque num assunto para ver com o que ele se liga"
+          aria-label="Grafo de exemplo: toque num assunto para ver com o que ele se liga, ou arraste para mover"
+          onPointerMove={aoMover}
+          onPointerUp={aoSoltar}
+          onPointerCancel={aoSoltar}
         >
           {ARESTAS.map((a) => {
-            const de = NOS.find((n) => n.id === a.de)!
-            const para = NOS.find((n) => n.id === a.para)!
+            const de = pos[a.de]
+            const para = pos[a.para]
             const viva = !escolhido || (aceso.has(a.de) && aceso.has(a.para))
             return (
               <line
@@ -160,6 +251,7 @@ export default function GrafoInterativo() {
             const viva = !escolhido || aceso.has(n.id)
             const alvo = escolhido === n.id
             const cor = n.materia ? MATERIAS[n.materia].cor : 'var(--ink-faint)'
+            const p = pos[n.id]
             return (
               <g
                 key={n.id}
@@ -168,7 +260,17 @@ export default function GrafoInterativo() {
                 tabIndex={0}
                 aria-pressed={alvo}
                 aria-label={`${n.rotulo}. ${explicar(n.id).texto}`}
-                onClick={() => setEscolhido(n.id)}
+                onPointerDown={(e) => aoPegar(e, n.id)}
+                onClick={() => {
+                  /* Engole o clique que veio de um arrasto. Sem isto, empurrar
+                     um nó trocaria a explicação por acidente — o navegador
+                     dispara `click` ao soltar o dedo mesmo depois de mover. */
+                  if (arrastou.current) {
+                    arrastou.current = false
+                    return
+                  }
+                  setEscolhido(n.id)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
@@ -177,15 +279,20 @@ export default function GrafoInterativo() {
                   }
                   navegar(e, i)
                 }}
-                className="cursor-pointer outline-none [&:focus-visible>circle]:stroke-[var(--acento)] [&:focus-visible>circle]:stroke-[3]"
+                /* `touch-none` SÓ no nó, e não no SVG: o dedo continua rolando
+                   a página em qualquer lugar do desenho, e só perde a rolagem
+                   quando começa em cima de um nó — que é quando a intenção é
+                   arrastar. Pôr isto no SVG sequestraria a rolagem da página
+                   inteira no celular. */
+                className="cursor-grab active:cursor-grabbing touch-none outline-none [&:focus-visible>circle]:stroke-[var(--acento)] [&:focus-visible>circle]:stroke-[3]"
                 opacity={viva ? 1 : 0.4}
               >
                 {/* Alvo de toque generoso e invisível: o círculo visível tem 7px
                     de raio, que é metade do mínimo confortável para um dedo. */}
-                <circle cx={n.x} cy={n.y} r={22} fill="transparent" />
+                <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
                 <circle
-                  cx={n.x}
-                  cy={n.y}
+                  cx={p.x}
+                  cy={p.y}
                   r={n.raiz ? 9 : 7}
                   /* Vazado = matéria (guarda-chuva), preenchido = resumo. Mesma
                      regra da decisão 12, com uma diferença: lá o vazado é o
@@ -197,8 +304,8 @@ export default function GrafoInterativo() {
                   className="transition-[stroke-width] duration-150"
                 />
                 <text
-                  x={n.x}
-                  y={n.y - (n.raiz ? 17 : 15)}
+                  x={p.x}
+                  y={p.y - (n.raiz ? 17 : 15)}
                   textAnchor="middle"
                   className="text-[11px] font-medium select-none"
                   fill={alvo ? cor : 'var(--ink-dim)'}
