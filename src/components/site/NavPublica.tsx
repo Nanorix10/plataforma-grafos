@@ -10,6 +10,11 @@ import { BotaoTema } from '@/components/BotaoTema'
  * layout de `(site)` em vez de recopiá-la — que é exatamente como o nome da
  * marca acabou escrito à mão em cinco arquivos antes da decisão 9h.
  *
+ * A âncora de Matérias é `/#materias`, com a barra, e não `#materias`: esta
+ * barra vive em mais de uma página desde que `/planos` existe, e âncora sem
+ * caminho só funciona na página que tem a seção — nas outras ela não faz nada,
+ * em silêncio.
+ *
  * `/login` NÃO usa esta barra, e é de propósito: lá a tarefa é uma só, e um
  * menu com saídas para catálogo e planos convida a abandoná-la.
  */
@@ -24,12 +29,12 @@ export default function NavPublica() {
           <Marca tamanho="landing" />
         </Link>
         <div className="hidden md:flex gap-8 text-sm text-[var(--ink-dim)] ml-auto">
-          <a href="#materias" className="hover:text-[var(--ink)]">
+          <Link href="/#materias" className="hover:text-[var(--ink)]">
             Matérias
-          </a>
-          <a href="#planos" className="hover:text-[var(--ink)]">
+          </Link>
+          <Link href="/planos" className="hover:text-[var(--ink)]">
             Planos
-          </a>
+          </Link>
         </div>
         <BotaoTema className="md:ml-0 ml-auto" />
         {/* `.botao .botao-primario` e nada mais: a classe já traz raio, peso,

@@ -23,9 +23,18 @@ export default function Planos() {
     >
       <div className="max-w-[520px] mb-11">
         <div className="rotulo-secao mb-3">Planos</div>
-        <h2 className="text-[length:var(--t-titulo)] font-medium">
+        <h2 className="text-[length:var(--t-titulo)] font-medium mb-3">
           Escolha o acesso pelo processo seletivo que você está fazendo.
         </h2>
+        {/* A comparação completa é página própria. Os cartões ficam aqui
+            porque preço é o que mais decide e esconder isso da página
+            inicial custaria mais do que a rolagem extra. */}
+        <Link
+          href="/planos"
+          className="text-sm text-[var(--acento)] underline underline-offset-[3px] hover:text-[var(--acento-claro)]"
+        >
+          Ver a comparação completa
+        </Link>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
         {PLANOS_A_VENDA.map((p) => (

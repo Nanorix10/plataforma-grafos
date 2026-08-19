@@ -27,6 +27,14 @@ export type Plano = {
   preco: number | null
   /** O cartão em destaque na landing. No máximo um. */
   destaque?: boolean
+  /**
+   * Para quem este plano serve, em uma frase que o aluno reconheça.
+   *
+   * É a única informação de venda escrita à mão aqui, e ela é DERIVADA do
+   * produto: diz qual prova o plano cobre, não promete benefício. Vantagem
+   * inventada numa página de preço é a mentira que mais custa caro depois.
+   */
+  paraQuem: string
 }
 
 export const PLANOS: Record<string, Plano> = {
@@ -34,17 +42,20 @@ export const PLANOS: Record<string, Plano> = {
     nome: 'Acesso PASSE',
     processos: ['passe'],
     preco: null,
+    paraQuem: 'Você presta só o PASSE, da UFMS.',
   },
   completo: {
     nome: 'Acesso Completo',
     processos: ['passe', 'pas-uem', 'pas-unb'],
     preco: null,
+    paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.',
     destaque: true,
   },
   pas: {
     nome: 'Acesso PAS',
     processos: ['pas-uem', 'pas-unb'],
     preco: null,
+    paraQuem: 'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE.',
   },
   /**
    * `nenhum` é o plano de quem acabou de se cadastrar — ver a decisão 1b do
@@ -56,6 +67,7 @@ export const PLANOS: Record<string, Plano> = {
     nome: 'Sem acesso',
     processos: [],
     preco: null,
+    paraQuem: 'Estado de quem se cadastrou e ainda não teve o acesso liberado.',
   },
 }
 
@@ -68,6 +80,23 @@ export const PLANOS: Record<string, Plano> = {
 export const PLANO_PROCESSOS: Record<string, string[]> = Object.fromEntries(
   Object.entries(PLANOS).map(([slug, p]) => [slug, p.processos])
 )
+
+/**
+ * O que TODO plano entrega, sem exceção.
+ *
+ * Vale a pena dizer isto em voz alta na página de planos, porque é a coisa
+ * mais útil que ela tem a informar: **os planos não diferem em recurso, só em
+ * cobertura**. Ninguém compra o mais caro para destravar uma função — compra
+ * porque presta mais de uma prova. Esconder isso venderia mais no primeiro mês
+ * e geraria pedido de reembolso no segundo.
+ */
+export const INCLUI_SEMPRE = [
+  'Todas as matérias do processo seletivo escolhido',
+  'Resumos interligados, com o mapa de conexões',
+  'Linha do tempo dos eventos históricos',
+  'Leitura no próprio site, sem baixar nada',
+  'Atualizações do acervo enquanto o acesso estiver ativo',
+] as const
 
 /** Os planos que aparecem na vitrine, na ordem em que ela os mostra. */
 export const PLANOS_A_VENDA = (['passe', 'completo', 'pas'] as const).map((slug) => ({
