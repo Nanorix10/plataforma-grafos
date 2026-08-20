@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    Marca de aba, NÃO a logo. O `Simbolo` de `components/Marca.tsx` continua
+    devolvendo null, esperando o desenho do autor.
+
+    Segue as três regras que o próprio Marca.tsx escreveu para este arquivo:
+
+    1. **Uma cor só, cravada, e nada de `currentColor`.** Na aba do navegador
+       não existe texto do qual herdar. O tom é o meio-caminho entre os dois
+       acentos do site (#5B4BC4 no claro, #9184D9 no escuro), então ele tem
+       massa suficiente para ler tanto na aba clara quanto na escura — nenhum
+       dos dois extremos consegue isso sozinho.
+    2. **Forma cheia.** Isto é desenhado com 16px de lado; contorno fino
+       viraria mancha.
+    3. **Sem `<text>`.** Fonte dentro de SVG depende de a fonte existir na
+       máquina de quem lê.
+
+    O desenho é o grafo, que é o nome da empresa: três nós e duas arestas, com
+    a base ABERTA de propósito. Triângulo fechado leria como um símbolo de
+    "portanto"; a base aberta lê como coisa que se ramifica, que é o que o
+    produto faz.
+
+    Substitui o `favicon.ico` de 25 KB que veio do template do Next e que
+    anunciava o site como "projeto Next recém-criado" na aba.
+  -->
+  <g fill="none" stroke="#766ACE" stroke-width="2.6" stroke-linecap="round">
+    <path d="M8.5 22 L16 8.5" />
+    <path d="M16 8.5 L24.5 19.5" />
+  </g>
+  <g fill="#766ACE">
+    <circle cx="16" cy="8.5" r="4.6" />
+    <circle cx="8.5" cy="22" r="4.2" />
+    <circle cx="24.5" cy="19.5" r="4.2" />
+  </g>
+</svg>

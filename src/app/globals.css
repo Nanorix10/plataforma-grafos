@@ -38,19 +38,40 @@
      e azul frio é literalmente a ponta fria do espectro. Um site onde o aluno
      passa a tarde inteira não pode ter a temperatura de uma tela de sistema.
 
+     ATENÇÃO, e é a parte que já falhou uma vez: esta regra vale para os DOIS
+     temas, e por um tempo valeu só para o claro. A primeira passada aqueceu o
+     tema claro (matiz ~40) e deixou o escuro no violeta de origem (~250) — os
+     dois ficaram a 210° de distância no círculo de cor, e o site deixou de ler
+     como a mesma marca em duas iluminações. Pior: o roxo do acento parou de
+     funcionar como acento no escuro, porque passou a dividir família com o
+     próprio fundo. Se tudo é roxo, nada é roxo.
+
+     COMO o escuro foi aquecido, porque o caminho ingênuo estraga o contraste:
+     cada token escuro recebeu o MATIZ do seu par claro, e depois teve a
+     luminosidade recalculada até casar a LUMINÂNCIA que ele já tinha. Girar
+     matiz com o "L" do HSL fixo NÃO preserva contraste — na conta de
+     luminância o verde pesa 0,7152 e o azul 0,0722, então sair do azul para o
+     âmbar no mesmo L clareia de verdade. Foi medido: o acento sobre --raised
+     caía de 4,74:1 para 4,24:1, abaixo do mínimo. Casando a luminância, todos
+     os pares ficaram dentro de 0,03 do valor original.
+
+     Quem for mexer num tom escuro daqui: confira que o vermelho continua acima
+     do azul, e remeça o contraste. As duas coisas se verificam em segundos e
+     nenhuma delas é perceptível no olho.
+
      O acolhimento vem do fundo, não de enfeite: nenhum elemento novo entrou
      na tela para isso, só a luz mudou de temperatura.
 
      A dose é curta de propósito. Puxar mais o amarelo cairia no bege de
      "papel envelhecido", que briga com o lilás do acento e viraria outro
      site — o pedido era conforto, não uma identidade nova. */
-  --page: light-dark(#F3F1EC, #12111A); /* fundo atrás de tudo */
-  --paper: light-dark(#FCFAF6, #1A1822); /* fundo do conteúdo */
-  --panel: light-dark(#F6F3ED, #1E1B26); /* barras laterais e cabeçalhos */
-  --sel: light-dark(#EBE7DF, #272332); /* item selecionado ou sob o cursor */
-  --raised: light-dark(#FAF7F1, #272332); /* cartão sobre o conteúdo */
-  --raised-hover: light-dark(#F1EDE5, #2E2937); /* o mesmo cartão sob o cursor */
-  --canvas: light-dark(#FAF8F4, #16141E); /* área do mapa */
+  --page: light-dark(#F3F1EC, #14120D); /* fundo atrás de tudo */
+  --paper: light-dark(#FCFAF6, #1C1914); /* fundo do conteúdo */
+  --panel: light-dark(#F6F3ED, #1F1C16); /* barras laterais e cabeçalhos */
+  --sel: light-dark(#EBE7DF, #29251D); /* item selecionado ou sob o cursor */
+  --raised: light-dark(#FAF7F1, #29251D); /* cartão sobre o conteúdo */
+  --raised-hover: light-dark(#F1EDE5, #2F2B23); /* o mesmo cartão sob o cursor */
+  --canvas: light-dark(#FAF8F4, #181510); /* área do mapa */
 
   /* Verde de "deu certo" — acesso liberado, pagamento confirmado. Escurece no
      claro para passar de 4,5:1; o valor caiu mais um passo (#2E7D50 → #2A7248)
@@ -68,22 +89,22 @@
 
      Os números abaixo são o pior fundo de cada tema (`--sel`, onde o rótulo
      cai sobre item selecionado), medidos — não estimados. */
-  --ink: light-dark(#1A1814, #EBE8E4); /* principal — 14,4:1 / 12,5:1 */
-  --ink-soft: light-dark(#3E3B33, #D3CFD9); /* um passo abaixo do principal, para texto longo — 9,1:1 / 10,0:1 */
-  --ink-dim: light-dark(#5A564B, #B6B2C0); /* secundário — 5,9:1 / 7,4:1 */
+  --ink: light-dark(#1A1814, #EBE8E3); /* principal — 14,4:1 / 12,5:1 */
+  --ink-soft: light-dark(#3E3B33, #D4D1C8); /* um passo abaixo do principal, para texto longo — 9,1:1 / 10,0:1 */
+  --ink-dim: light-dark(#5A564B, #B8B4A8); /* secundário — 5,9:1 / 7,4:1 */
   /* Este passou a PASSAR. Estava em #767C8C/#75798C, que o comentário antigo
      dava como 4,7:1 e 4,6:1 — medido, era 3,6:1 no claro e 3,5:1 no escuro
      sobre `--sel`, abaixo do mínimo da WCAG AA. É o token dos rótulos, das
      datas e dos contadores: o texto miúdo que já é o mais difícil de ler era
      também o de menor contraste do sistema. */
-  --ink-faint: light-dark(#6C6759, #918C9E); /* rótulos — 4,6:1 / 4,7:1, só em 12px+ */
+  --ink-faint: light-dark(#6C6759, #948E80); /* rótulos — 4,6:1 / 4,7:1, só em 12px+ */
 
   /* --- traços ---
      Mornos pela mesma razão dos fundos: uma divisória azulada sobre papel
      morno aparece como uma linha CINZA-AZUL, e não como o fio neutro que ela
      deveria ser. */
-  --line: light-dark(#E7E3DA, #2C2830); /* divisórias */
-  --line-forte: light-dark(#CFC9BC, #454049); /* borda de campo e de cartão */
+  --line: light-dark(#E7E3DA, #2C2924); /* divisórias */
+  --line-forte: light-dark(#CFC9BC, #44423C); /* borda de campo e de cartão */
 
   /* --- destaque ---
      O lilás do escuro ficaria lavado sobre branco, então o claro usa o mesmo
@@ -98,10 +119,29 @@
   --acento-escuro: var(--acento-claro);
 
   /* --- faixa de números ---
-     A única superfície saturada do sistema. Fica azul-marinho nos dois temas:
-     é uma faixa que se destaca do fundo, e clareá-la no tema claro tiraria
-     justamente o respiro de cor que ela existe para dar. */
-  --faixa: #262A60;
+     A única superfície saturada do sistema, e a única cor que existe para dar
+     respiro no meio de uma sequência de seções parecidas.
+
+     Ela JÁ FOI cor única nos dois temas, e isso falhou de um jeito que só a
+     medição mostrou: #262A60 contra o fundo claro dá 11,76:1 e contra o fundo
+     escuro dá 1,41:1 — praticamente o mesmo valor do fundo. No claro ela
+     quebrava a página; no escuro era um retângulo invisível, e o respiro que
+     ela existe para dar já estava perdido.
+
+     Agora é um par, e a lógica INVERTE entre os temas: no claro ela é a mancha
+     escura sobre papel, no escuro a mancha clara sobre a página. Mesmo matiz
+     (236) e mesma saturação (43%) — só o tom e a luz mudam, que é o que
+     mantém a cor reconhecível como a mesma.
+
+     O lado escuro dá 2,19:1 contra o fundo. Parece pouco perto do 11,76 do
+     claro, e não é: a referência num tema escuro é o quanto --paper já se
+     separa de --page, que é 1,28:1 e lê como cartão distinto sem esforço.
+     3:1 é limiar de COMPONENTE de interface, não de superfície decorativa —
+     importar esse número para cá daria uma faixa lavada.
+
+     O texto de dentro dela não muda com o tema (--faixa-ink, --faixa-dim) e
+     continua passando nos dois: 7,84:1 e 5,26:1 sobre o lado escuro. */
+  --faixa: light-dark(#262A60, #3D4399);
   --faixa-ink: #F3F5FE;
   --faixa-dim: #C7C8F0;
 
@@ -122,6 +162,26 @@
   --t-medio: 1.0625rem; /* 17px — corpo do resumo */
   --t-grande: 1.375rem; /* 22px — título de seção */
   --t-titulo: 1.75rem; /* 28px — título de página */
+  /* Sétimo degrau, e o único que escala com a tela. Existe só para o h1 da
+     landing, que é a primeira coisa que um desconhecido lê do produto — nas
+     outras telas quem chegou já sabe onde está, e 28px basta.
+
+     Fluido porque é a única tipografia do site que atravessa de 390px a
+     1120px sem quebrar de layout: fixo em 48px estoura no celular, fixo em
+     38px some no monitor. O `clamp` reproduz exatamente o par que a landing
+     já usava à mão (38px → 48px), então nada muda de aparência — o que muda é
+     o valor deixar de ser inventado dentro do componente. */
+  --t-hero: clamp(2.375rem, 4.6vw, 3rem); /* 38→48px — só o h1 da landing */
+
+  /* --- ritmo vertical das seções públicas ---
+     A landing tinha cinco espaçamentos diferentes (pt-24, pb-22, py-20, py-14,
+     py-9) para o que é uma coisa só: a distância entre um assunto e o próximo.
+     Cinco valores parecidos não leem como cinco intenções, leem como nenhuma.
+
+     Um valor só, e ele também encolhe no celular — 80px de respiro numa tela
+     de 390px empurra a seção seguinte para fora do primeiro alcance do polegar
+     e faz a página parecer vazia. */
+  --ritmo-secao: clamp(3.5rem, 7vw, 5rem); /* 56→80px */
 
   /* --- raio e sombra ---
      12 e 9, e não 8 e 6. Canto é a parte do desenho que o olho lê como
@@ -258,7 +318,11 @@ h1, h2, h3, h4 {
   font-size: var(--t-base);
   font-weight: 600;
   border-radius: var(--raio-peq);
-  padding: 0.5rem 1rem;
+  /* 0.625rem e nao 0.5rem: com 0.5 o botao media 42px de altura, e a
+     recomendacao de alvo de toque e 44px. Dois pixels por lado sao
+     invisiveis no desenho e valem para TODO botao do site, inclusive os da
+     area logada. Medido em viewport de 390px antes de publicar. */
+  padding: 0.625rem 1rem;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 /* O botão principal é contornado, não preenchido. Um bloco lilás sólido é a

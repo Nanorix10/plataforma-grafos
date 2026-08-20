@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { getSessao } from '@/lib/sessao'
 import { MATERIAS } from '@/lib/materias'
-import { PLANO_PROCESSOS } from '@/lib/wikilinks'
+import { PLANO_PROCESSOS } from '@/lib/planos'
 import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 
 // A montagem da árvore mora em `lib/arvore.ts`, sem nada de servidor, porque a

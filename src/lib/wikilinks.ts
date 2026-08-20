@@ -18,10 +18,3 @@ export function renderizarWikilinks(
   })
 }
 
-// Planos e quais processos seletivos cada um libera
-export const PLANO_PROCESSOS: Record<string, string[]> = {
-  passe: ['passe'],
-  pas: ['pas-uem', 'pas-unb'],
-  completo: ['passe', 'pas-uem', 'pas-unb'],
-  nenhum: [],
-}
