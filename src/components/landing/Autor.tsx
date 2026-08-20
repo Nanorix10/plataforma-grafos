@@ -53,6 +53,15 @@ export default function Autor() {
             O material é de {nome}, e ele prestou as mesmas provas que você.
           </h2>
 
+          {conquistas.length > 1 && (
+            /* As três são de bancas diferentes, e dizer isso vale mais que a
+               lista: PASSE, ENEM e Poliedro não são a mesma prova, o que afasta
+               a leitura de "acertou uma vez". */
+            <p className="text-sm text-[var(--ink-dim)] mb-6 max-w-[58ch] leading-relaxed">
+              Não é resultado de uma prova só — são bancas diferentes, no mesmo ano.
+            </p>
+          )}
+
           {conquistas.length > 0 && (
             /* Só aparece com dado real. Uma afirmação de desempenho sem número
                e sem ano ao lado enfraquece em vez de vender. */

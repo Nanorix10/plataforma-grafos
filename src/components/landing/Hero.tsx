@@ -44,7 +44,13 @@ export default function Hero() {
             Preparação PASSE · PAS-UEM · PAS-UnB
           </div>
           <h1 className="text-[length:var(--t-hero)] leading-[1.1] font-medium tracking-[-0.02em] mb-5">
-            Estude com quem já corrigiu a prova mil vezes.
+            {/* Presente, e não passado, de propósito: o PASSE é seriado, então
+                liderar hoje não é ter vencido. "Está em" diz a verdade sozinho
+                e dispensa asterisco; "tirou" afirmaria um resultado final que
+                ainda não existe. A prova da frase está logo abaixo, na seção do
+                autor — afirmação de primeiro lugar sem a colocação escrita ao
+                lado é a única forma de ela enfraquecer em vez de vender. */}
+            Os resumos de quem está em 1º lugar em medicina no PASSE.
           </h1>
           <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[52ch] mb-8">
             Resumos organizados por matéria e por processo seletivo, interligados

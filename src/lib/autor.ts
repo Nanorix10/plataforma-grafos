@@ -25,17 +25,40 @@ export const AUTOR = {
   nome: 'Leandro',
 
   /**
-   * ⏳ FALTA: a colocação exata, com posição, ranking e ano.
+   * O que ele conquistou, com onde e quando.
    *
-   * Enquanto a lista estiver vazia a seção mostra o material e o método, e
-   * NÃO faz afirmação de desempenho. É o que sustenta a headline do campeão —
-   * sem isso, "melhor do estado" seria uma frase sem prova ao lado dela, que
-   * é a única forma de ela enfraquecer em vez de vender.
+   * **O tempo verbal do 1º lugar é decisão, não estilo.** O PASSE é seriado:
+   * liderar hoje não é ter vencido. "Está em 1º lugar" é presente e diz a
+   * verdade sozinho; "tirou o 1º lugar" afirmaria um resultado final que ainda
+   * não existe, e é o tipo de frase que um concorrente desmonta com uma
+   * pergunta. Por isso o `titulo` abaixo não usa passado, e a headline da
+   * landing também não.
    *
-   * Exemplo do formato esperado, para preencher e apagar este comentário:
-   *   { titulo: '1º lugar geral', onde: 'ranking do PASSE — UFMS', ano: 2025 }
+   * **O "cursando o primeiro ano" do ENEM não é adorno.** 920 na redação é
+   * ótimo; 920 fazendo a prova no primeiro ano do ensino médio é outra
+   * categoria. Se essa parte cair num corte de texto, a conquista encolhe pela
+   * metade.
+   *
+   * **O ano fica em todas.** Conquista com data lê como registro; sem data lê
+   * como slogan, e é a primeira coisa que alguém pede ao duvidar.
    */
-  conquistas: [] as Conquista[],
+  conquistas: [
+    {
+      titulo: 'Está em 1º lugar em medicina',
+      onde: 'PASSE da UFMS, entre todos os candidatos',
+      ano: 2025,
+    },
+    {
+      titulo: '920 na redação do ENEM',
+      onde: 'cursando o primeiro ano do ensino médio',
+      ano: 2025,
+    },
+    {
+      titulo: 'Medalha de ouro',
+      onde: 'ranking de notas do Poliedro no Colégio Harmonia',
+      ano: 2025,
+    },
+  ] as Conquista[],
 
   /**
    * O que é verdade hoje e já dá para dizer. Vem do checklist do produto:
