@@ -171,7 +171,7 @@
      38px some no monitor. O `clamp` reproduz exatamente o par que a landing
      já usava à mão (38px → 48px), então nada muda de aparência — o que muda é
      o valor deixar de ser inventado dentro do componente. */
-  --t-hero: clamp(2.375rem, 4.6vw, 3rem); /* 38→48px — só o h1 da landing */
+  --t-hero: clamp(2.75rem, 6.4vw, 4.5rem); /* 44→72px — só o h1 da landing */
 
   /* --- ritmo vertical das seções públicas ---
      A landing tinha cinco espaçamentos diferentes (pt-24, pb-22, py-20, py-14,
@@ -232,6 +232,26 @@ h1, h2, h3, h4 {
   font-family: var(--fonte-texto), sans-serif;
   font-weight: 500;
   letter-spacing: -0.015em;
+}
+
+/* Título da cara pública, e SÓ dela.
+   A classe é posta em `(site)/layout.tsx`, junto da variável da Gabarito — as
+   duas nascem no mesmo lugar de propósito, senão a família ficaria declarada
+   num arquivo e usada em outro, e a próxima pessoa teria de caçar a ligação.
+
+   Vale para h1 e h2 e para mais nada: h3/h4 na landing são rótulo dentro de
+   cartão, e display em texto pequeno vira só uma fonte diferente sem virar
+   hierarquia. Dentro do `(app)` a regra não alcança, então resumo, editor e
+   barra lateral seguem inteiros na Inter.
+
+   O tracking é MAIS fechado que os -0.015em da interface porque aqui o corpo
+   é outro: a -0.015em o `h1` de 72px abre buracos entre as letras que a mesma
+   frase a 28px não tem. Peso é escolha do componente, não daqui — o Hero
+   precisa dos dois extremos na MESMA linha. */
+.titulo-display h1,
+.titulo-display h2 {
+  font-family: var(--fonte-display), var(--fonte-texto), sans-serif;
+  letter-spacing: -0.03em;
 }
 
 /* A marca acompanha a interface. A Fraunces saiu do projeto: era a única

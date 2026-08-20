@@ -16,6 +16,39 @@ import Grafo from '@/components/marca/Grafo'
  * ser lido como desenho em vez de ficar espremido atrás de metade da tela.
  *
  * Uma dobra, uma ideia.
+ *
+ * ---
+ *
+ * **O peso é a informação, e é por isso que a frase tem dois.** A afirmação
+ * inteira estava em 500, um peso só, e um peso só não tem hierarquia: o olho
+ * chegava em "Os resumos de quem está em" com a mesma força de "1º lugar em
+ * medicina", que é a única parte que outro cursinho não consegue escrever. Com
+ * 400 na moldura e 900 no fato, a frase se lê em dois tempos — primeiro o que
+ * é, depois de quem é.
+ *
+ * **900, e não 700, porque 700 não chegou.** Medido na tela, e não no olho: a
+ * Gabarito já tem 400 encorpado, e sobre fundo escuro o texto claro "vaza" e
+ * parece mais grosso do que é (é a mesma observação que mantém os títulos da
+ * interface em 500). Os dois pesos ficavam a uma distância que o olho não
+ * separava, e a hierarquia que a frase precisa não acontecia.
+ *
+ * **O `md:whitespace-nowrap` é o que salva o destaque.** Sem ele a frase
+ * quebrava entre "1º lugar em" e "medicina", e um destaque partido em duas
+ * linhas deixa de ser destaque. Só a partir de `md`: numa tela de 390px a
+ * frase inteira numa linha só estouraria a largura.
+ *
+ * **"está em" fica no peso leve de propósito.** Ele é o verbo que mantém a
+ * afirmação no presente (o PASSE é seriado, então liderar hoje não é ter
+ * vencido); engordá-lo junto do resto empurraria a frase para "foi primeiro
+ * lugar", que é o que ela cuidadosamente não diz. A prova continua logo
+ * abaixo, na seção do autor.
+ *
+ * **A textura recuou para a direita.** Com o `h1` a 72px o grafo a 38% passava
+ * por trás das letras e sujava a contraforma — a regra 2 do `Grafo.tsx` (baixo
+ * contraste) vale ainda mais quando o texto por cima cresce. A máscara abre um
+ * campo limpo na coluna de leitura e deixa o desenho inteiro do lado para onde
+ * o olho vai depois de ler. Continua sendo textura atrás do conteúdo, que é a
+ * regra 1 daquele arquivo.
  */
 export default function Hero() {
   return (
@@ -27,7 +60,21 @@ export default function Hero() {
           mapa do produto já usa. A landing pisa no mesmo chão que a
           ferramenta — consistência de marca que não custou token novo. */}
       <div aria-hidden="true" className="quadro absolute inset-0">
-        <Grafo className="absolute inset-0 w-full h-full opacity-[0.38]" />
+        {/* A máscara é `style` e não classe utilitária porque precisa do par
+            com prefixo: o Safari ainda pede `-webkit-mask-image`, e sem ele a
+            textura volta a passar por baixo do texto justamente no navegador
+            de metade dos celulares. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            maskImage:
+              'linear-gradient(to right, transparent 42%, #000 82%)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent 42%, #000 82%)',
+          }}
+        >
+          <Grafo className="absolute inset-0 w-full h-full opacity-[0.34]" />
+        </div>
         {/* Esmaecimento até `--page` na base. Sem ele o grafo encosta na faixa
             da seção seguinte com uma borda dura, e o que era textura vira um
             bloco recortado. */}
@@ -38,21 +85,26 @@ export default function Hero() {
         {/* A coluna de texto continua estreita mesmo sem o painel ao lado: a
             linha de leitura é o que decide a largura, não o espaço disponível.
             Esticar o parágrafo até 1120px passaria de 150 caracteres por linha
-            e o olho perderia o começo da linha seguinte. */}
-        <div className="max-w-[640px]">
-          <div className="rotulo-secao mb-4 text-[var(--acento-claro)]">
+            e o olho perderia o começo da linha seguinte.
+
+            Subiu de 640 para 720 junto com o `h1`: a 72px, 640px quebrava a
+            afirmação em cinco linhas curtas e ela deixava de ler como frase. */}
+        <div className="max-w-[720px]">
+          <div className="rotulo-secao mb-5 text-[var(--acento-claro)]">
             Preparação PASSE · PAS-UEM · PAS-UnB
           </div>
-          <h1 className="text-[length:var(--t-hero)] leading-[1.1] font-medium tracking-[-0.02em] mb-5">
+          <h1 className="text-[length:var(--t-hero)] leading-[1.03] font-normal mb-6 text-balance">
             {/* Presente, e não passado, de propósito: o PASSE é seriado, então
                 liderar hoje não é ter vencido. "Está em" diz a verdade sozinho
                 e dispensa asterisco; "tirou" afirmaria um resultado final que
-                ainda não existe. A prova da frase está logo abaixo, na seção do
-                autor — afirmação de primeiro lugar sem a colocação escrita ao
-                lado é a única forma de ela enfraquecer em vez de vender. */}
-            Os resumos de quem está em 1º lugar em medicina no PASSE.
+                ainda não existe. */}
+            Os resumos de quem está em{' '}
+            <strong className="font-black md:whitespace-nowrap">
+              1º lugar em medicina
+            </strong>{' '}
+            no PASSE.
           </h1>
-          <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[52ch] mb-8">
+          <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[52ch] mb-9">
             Resumos organizados por matéria e por processo seletivo, interligados
             entre si — lidos no próprio site, sem baixar nada e sempre na versão
             mais recente.
