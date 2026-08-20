@@ -63,7 +63,11 @@ export default function Hero() {
             </a>
             <a
               href="#materias"
-              className="text-sm underline underline-offset-[3px] decoration-[var(--ink-faint)] hover:decoration-[var(--ink)]"
+              /* `py-2` pelo alvo de toque, não pelo desenho: sem ele o link
+                 media 162x20 no celular, abaixo do mínimo de 24px da WCAG 2.2
+                 (critério 2.5.8). O botão ao lado tem 44px de altura, então o
+                 padding também alinha os dois pelo meio. */
+              className="py-2 text-sm underline underline-offset-[3px] decoration-[var(--ink-faint)] hover:decoration-[var(--ink)]"
             >
               Ver matérias disponíveis
             </a>

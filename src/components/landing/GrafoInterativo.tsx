@@ -287,9 +287,14 @@ export default function GrafoInterativo() {
                 className="cursor-grab active:cursor-grabbing touch-none outline-none [&:focus-visible>circle]:stroke-[var(--acento)] [&:focus-visible>circle]:stroke-[3]"
                 opacity={viva ? 1 : 0.4}
               >
-                {/* Alvo de toque generoso e invisível: o círculo visível tem 7px
-                    de raio, que é metade do mínimo confortável para um dedo. */}
-                <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
+                {/* Alvo de toque invisível, e o raio está em unidades do
+                    viewBox — não em pixels. O SVG encolhe no celular (560
+                    unidades desenhadas em ~326px), então 22 unidades viravam
+                    26px de alvo real, perto demais do mínimo de 24px da WCAG
+                    2.2. Com 28 o alvo vai a ~32px, e ainda cabe: os dois nós
+                    mais próximos do desenho estão a 90 unidades um do outro, o
+                    dobro do diâmetro, então nenhum alvo invade o vizinho. */}
+                <circle cx={p.x} cy={p.y} r={28} fill="transparent" />
                 <circle
                   cx={p.x}
                   cy={p.y}
@@ -319,7 +324,11 @@ export default function GrafoInterativo() {
       </div>
 
       <div>
-        <div className="rotulo-secao mb-3">O que é um grafo</div>
+        {/* Esta coluna NÃO leva rótulo de seção, e a ausência é decisão.
+            A seção que a contém já tem o dela ("Por dentro") a poucos pixels
+            daqui, e dois rótulos minúsculos em maiúsculas na mesma tela, para
+            uma ideia só, é andaime — não hierarquia. O rótulo repetido a cada
+            bloco é um dos sinais mais confiáveis de página gerada. */}
         <h3 className="text-[length:var(--t-grande)] font-medium mb-3">
           Cada assunto sabe onde mora e com quem conversa.
         </h3>

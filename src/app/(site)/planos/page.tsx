@@ -36,7 +36,11 @@ export default function PlanosPage() {
           para lugar nenhum útil. */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-[length:var(--t-peq)] text-[var(--ink-faint)] hover:text-[var(--ink)] mb-9 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
+        /* `py-2 -ml-1 px-1` existe pelo alvo de toque, nao pelo desenho: sem
+           isso o link media 182x21 e ficava ABAIXO do minimo de 24px da WCAG
+           2.2 (critério 2.5.8). O recuo negativo devolve o alinhamento visual
+           que o padding tirou. */
+        className="inline-flex items-center gap-1.5 py-2 px-1 -ml-1 text-[length:var(--t-peq)] text-[var(--ink-faint)] hover:text-[var(--ink)] mb-9 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
       >
         <span aria-hidden="true">←</span> Voltar para a página inicial
       </Link>
