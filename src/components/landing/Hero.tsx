@@ -1,23 +1,22 @@
-import { MATERIAS } from '@/lib/materias'
 import Grafo from '@/components/marca/Grafo'
 
 /**
- * O cartão-resposta do hero — bolhas de múltipla escolha, uma por matéria.
+ * A primeira dobra.
  *
- * É o motivo de marca mais diferenciado que o produto tem: nenhum concorrente
- * do nicho usa a linguagem visual da prova em si. Fica onde estava; o que muda
- * é que agora ele divide a tela com o grafo, e os dois juntos dizem as duas
- * metades do produto — "isto é vestibular" e "isto é interligado".
+ * **O cartão-resposta saiu daqui, e a decisão vale registrar.** Ele ocupava
+ * metade da largura com seis linhas de bolhas e não dizia nada: quem chegava
+ * não entendia o que era, e nem parava para tentar. Foi levado ao acervo para
+ * ver se ali ganhava sentido — uma bolha por prova, dizendo em qual vestibular
+ * cada matéria cai — e perdeu para a variante que mostra os assuntos. Não
+ * sobrou lugar no site onde ele diga algo verdadeiro.
+ *
+ * Com ele fora, o hero fica com uma coisa só: o texto sobre o grafo. O grafo é
+ * o motivo que se sustenta sozinho — é o nome da empresa E a estrutura de
+ * dados do produto —, e com a coluna inteira ele finalmente tem espaço para
+ * ser lido como desenho em vez de ficar espremido atrás de metade da tela.
+ *
+ * Uma dobra, uma ideia.
  */
-const CARTAO_RESPOSTA = [
-  { num: '01', label: 'Biologia — PAS UEM', marcada: 0, cor: MATERIAS.biologia.cor },
-  { num: '02', label: 'Química — PASSE UFMS', marcada: 0, cor: MATERIAS.quimica.cor },
-  { num: '03', label: 'Matemática — PAS UnB', marcada: 1, cor: MATERIAS.matematica.cor },
-  { num: '04', label: 'Geografia — PASSE UFMS', marcada: 2, cor: MATERIAS.geografia.cor },
-  { num: '05', label: 'Literatura — PAS UEM', marcada: 0, cor: MATERIAS.literatura.cor },
-  { num: '06', label: 'Física — PAS UnB', marcada: 2, cor: MATERIAS.fisica.cor },
-]
-
 export default function Hero() {
   return (
     /* `relative` + `overflow-hidden` seguram o grafo: ele é maior que o hero
@@ -25,25 +24,29 @@ export default function Hero() {
        pendurado), e sem o corte ele criaria barra de rolagem horizontal. */
     <header className="relative overflow-hidden">
       {/* A mesma superfície do `/mapa`: `.quadro` é o fundo quadriculado que o
-          mapa do produto já usa. A landing passa a pisar no mesmo chão que a
+          mapa do produto já usa. A landing pisa no mesmo chão que a
           ferramenta — consistência de marca que não custou token novo. */}
       <div aria-hidden="true" className="quadro absolute inset-0">
         <Grafo className="absolute inset-0 w-full h-full opacity-[0.38]" />
         {/* Esmaecimento até `--page` na base. Sem ele o grafo encosta na faixa
-            azul-marinho da seção seguinte com uma borda dura, e o que era
-            textura vira um bloco recortado. */}
+            da seção seguinte com uma borda dura, e o que era textura vira um
+            bloco recortado. */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--page)]" />
       </div>
 
-      <div className="relative max-w-[1120px] mx-auto px-8 pt-[var(--ritmo-secao)] pb-[var(--ritmo-secao)] grid md:grid-cols-[1.2fr_0.8fr] gap-12 items-end">
-        <div>
+      <div className="relative max-w-[1120px] mx-auto px-8 pt-[var(--ritmo-secao)] pb-[var(--ritmo-secao)]">
+        {/* A coluna de texto continua estreita mesmo sem o painel ao lado: a
+            linha de leitura é o que decide a largura, não o espaço disponível.
+            Esticar o parágrafo até 1120px passaria de 150 caracteres por linha
+            e o olho perderia o começo da linha seguinte. */}
+        <div className="max-w-[640px]">
           <div className="rotulo-secao mb-4 text-[var(--acento-claro)]">
             Preparação PASSE · PAS-UEM · PAS-UnB
           </div>
-          <h1 className="text-[length:var(--t-hero)] leading-[1.1] font-medium tracking-[-0.02em] mb-5 max-w-[640px]">
+          <h1 className="text-[length:var(--t-hero)] leading-[1.1] font-medium tracking-[-0.02em] mb-5">
             Estude com quem já corrigiu a prova mil vezes.
           </h1>
-          <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[460px] mb-8">
+          <p className="text-base leading-relaxed text-[var(--ink-dim)] max-w-[52ch] mb-8">
             Resumos organizados por matéria e por processo seletivo, interligados
             entre si — lidos no próprio site, sem baixar nada e sempre na versão
             mais recente.
@@ -59,33 +62,6 @@ export default function Hero() {
               Ver matérias disponíveis
             </a>
           </div>
-        </div>
-
-        <div className="bg-[var(--paper)] rounded-[var(--raio)] p-[1.375rem] shadow-[var(--sombra)]">
-          <div className="rotulo-secao mb-3.5">Cartão-resposta</div>
-          {CARTAO_RESPOSTA.map((linha) => (
-            <div key={linha.num} className="flex items-center gap-3 py-2.5">
-              <span className="text-[length:var(--t-mini)] text-[var(--ink-faint)] w-[18px]">
-                {linha.num}
-              </span>
-              <span className="text-[length:var(--t-peq)] flex-1 text-[var(--ink-soft)]">
-                {linha.label}
-              </span>
-              <div className="flex gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-3.5 h-3.5 rounded-full border"
-                    style={
-                      i === linha.marcada
-                        ? { background: linha.cor, borderColor: 'transparent' }
-                        : { borderColor: 'var(--line-forte)' }
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </header>

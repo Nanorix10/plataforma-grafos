@@ -39,7 +39,7 @@ o amarelo cairia no bege de papel envelhecido, que brigaria com o lilás.
 **Três famílias, com papéis que não se cruzam.** Interface, leitura longa e dado
 são coisas diferentes e cada uma tem a sua fonte. Não entra uma quarta.
 
-**Os motivos vêm do conteúdo.** Grafo e cartão-resposta, e nada além. Ícone ou
+**Os motivos vêm do conteúdo.** Grafo e faixa, e nada além. Ícone ou
 ilustração solta que não nasça do que o produto já é não pertence aqui.
 
 ---
@@ -51,7 +51,7 @@ ilustração solta que não nasça do que o produto já é não pertence aqui.
 Cada token traz os dois valores lado a lado:
 
 ```css
---page: light-dark(#F3F1EC, #12111A);
+--page: light-dark(#F3F1EC, #14120D);
 ```
 
 A alternativa seria repetir a paleta num `@media (prefers-color-scheme)` **e** de
@@ -69,12 +69,12 @@ ele troca sozinho ao anoitecer.
 
 | Token | Claro | Escuro | Para quê |
 |---|---|---|---|
-| `--page` | `#F3F1EC` | `#12111A` | fundo atrás de tudo |
-| `--paper` | `#FCFAF6` | `#1A1822` | fundo do conteúdo, a superfície mais comum |
-| `--panel` | `#F6F3ED` | `#1E1B26` | barra lateral, cabeçalho |
+| `--page` | `#F3F1EC` | `#14120D` | fundo atrás de tudo |
+| `--paper` | `#FCFAF6` | `#1C1914` | fundo do conteúdo, a superfície mais comum |
+| `--panel` | `#F6F3ED` | `#1F1C16` | barra lateral, cabeçalho |
 | `--canvas` | — | — | área com textura de fundo (usada por `.quadro`) |
 | `--raised` / `--raised-hover` | — | — | cartão e botão secundário, e o hover deles |
-| `--sel` | `#EBE7DF` | `#272332` | item selecionado ou sob o cursor |
+| `--sel` | `#EBE7DF` | `#29251D` | item selecionado ou sob o cursor |
 
 ### Texto, linha e acento
 
@@ -96,11 +96,24 @@ sumir: `--acento-escuro` (aponta para `--acento-claro`) e `--stamp` (aponta para
 
 ### A faixa: a única superfície saturada
 
-`--faixa: #262A60`, `--faixa-ink: #F3F5FE`, `--faixa-dim: #C7C8F0`.
+`--faixa: light-dark(#262A60, #3D4399)`, com `--faixa-ink: #F3F5FE` e
+`--faixa-dim: #C7C8F0` fixos.
 
-**Não mudam com o tema**, e é decisão: clareá-la no tema claro tiraria justamente
-o respiro de cor que ela existe para dar. É a exceção declarada à regra de que
-todo token usa `light-dark()`.
+**Ela JÁ FOI cor única nos dois temas, e isso foi desfeito em agosto/2026.** A
+medição mostrou por quê: `#262A60` dá 11,76:1 contra o fundo claro e **1,41:1**
+contra o escuro — praticamente o mesmo valor do fundo. No claro ela quebrava a
+página; no escuro era um retângulo invisível, e o respiro de cor que a decisão
+existia para proteger já estava perdido justamente no tema onde ela mandava não
+mexer.
+
+Agora a lógica **inverte** entre os temas: mancha escura sobre papel no claro,
+mancha clara sobre a página no escuro. Mesmo matiz (236) e mesma saturação
+(43%) — só o tom e a luz mudam.
+
+O lado escuro dá 2,19:1 contra o fundo, e isso basta: a referência num tema
+escuro é o quanto `--paper` já se separa de `--page` (1,28:1), que lê como
+cartão distinto sem esforço. 3:1 é limiar de COMPONENTE de interface, não de
+superfície decorativa.
 
 **Regra dura: no máximo um elemento em `--faixa` por tela.** Dois pontos gritando
 na mesma rolagem anulam um ao outro. Na dúvida entre `--faixa` e `--acento`, use
@@ -228,8 +241,9 @@ ler a decisão **12c**: o título corrido depende dessas margens serem iguais.
 
 ## 6. Motivos de marca
 
-Três elementos que vêm do próprio nome e conteúdo do produto. A marca cresce a
-partir deles, e não somando ícone genérico por cima.
+Dois elementos que vêm do próprio nome e conteúdo do produto — eram três, e o
+terceiro foi retirado depois de testado (ver abaixo). A marca cresce a partir
+deles, e não somando ícone genérico por cima.
 
 ### Grafo
 
@@ -257,12 +271,35 @@ carregamento, e marca que muda de forma não é marca. E nenhum dos dois usa d3:
 landing é a página que todo visitante baixa, e a decisão **10** vale mais aqui do
 que dentro do `/mapa`.
 
-### Cartão-resposta
+### ~~Cartão-resposta~~ — retirado em agosto/2026
 
-Bolhas de múltipla escolha (A/B/C/D/E). Referência direta à linguagem de
-vestibular, que já é o produto — e o elemento mais diferenciado disponível:
-nenhum concorrente do nicho tem isso. Pode aparecer como painel, ícone ou
-elemento de espera. Qualquer forma de "preencher uma bolha" pertence à marca.
+**Não é mais um motivo de marca.** Ficou aqui enquanto foi hipótese; foi
+testado e não passou.
+
+A afirmação original dizia que bolhas de múltipla escolha eram "o elemento mais
+diferenciado disponível, porque nenhum concorrente do nicho tem isso". Ela veio
+de um documento anterior e foi preservada sem auditoria quando este arquivo foi
+reescrito a partir do código.
+
+Ela é mais fraca que os outros dois, e a diferença importa: o **grafo** é o nome
+da empresa E a estrutura de dados do produto (`pai_id`, `conexoes`, "todo
+título é um nó"); a **faixa** é um token com propósito escrito no CSS. O
+cartão-resposta se apoiava só no ASSUNTO do produto ser vestibular — que é o
+mesmo grau de conexão que um ícone de birrete teria.
+
+O que decidiu foram duas evidências, não a argumentação:
+
+1. Ele esteve na primeira dobra da landing por meses, ocupando metade da
+   largura, e a primeira pessoa próxima do produto a olhar com atenção não
+   entendeu o que era.
+2. Foi levado ao acervo para ganhar o lugar dizendo algo verdadeiro — uma bolha
+   por prova, indicando em qual vestibular cada matéria cai — e **perdeu** para
+   a variante que mostra os assuntos de cada matéria. E duplicava a matriz de
+   cobertura que `/planos` já traz, num lugar pior.
+
+Não sobrou superfície onde ele diga algo que o site precise dizer. Se alguém
+quiser trazê-lo de volta, o ônus é mostrar onde ele informa — não onde ele
+combina.
 
 ### Faixa
 
