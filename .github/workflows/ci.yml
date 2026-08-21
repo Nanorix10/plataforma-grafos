@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # `next build` roda o TypeScript por dentro, com os tipos que ele mesmo
+      # gera. `tsc --noEmit` sozinho NÃO serve aqui: sem esses tipos gerados ele
+      # acusa `Cannot find name 'LayoutProps'` nos dois layouts, que é um erro
+      # falso.
+      - run: npm run build
+        env:
+          # Fictícias de propósito. O build só exige que as duas existam, para
+          # conseguir prerenderizar /login — nenhuma chamada de rede acontece
+          # durante o build. As duas são NEXT_PUBLIC, ou seja, já vão para o
+          # navegador em produção; não há segredo a proteger aqui.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder.placeholder
