@@ -40,7 +40,18 @@ function pegar(el: HTMLElement, nome: string): string | null {
   return el.getAttribute(nome) ?? el.querySelector('img')?.getAttribute(nome) ?? null
 }
 
+/**
+ * O atributo ausente cai no padrão — e é por isso que a conversão vem depois.
+ *
+ * `Number(null)` e `Number('')` valem 0, e 0 é um valor LEGÍTIMO para brilho,
+ * contraste, saturação e opacidade. Convertendo primeiro, toda imagem sem
+ * `data-brilho` ganhava brilho 0 e opacidade 0 — ou seja, sumia. E o
+ * `renderHTML` só grava esses atributos quando eles FOGEM do padrão, então a
+ * imagem que ninguém ajustou é exatamente a que não os tem: bastava reabrir o
+ * resumo no editor para ela desaparecer.
+ */
 function numero(v: string | null, padrao: number) {
+  if (v === null || v.trim() === '') return padrao
   const n = Number(v)
   return Number.isFinite(n) ? n : padrao
 }
