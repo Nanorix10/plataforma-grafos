@@ -340,6 +340,17 @@ Dois cuidados que a migration precisa ter:
   com aquele título, e roda no insert. Como as linhas entram em sequência, todo
   link que aponta para um irmão inserido depois não acha destino e é descartado
   em silêncio. O update vazio dispara o trigger de novo com todos já no banco.
+- **Migre a partir do `.docx`, não do texto exportado.** A exportação em texto
+  do Google Docs perde TUDO o que não é letra: as fórmulas, as imagens e o
+  subscrito. O `.docx` traz as equações em OMML (que viram LaTeX) e as imagens
+  em `word/media/`. A primeira leva da Biologia entrou pelo texto e teve de
+  ganhar uma segunda migration só para devolver as quinze figuras — e uma delas
+  era um tópico inteiro ("Níveis de organização") que só existia como desenho.
+- **Imagem importada mora em `public/img/resumos/<matéria>/`, em WebP.** O que
+  o autor sobe pelo editor vai para o bucket `imagens` do Supabase, cuja policy
+  de INSERT exige sessão de admin — que uma migration não tem. As duas origens
+  convivem porque o `<img src>` não distingue uma da outra, e a imagem que veio
+  junto com o texto fica versionada junto com ele.
 
 **Transportar não é reescrever.** O texto do resumo é do autor, e é ele que
 responde por aquilo na frente dos alunos — "ficou melhor assim" não é régua de
