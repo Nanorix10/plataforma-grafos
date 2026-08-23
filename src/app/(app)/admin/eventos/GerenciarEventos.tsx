@@ -11,6 +11,7 @@ import {
   type Evento,
 } from '@/lib/tempo'
 import BotaoEnviar from '@/components/BotaoEnviar'
+import ColarEmLote from './ColarEmLote'
 import { salvarEvento, excluirEvento } from './actions'
 
 type ResumoOpcao = { id: string; titulo: string; materia_slug: string }
@@ -66,6 +67,10 @@ export default function GerenciarEventos({
   eventos: Evento[]
   resumos: ResumoOpcao[]
 }) {
+  /* Qual aba está aberta. 'um' por padrão: o lote serve para encher o eixo,
+     que é trabalho de uma tarde; corrigir e acrescentar um evento avulso é o
+     que se faz todo dia depois disso. */
+  const [modo, setModo] = useState<'um' | 'lote'>('um')
   const [rascunho, setRascunho] = useState<Rascunho>(VAZIO)
   const [erro, setErro] = useState<string | null>(null)
   const [recado, setRecado] = useState<string | null>(null)
@@ -96,8 +101,68 @@ export default function GerenciarEventos({
 
   return (
     <div className="grid lg:grid-cols-[380px_1fr] gap-8 items-start">
+      {/* ---- coluna de entrada: um evento por vez, ou uma lista colada ---- */}
+      <div className="lg:sticky lg:top-6">
+        {/* Cápsula de abas no mesmo padrão do `/login`: setas andam entre elas,
+            tabindex rotativo (só a ativa é alcançável por Tab), e `aria-controls`
+            nos dois. Aqui, ao contrário de lá, cada aba TEM o próprio painel —
+            são dois formulários diferentes —, então cada uma aponta para o seu. */}
+        <div
+          role="tablist"
+          aria-label="Como cadastrar"
+          onKeyDown={(e) => {
+            const destino =
+              e.key === 'ArrowRight' || e.key === 'ArrowLeft'
+                ? modo === 'um'
+                  ? 'lote'
+                  : 'um'
+                : e.key === 'Home'
+                  ? 'um'
+                  : e.key === 'End'
+                    ? 'lote'
+                    : null
+            if (!destino) return
+            e.preventDefault()
+            setModo(destino)
+            document.getElementById(`aba-${destino}`)?.focus()
+          }}
+          className="inline-flex overflow-hidden rounded-lg border border-[var(--line-forte)] mb-5"
+        >
+          {(
+            [
+              ['um', 'Um evento'],
+              ['lote', 'Colar lista'],
+            ] as const
+          ).map(([id, rotulo], i) => (
+            <button
+              key={id}
+              id={`aba-${id}`}
+              type="button"
+              role="tab"
+              aria-selected={modo === id}
+              aria-controls={`painel-${id}`}
+              tabIndex={modo === id ? 0 : -1}
+              onClick={() => setModo(id)}
+              className={`px-4 py-2 text-[13px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] ${i > 0 ? 'border-l border-[var(--line-forte)]' : ''} ${modo === id ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]' : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'}`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+
+        <div id="painel-lote" role="tabpanel" aria-labelledby="aba-lote" hidden={modo !== 'lote'}>
+          <ColarEmLote />
+        </div>
+
       {/* ---- formulário ---- */}
-      <form action={aoEnviar} className="flex flex-col gap-3.5 lg:sticky lg:top-6">
+      <form
+        id="painel-um"
+        role="tabpanel"
+        aria-labelledby="aba-um"
+        hidden={modo !== 'um'}
+        action={aoEnviar}
+        className="flex flex-col gap-3.5"
+      >
         <input type="hidden" name="id" value={rascunho.id} />
 
         <div>
@@ -295,6 +360,7 @@ export default function GerenciarEventos({
           </p>
         ) : null}
       </form>
+      </div>
 
       {/* ---- lista ---- */}
       <div>

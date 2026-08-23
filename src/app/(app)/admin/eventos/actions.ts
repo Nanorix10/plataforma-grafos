@@ -2,29 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { getSessao } from '@/lib/sessao'
+// `lerAno` morava aqui. Foi para o lado puro porque a pré-visualização do lote
+// roda no navegador e precisa da mesma leitura de ano — duas cópias
+// discordariam no primeiro formato exótico.
+import { analisarLinhaDeEvento, lerAno, type EventoEmLote } from '@/lib/tempo'
 
 async function exigirAdmin() {
   const { supabase, userId, isAdmin } = await getSessao()
   if (!userId || !isAdmin) throw new Error('Só administrador pode mexer nos eventos.')
   return supabase
-}
-
-/**
- * Lê um ano do formulário.
- *
- * O campo é texto e não `<input type="number">` de propósito: as setinhas
- * nativas comem metade da caixa (mesma razão já registrada no editor), e ano
- * histórico é digitado com sinal — "-350" para 350 a.C. Aceitar "350 a.C."
- * escrito por extenso também evita que o autor tenha de traduzir na cabeça o
- * que ele já sabe escrever.
- */
-function lerAno(bruto: string): number | null {
-  const t = bruto.trim()
-  if (!t) return null
-  const antesDeCristo = /a\.?\s*c\.?/i.test(t)
-  const numero = Number.parseInt(t.replace(/[^\d-]/g, ''), 10)
-  if (Number.isNaN(numero)) return null
-  return antesDeCristo ? -Math.abs(numero) : numero
 }
 
 export async function salvarEvento(formData: FormData) {
@@ -76,6 +62,69 @@ export async function salvarEvento(formData: FormData) {
   revalidatePath('/admin/eventos')
   revalidatePath('/linha-do-tempo')
   return { ok: true as const }
+}
+
+/**
+ * Cadastra vários eventos de uma vez, a partir do texto colado.
+ *
+ * O eixo da linha do tempo tem UM evento no banco desde que foi construído, e a
+ * razão não é falta de material: é que lançar evento era abrir um formulário de
+ * sete campos, salvar, e recomeçar. Trinta eventos eram trinta idas e voltas.
+ *
+ * ## Por que reanalisar aqui
+ *
+ * A tela já analisou cada linha para mostrar a pré-visualização, e o resultado
+ * dela é jogado fora: o que vale é o texto bruto, reanalisado aqui. Server
+ * action é endereço público — responde a qualquer POST, não só ao que saiu do
+ * formulário —, então confiar no JSON que o navegador mandou seria deixar
+ * qualquer um escrever `ano_inicio` direto na tabela. A análise é a mesma
+ * função nos dois lados (`analisarLinhaDeEvento`), então o resultado bate.
+ *
+ * ## Por que tudo ou nada
+ *
+ * Uma linha ruim cancela a remessa inteira. Inserir as boas e recusar as ruins
+ * pareceria gentil e seria pior: o autor ficaria com uma lista pela metade sem
+ * saber quais entraram, e o reenvio duplicaria as que já estavam lá — a tabela
+ * não tem chave única de título e ano que o impeça.
+ */
+export async function salvarEventosEmLote(formData: FormData) {
+  const supabase = await exigirAdmin()
+
+  const bruto = String(formData.get('linhas') ?? '')
+  const linhas = bruto
+    .split('\n')
+    .map((l) => l.trim())
+    // linha vazia é respiro no meio da lista, não erro
+    .filter(Boolean)
+
+  if (linhas.length === 0) {
+    return { ok: false as const, erro: 'Cole pelo menos uma linha.' }
+  }
+
+  const prontos: EventoEmLote[] = []
+  const recusadas: string[] = []
+
+  linhas.forEach((linha, i) => {
+    const r = analisarLinhaDeEvento(linha)
+    // numera pela posição na LISTA LIMPA, que é a que o autor vê na
+    // pré-visualização — contar as linhas em branco apontaria para o lugar
+    // errado justamente na hora de consertar
+    if (r.ok) prontos.push(r.evento)
+    else recusadas.push(`Linha ${i + 1}: ${r.erro}`)
+  })
+
+  if (recusadas.length > 0) {
+    return { ok: false as const, erro: recusadas.join('\n') }
+  }
+
+  const { error } = await supabase.from('eventos').insert(
+    prontos.map((e) => ({ ...e, resumo_id: null, descricao: '' }))
+  )
+  if (error) return { ok: false as const, erro: error.message }
+
+  revalidatePath('/admin/eventos')
+  revalidatePath('/linha-do-tempo')
+  return { ok: true as const, quantos: prontos.length }
 }
 
 export async function excluirEvento(formData: FormData) {

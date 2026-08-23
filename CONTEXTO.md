@@ -641,6 +641,89 @@ essa mesma coluna, e a tela de pessoas segue valendo para os casos manuais.
 > Providers → Email), não do código. Com ela ligada, quem se cadastra só entra
 > depois de clicar no link recebido; desligada, entra na hora.
 
+**10b. A física do grafo é ancorada por matéria, e o `forceCenter` saiu.**
+O acervo tem 38 resumos, 6 matérias e **uma** citação `[[…]]` no total. Ao
+abrir, o mapa são seis estrelas que não se ligam por aresta nenhuma — e essa
+topologia expõe uma armadilha do d3 que só aparece com componentes desconexos:
+
+**`forceCenter` não puxa nó nenhum.** Ele TRANSLADA o sistema a cada tick para
+manter o centroide parado. Com seis blocos se repelindo em direções opostas, a
+média entre eles continua no meio da tela enquanto todos vão embora. Medido
+numa simulação headless da topologia real: o desenho ocupava 2142x1274 numa
+moldura de 1000x700, com 34 dos 35 nós fora dela. Quem substitui são `forceX` e
+`forceY`, que agem POR NÓ.
+
+Cada matéria tem um lugar fixo num anel, pelo índice em `MATERIAS` (ordem
+canônica, não a ordem da consulta — senão publicar um resumo giraria o mapa).
+A matéria é presa com força 0.25 e o resumo com 0.12; apertar o resumo
+empilharia os irmãos, e quem de fato o posiciona é a aresta com o pai.
+
+`forceManyBody` ganhou `distanceMax(420)`. Sem teto a repulsão tem alcance
+infinito, e é ela que empurrava um grupo contra o outro do outro lado da tela.
+
+**Os números saíram de medição, não de gosto.** Uma varredura de anel x força x
+teto de rótulo sobre a topologia real escolheu `anel 0.24`, `força 0.12`,
+`teto 40`: zero nós fora da moldura, zero círculos sobrepostos, um par de
+rótulos se tocando. As alternativas testadas iam a 16 nós fora.
+
+**O rótulo entra na colisão, e é cortado em 26 caracteres.** A colisão do d3 é
+circular e o texto não faz parte do círculo: sem corte, "Movimento circular
+uniformemente variado" (215px a 11px) atravessa os vizinhos por mais que a
+física empurre. O título inteiro segue no balão e no `aria-label`.
+
+**O que a física não resolve, o zoom resolve.** 35 nós com rótulo ocupam uns
+840x680 — não cabem nos 380px de um celular, e apertar as forças até caberem
+empilharia tudo. Então o mapa se ENQUADRA sozinho quando assenta pela primeira
+vez, e o botão "Centralizar" passou a enquadrar em vez de voltar para
+`zoomIdentity` (que é escala 1 na origem, e não centralizava nada).
+
+**Nó arrastado agora FICA.** Antes o `end` do arrasto fazia `d.fx = null` e a
+física o puxava de volta — de perto, parece que o nó escapou da mão. Quem
+arrasta está montando um arranjo. Desfaz-se pelo botão "Soltar nós", que só
+aparece quando há pino, e **não** por duplo clique: duplo clique dispara dois
+`click` antes do `dblclick`, e o `click` no nó abre o resumo.
+
+Três ajustes menores com a mesma origem — o mapa tremia: `velocityDecay` 0.55
+(o padrão 0.4 faz o nó passar do ponto e voltar), `alphaDecay` 0.035, e o
+`alphaTarget` do arrasto caiu de 0.25 para 0.1. O `ResizeObserver` era fonte
+independente de tremor: ele reaquecia em toda notificação, inclusive a que o
+`observe()` dispara sozinho ao montar e a que a barra do navegador do celular
+provoca ao aparecer. Agora ignora a primeira e exige 24px de variação.
+
+E a remontagem abre fria (`alpha(0.35)` em vez de 1, a partir da segunda):
+expandir um ramo reacomoda os filhos novos, não o mapa inteiro. Os filhos
+nascem num leque de ângulo determinístico pelo índice, e não em `pai ± 15px`
+sorteados — irmãos nascendo no mesmo ponto era a bagunça que se via ao expandir.
+
+**10c. Evento entra em lote, colando uma lista.**
+A linha do tempo passou a existência inteira com UM evento no banco. Não
+faltava material: lançar evento era um formulário de sete campos por vez, e
+trinta eventos eram trinta idas e voltas.
+
+`/admin/eventos` ganhou a aba "Colar lista", no formato
+`ano | título | matérias | data escrita`. As matérias são aceitas por nome ou
+por slug, e o ano aceita `1789`, `-350`, `350 a.C.` e intervalos.
+
+**`lerAno` mudou de casa e ficou mais rígido.** Foi de `admin/eventos/actions.ts`
+(que é `'use server'`) para `lib/tempo.ts`, o lado puro, porque a
+pré-visualização roda no navegador e precisa da MESMA leitura — duas cópias
+discordariam no primeiro formato exótico. E passou a exigir que sobre
+exatamente um número: a versão antiga varria os dígitos com
+`replace(/[^\d-]/g, '')`, então "1914 até 1918" virava o ano **19141918** em
+silêncio — um evento a dezenove milhões de anos daqui, que no eixo esmagaria
+todos os outros contra a margem. Pego por teste, não na tela.
+
+**Tudo ou nada.** Uma linha ruim cancela a remessa inteira. Inserir as boas
+pareceria gentil e seria pior: o autor ficaria com uma lista pela metade sem
+saber quais entraram, e reenviar duplicaria — não há chave única de título e ano
+que impeça. O botão fica travado enquanto houver erro, e a pré-visualização
+numera igual ao servidor (as duas tiram as linhas em branco antes de contar,
+senão o "Linha 7" apontaria para o lugar errado).
+
+O servidor **reanalisa o texto bruto** e ignora o que a tela calculou: server
+action é endereço público, e aceitar o JSON pronto deixaria qualquer um
+escrever `ano_inicio` direto na tabela.
+
 **11. A folha tem régua, e imagem e tabela podem sair das margens.**
 `lib/pagina.ts` é a fonte única: folha de **920px**, margem padrão **150** de
 cada lado — o que devolve exatamente a coluna de 620px que o editor já tinha,
