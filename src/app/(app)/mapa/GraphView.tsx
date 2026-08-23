@@ -13,8 +13,9 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter,
   forceCollide,
+  forceX,
+  forceY,
   type Simulation,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
@@ -64,6 +65,54 @@ function raio(d: NoSim) {
   return 7 + Math.sqrt(d.grau + d.filhos) * 4.5
 }
 
+/**
+ * Quantos caracteres do título são desenhados no mapa.
+ *
+ * "Movimento circular uniformemente variado" tem 40 caracteres e, a 11px,
+ * ocupa uns 215px — mais largo que qualquer folga que a colisão consiga abrir
+ * entre dois nós. Sem corte, um título desses atravessa os vizinhos por mais
+ * que a física empurre, porque quem colide é o CÍRCULO e o texto não faz parte
+ * dele.
+ *
+ * Nada se perde: o `Balao` mostra o título inteiro ao passar o mouse ou focar,
+ * e o `aria-label` do nó também — o corte é só do que se desenha.
+ */
+const MAX_ROTULO = 26
+
+function rotuloCurto(titulo: string) {
+  return titulo.length > MAX_ROTULO ? `${titulo.slice(0, MAX_ROTULO - 1).trimEnd()}…` : titulo
+}
+
+/**
+ * Raio de colisão, contando o rótulo e não só o círculo.
+ *
+ * Antes era `raio(d) + 26` para todo mundo: uma folga fixa, cega ao texto que
+ * o nó carrega embaixo. O resultado era o nó pequeno de título longo passando
+ * por cima do vizinho enquanto sobrava espaço em volta do nó grande de título
+ * curto.
+ *
+ * 5,4px por caractere é a largura média da Inter nos 11px usados aqui —
+ * medida, não chutada, mas ainda uma média: título com muitos "i" ocupa menos.
+ * A conta não precisa ser exata porque colisão em d3 é CIRCULAR e o rótulo é
+ * retangular; o teto de 40px existe justamente para o título comprido não
+ * inflar um círculo de exclusão gigante em volta de um ponto de 8px.
+ */
+function raioDeColisao(d: NoSim) {
+  const meiaLargura = (Math.min(d.titulo.length, MAX_ROTULO) * 5.4) / 2
+  return raio(d) + 12 + Math.min(meiaLargura, 40)
+}
+
+/**
+ * Espessura do anel do nó no estado normal.
+ *
+ * Existe como função porque o pino a engrossa e depois precisa DEVOLVER o
+ * valor certo. Um `.attr('stroke-width', null)` apagaria o atributo e o nó
+ * bloqueado (que usa 1) voltaria com a espessura do liberado.
+ */
+function larguraDoAnel(d: NoSim) {
+  return d.tipo === 'materia' ? 2 : d.liberado ? 2 : 1
+}
+
 const idMateria = (slug: string) => `materia:${slug}`
 
 export default function GraphView({
@@ -98,6 +147,37 @@ export default function GraphView({
    * só os filhos novos se acomodam — saindo de dentro do pai.
    */
   const posicoes = useRef(new Map<string, { x: number; y: number }>())
+
+  /**
+   * Quem o autor arrastou e prendeu no lugar.
+   *
+   * Fica num ref, e não em estado, porque mudá-lo não deve repintar o React:
+   * quem desenha o mapa é o d3, dentro do efeito, e um `setState` aqui
+   * remontaria a simulação inteira no meio de um arrasto.
+   *
+   * Precisa sobreviver à remontagem do efeito (que acontece a cada expansão),
+   * senão o arranjo que o autor montou à mão se desfaria no primeiro clique
+   * num selo.
+   */
+  const pregados = useRef(new Set<string>())
+
+  /* O ref guarda QUEM está pregado; este estado só diz SE há alguém, para o
+     botão "Soltar nós" aparecer. São coisas separadas de propósito: o conjunto
+     muda no meio de um arrasto e não pode repintar nada, e o botão precisa de
+     estado do React para existir na árvore. Note que `temPino` não entra nas
+     dependências do efeito — se entrasse, prender um nó remontaria a
+     simulação inteira. */
+  const [temPino, setTemPino] = useState(false)
+
+  /**
+   * Se a simulação já rodou uma vez nesta tela.
+   *
+   * `forceSimulation` nasce com `alpha = 1`, que é "reorganize tudo". Isso é o
+   * certo na primeira vez e errado em todas as outras: como as posições são
+   * restauradas de `posicoes`, expandir um ramo não precisa reacomodar o mapa
+   * inteiro — precisa só acomodar os filhos que acabaram de aparecer.
+   */
+  const jaRodou = useRef(false)
 
   const alternar = useCallback((id: string) => {
     setExpandidos((atual) => {
@@ -186,23 +266,45 @@ export default function GraphView({
         })),
     ]
 
-    // reaproveita a posição de quem já estava na tela; quem é novo nasce em
-    // cima do pai, pra parecer que saiu de dentro dele
+    /* Reaproveita a posição de quem já estava na tela; quem é novo nasce em
+       volta do pai, pra parecer que saiu de dentro dele.
+
+       O filho novo nasce num LEQUE, e não num ponto aleatório perto do pai.
+       Antes era `pai ± 15px` sorteados: seis irmãos apareciam praticamente no
+       mesmo lugar, e a física tinha de desempilhá-los à força — é essa briga
+       que se vê como bagunça ao expandir um ramo. Distribuídos num arco desde
+       o começo, eles já nascem separados e a simulação só ajusta.
+
+       O ângulo vem do ÍNDICE do filho, não de `Math.random()`: expandir e
+       recolher o mesmo ramo duas vezes devolve o mesmo desenho, em vez de um
+       arranjo novo a cada clique. */
     const idsAgora = new Set(simNodes.map((n) => n.id))
+    const nascidosPorPai = new Map<string, number>()
     for (const n of simNodes) {
       const anterior = posicoes.current.get(n.id)
       if (anterior) {
         n.x = anterior.x
         n.y = anterior.y
-      } else {
-        const paiId = porId.get(n.id)?.pai ?? idMateria(porId.get(n.id)?.materia ?? '')
-        const doPai = posicoes.current.get(paiId)
-        if (doPai) {
-          // desloca um tico: nós exatamente sobrepostos não recebem direção da
-          // física e ficariam empilhados
-          n.x = doPai.x + (Math.random() - 0.5) * 30
-          n.y = doPai.y + (Math.random() - 0.5) * 30
-        }
+        continue
+      }
+      const paiId = porId.get(n.id)?.pai ?? idMateria(porId.get(n.id)?.materia ?? '')
+      const doPai = posicoes.current.get(paiId)
+      if (!doPai) continue
+
+      const irmaos = Math.max(1, (filhosDe.get(paiId) ?? []).length)
+      const ordem = nascidosPorPai.get(paiId) ?? 0
+      nascidosPorPai.set(paiId, ordem + 1)
+
+      const angulo = (ordem / irmaos) * Math.PI * 2
+      n.x = doPai.x + Math.cos(angulo) * 40
+      n.y = doPai.y + Math.sin(angulo) * 40
+    }
+
+    // devolve o pino a quem o autor tinha prendido antes desta remontagem
+    for (const n of simNodes) {
+      if (pregados.current.has(n.id) && n.x != null && n.y != null) {
+        n.fx = n.x
+        n.fy = n.y
       }
     }
     // esquece quem saiu, senão o mapa "lembra" posições velhas ao reexpandir
@@ -287,7 +389,7 @@ export default function GraphView({
         return d.tipo === 'materia' ? d.cor : d.liberado ? 'var(--canvas)' : 'var(--ink-faint)'
       })
       .attr('stroke-opacity', (d) => (d.tipo === 'titulo' ? 0.55 : 1))
-      .attr('stroke-width', (d) => (d.tipo === 'materia' ? 2 : d.liberado ? 2 : 1))
+      .attr('stroke-width', larguraDoAnel)
       .attr('stroke-dasharray', (d) => (d.tipo === 'resumo' && !d.liberado ? '3,2' : 'none'))
 
     /* Selo de "tem coisa dentro". Fica num alvo próprio, e não no nó, porque
@@ -340,7 +442,9 @@ export default function GraphView({
       .attr('stroke-width', 3.5)
       .attr('stroke-linejoin', 'round')
       .attr('pointer-events', 'none')
-      .text((d) => d.titulo)
+      // cortado, porque o texto não colide (ver `rotuloCurto`); o título
+      // inteiro segue no balão e no `aria-label` logo abaixo
+      .text((d) => rotuloCurto(d.titulo))
 
     // acessível por teclado e leitor de tela: cada nó vira um destino real
     noSel
@@ -354,6 +458,41 @@ export default function GraphView({
             : `${d.titulo} — fora do seu plano`
       )
 
+    /* ---------- âncoras das matérias ----------
+       Cada matéria ganha um lugar num anel, e os resumos dela são puxados de
+       leve para o mesmo ponto. Sem isto o mapa é seis estrelas soltas: hoje o
+       acervo tem UMA citação `[[...]]` no total, então as matérias não se
+       ligam por nada e o desenho depende só de onde os nós nasceram — cada
+       recarregamento dava uma forma diferente.
+
+       O ângulo sai do índice em `materiasUsadas`, que chega na ordem do
+       `MATERIAS` (o `page.tsx` monta a lista com `Object.entries`). Ordem
+       canônica e não ordem de chegada da consulta: assim publicar um resumo
+       novo não gira o mapa inteiro. Ganhar uma matéria INÉDITA muda os ângulos,
+       e deve mudar mesmo — é um setor novo que passou a existir. */
+    const anguloDaMateria = new Map<string, number>()
+    materiasUsadas.forEach((m, i) => {
+      // -π/2 põe a primeira matéria no topo, e não à direita, que é onde o
+      // ângulo zero cai; topo é onde o olho começa a ler o círculo
+      anguloDaMateria.set(m.slug, (i / materiasUsadas.length) * Math.PI * 2 - Math.PI / 2)
+    })
+
+    const raioDoAnel = Math.min(width, height) * 0.24
+
+    /** Para onde este nó tende: o ponto da matéria dele, ou o centro. */
+    function alvo(d: NoSim): { x: number; y: number } {
+      const slug =
+        d.tipo === 'materia'
+          ? d.id.slice('materia:'.length)
+          : (porId.get(d.id)?.materia ?? '')
+      const ang = anguloDaMateria.get(slug)
+      if (ang === undefined) return { x: width / 2, y: height / 2 }
+      return {
+        x: width / 2 + Math.cos(ang) * raioDoAnel,
+        y: height / 2 + Math.sin(ang) * raioDoAnel,
+      }
+    }
+
     // ---------- física ----------
     const sim: Simulation<NoSim, LinkSim> = forceSimulation(simNodes)
       .force(
@@ -365,9 +504,60 @@ export default function GraphView({
           .distance((l) => (l.tipo === 'contem' ? 62 : 100))
           .strength((l) => (l.tipo === 'contem' ? 0.9 : 0.25))
       )
-      .force('charge', forceManyBody().strength(-320))
-      .force('center', forceCenter(width / 2, height / 2))
-      .force('collide', forceCollide<NoSim>().radius((d) => raio(d) + 26))
+      /* A matéria empurra mais forte porque é o centro de uma estrela de até
+         dez resumos e precisa abrir espaço para todos eles.
+
+         `distanceMax` é o que impede o mapa de se esfarelar: sem teto, a
+         repulsão é de alcance INFINITO, e dois grupos que não se ligam por
+         aresta nenhuma continuam se empurrando de um canto ao outro da tela
+         para sempre. Com 420px ela vira uma força de vizinhança — separa quem
+         está perto e ignora quem já está longe. */
+      .force(
+        'charge',
+        forceManyBody<NoSim>()
+          .strength((d) => (d.tipo === 'materia' ? -520 : -260))
+          .distanceMax(420)
+      )
+      /* `forceX`/`forceY` no lugar do `forceCenter`, e a diferença é a causa do
+         mapa fugir da tela.
+
+         `forceCenter` NÃO puxa nó nenhum: ele desloca o sistema inteiro a cada
+         tick para manter o centroide no lugar. Com componentes desconexos, o
+         centroide fica parado enquanto os grupos se afastam — a média entre
+         seis blocos fugindo em direções opostas continua no meio. Estas duas
+         forças agem POR NÓ, então cada um tem para onde voltar.
+
+         A matéria é presa com força; o resumo só é sugerido, e quem de fato o
+         posiciona é a aresta que o liga ao pai. Apertar aqui empilharia os
+         irmãos todos no mesmo ponto. */
+      .force(
+        'x',
+        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+      )
+      .force(
+        'y',
+        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+      )
+      /* Duas iterações: com uma só (o padrão) a colisão não RESOLVE a
+         sobreposição, apenas empurra um pouco a cada tick — e como o alpha cai
+         antes de a conta fechar, o mapa assenta com nós ainda encavalados. */
+      .force('collide', forceCollide<NoSim>().radius(raioDeColisao).iterations(2))
+      /* Mais atrito e esfriamento mais rápido. `velocityDecay` é o parâmetro do
+         "nervoso": com o padrão 0.4 o nó passa do ponto de equilíbrio, volta,
+         passa de novo, e o mapa fica vibrando por segundos. `alphaDecay` a
+         0.035 faz a simulação assentar em ~130 ticks em vez de ~300. */
+      .velocityDecay(0.55)
+      .alphaDecay(0.035)
+
+    /* Remontagem abre FRIA. Este efeito roda de novo a cada expansão, e uma
+       `forceSimulation` nova nasce com `alpha = 1`, que significa "reorganize
+       tudo do zero". Na primeira vez é o que se quer; da segunda em diante,
+       não: as posições já vieram de `posicoes.current`, e o que falta acomodar
+       são só os filhos que acabaram de nascer. Com 1, o mapa inteiro se
+       reorganizava a cada clique num selo. */
+    const primeiraMontagem = !jaRodou.current
+    if (!primeiraMontagem) sim.alpha(0.35)
+    jaRodou.current = true
 
     function posicionar() {
       linkSel
@@ -383,6 +573,13 @@ export default function GraphView({
     sim.on('end', () => {
       for (const n of simNodes) {
         if (n.x != null && n.y != null) posicoes.current.set(n.id, { x: n.x, y: n.y })
+      }
+      /* Assentou pela primeira vez: enquadra. `enquadrar` é declaração de
+         função (içada) e este callback é assíncrono, então quando ele roda o
+         `comportamentoZoom` lá de baixo já existe. */
+      if (primeiraMontagem && !jaEnquadrou) {
+        jaEnquadrou = true
+        enquadrar(semMovimento ? 0 : 500)
       }
     })
 
@@ -461,12 +658,28 @@ export default function GraphView({
     // na ordem de registro e a navegação já teria acontecido.
     let arrastou = false
 
+    /* O nó pregado ganha um anel mais grosso. Sem marca visível, "está preso"
+       viraria um estado invisível: o autor arrastaria um nó, ele ficaria, e não
+       haveria como saber por que aquele não obedece mais à física — nem como
+       descobrir que existe um jeito de soltar. */
+    function marcarPino(grupo: SVGGElement, d: NoSim, preso: boolean) {
+      select(grupo)
+        .select('circle')
+        .attr('stroke-width', preso ? larguraDoAnel(d) + 1.8 : larguraDoAnel(d))
+    }
+    noSel.each(function (d) {
+      if (pregados.current.has(d.id)) marcarPino(this, d, true)
+    })
+
     noSel.call(
       drag<SVGGElement, NoSim>()
         .on('start', (event, d) => {
           arrastou = false
           setBalao(null)
-          if (!event.active) sim.alphaTarget(0.25).restart()
+          /* 0.1 e não 0.25: o alvo de alpha reaquece o mapa INTEIRO enquanto o
+             dedo está em cima de um nó só. Alto demais, arrastar um resumo
+             fazia as seis matérias saírem do lugar junto. */
+          if (!event.active) sim.alphaTarget(0.1).restart()
           d.fx = d.x
           d.fy = d.y
         })
@@ -475,11 +688,26 @@ export default function GraphView({
           d.fx = event.x
           d.fy = event.y
         })
-        .on('end', (event, d) => {
+        .on('end', function (event, d) {
           if (!event.active) sim.alphaTarget(0)
-          // solta o nó de volta pra física, como o Obsidian faz
-          d.fx = null
-          d.fy = null
+
+          /* O nó FICA onde foi solto. Antes o `end` fazia `d.fx = null` e a
+             física o puxava de volta assim que o dedo saía — de perto, parece
+             que o nó escapou da mão. Quem arrasta um nó no mapa está montando
+             um arranjo, não empurrando um brinquedo: o certo é ele obedecer.
+
+             Um clique sem arrasto não prega nada — senão abrir um resumo
+             deixaria um pino para trás sem ninguém ter pedido.
+
+             Quem desfaz é o botão "Soltar nós", e NÃO um duplo clique no nó:
+             duplo clique dispara dois `click` antes do `dblclick`, e o `click`
+             aqui navega para o resumo. O gesto abriria a página duas vezes
+             antes de chegar a soltar coisa alguma. */
+          if (arrastou) {
+            pregados.current.add(d.id)
+            marcarPino(this, d, true)
+            setTemPino(true)
+          }
           if (d.x != null && d.y != null) posicoes.current.set(d.id, { x: d.x, y: d.y })
         })
     )
@@ -534,17 +762,121 @@ export default function GraphView({
     svg.call(comportamentoZoom).on('dblclick.zoom', null)
 
     // ---------- responder ao tamanho da janela ----------
+    /* O observador era uma fonte de tremor por conta própria, por dois
+       motivos que se somavam:
+
+       1. `observe()` dispara uma notificação IMEDIATA, com o tamanho atual.
+          A simulação levava um `alpha(0.3)` na cara logo ao montar, por nada.
+       2. No celular, a barra do navegador entra e sai da tela conforme a
+          rolagem, e cada aparição mudava a altura em alguns pixels. O mapa
+          reaquecia a cada roçada de dedo.
+
+       Agora: a primeira notificação é ignorada, mudanças pequenas não contam,
+       e o reaquecimento é fraco (0.12) — o bastante para reacomodar as âncoras
+       novas, não para redesenhar o mapa. */
+    let larguraVista = width
+    let alturaVista = height
+    let primeiraMedicao = true
+
     const observer = new ResizeObserver(() => {
-      width = svgEl.clientWidth || width
-      height = svgEl.clientHeight || height
-      sim.force('center', forceCenter(width / 2, height / 2))
-      sim.alpha(0.3).restart()
+      const l = svgEl.clientWidth || larguraVista
+      const a = svgEl.clientHeight || alturaVista
+
+      if (primeiraMedicao) {
+        primeiraMedicao = false
+        larguraVista = l
+        alturaVista = a
+        return
+      }
+      if (Math.abs(l - larguraVista) < 24 && Math.abs(a - alturaVista) < 24) return
+
+      larguraVista = l
+      alturaVista = a
+      width = l
+      height = a
+
+      /* Reinstalar as forças, e não só mexer no alpha: `forceX`/`forceY` leem o
+         acessador uma vez, no `initialize()`, e guardam o alvo de cada nó. Sem
+         trocar a força, as âncoras continuariam apontando para o centro da
+         janela ANTIGA. */
+      sim.force(
+        'x',
+        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+      )
+      sim.force(
+        'y',
+        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+      )
+      sim.alpha(0.12).restart()
     })
     observer.observe(svgEl)
 
-    // guarda a função de reset pro botão "centralizar"
-    ;(svgEl as SVGSVGElement & { __reset?: () => void }).__reset = () => {
-      svg.transition().duration(semMovimento ? 0 : 400).call(comportamentoZoom.transform, zoomIdentity)
+    /**
+     * Enquadra o desenho inteiro na moldura.
+     *
+     * As forças resolvem o desenho no desktop, mas há um limite que nenhuma
+     * afinação vence: 35 nós com rótulo ocupam uns 840x680, e a tela de um
+     * celular tem 380px de largura. Medido — apertar as forças até caber ali
+     * empilharia os nós uns sobre os outros, trocando um problema por outro.
+     *
+     * Então quem resolve o celular é o ZOOM, não a física: mede-se onde os nós
+     * pararam e ajusta-se a escala para que caibam. É também o que "Centralizar"
+     * deveria ter feito desde sempre — ele voltava para `zoomIdentity`, que é
+     * escala 1 na origem, e portanto não centralizava nada se o desenho tivesse
+     * se acomodado longe do canto superior esquerdo.
+     */
+    function enquadrar(duracao: number) {
+      const comPosicao = simNodes.filter((n) => n.x != null && n.y != null)
+      if (comPosicao.length === 0) return
+
+      const margem = 48
+      const x1 = Math.min(...comPosicao.map((n) => n.x! - raioDeColisao(n)))
+      const x2 = Math.max(...comPosicao.map((n) => n.x! + raioDeColisao(n)))
+      const y1 = Math.min(...comPosicao.map((n) => n.y! - raioDeColisao(n)))
+      const y2 = Math.max(...comPosicao.map((n) => n.y! + raioDeColisao(n)))
+
+      const larg = Math.max(1, x2 - x1)
+      const alt = Math.max(1, y2 - y1)
+      // nunca AMPLIA além de 1: um mapa de três nós não deve aparecer gigante
+      const escala = Math.min(1, (width - margem * 2) / larg, (height - margem * 2) / alt)
+
+      const transform = zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(escala)
+        .translate(-(x1 + x2) / 2, -(y1 + y2) / 2)
+
+      svg.transition().duration(duracao).call(comportamentoZoom.transform, transform)
+    }
+
+    /* Enquadra sozinho quando a simulação assenta pela primeira vez. Só a
+       primeira: depois disso o enquadramento é do autor — ele deu zoom onde
+       queria olhar, e reenquadrar a cada expansão desfaria isso na cara dele. */
+    let jaEnquadrou = false
+
+    /* Saídas imperativas para os botões do canto. O padrão já existia para o
+       "Centralizar": o d3 vive dentro deste efeito e o botão vive no JSX, e
+       pendurar a função no próprio elemento evita subir a simulação inteira
+       para o estado do React só para dois cliques. */
+    type ComAtalhos = SVGSVGElement & { __reset?: () => void; __soltarPinos?: () => void }
+    ;(svgEl as ComAtalhos).__reset = () => enquadrar(semMovimento ? 0 : 400)
+    ;(svgEl as ComAtalhos).__soltarPinos = () => {
+      pregados.current.clear()
+      noSel.each(function (d) {
+        d.fx = null
+        d.fy = null
+        marcarPino(this, d, false)
+      })
+      sim.alpha(0.3).restart()
+    }
+
+    /* Com `prefers-reduced-motion` a simulação nunca dispara `end`: ela é
+       parada e adiantada à mão, 300 ticks acima. Então o enquadramento da
+       primeira vez precisa ser pedido aqui — e daqui, não lá em cima, porque
+       `enquadrar` depende do `comportamentoZoom`, que só existe a esta altura
+       do efeito. */
+    if (semMovimento && primeiraMontagem && !jaEnquadrou) {
+      jaEnquadrou = true
+      enquadrar(0)
     }
 
     return () => {
@@ -591,6 +923,23 @@ export default function GraphView({
             className="text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             {nos.some((n) => expandidos.has(n.id)) ? 'Recolher tudo' : 'Expandir tudo'}
+          </button>
+        ) : null}
+        {/* Só aparece quando há o que soltar: um botão permanentemente inútil
+            ensinaria menos do que este, que surge no instante em que o autor
+            prende o primeiro nó e explica sozinho o que aconteceu. */}
+        {temPino ? (
+          <button
+            type="button"
+            onClick={() => {
+              ;(
+                svgRef.current as (SVGSVGElement & { __soltarPinos?: () => void }) | null
+              )?.__soltarPinos?.()
+              setTemPino(false)
+            }}
+            className="text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+          >
+            Soltar nós
           </button>
         ) : null}
         <button
