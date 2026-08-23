@@ -505,6 +505,59 @@ aos planos da landing; quem libera continua sendo o admin, depois do Pix.
 Na barra lateral, o rótulo "plano: nenhum" virou link para cá. Era informação
 sem saída: dizia que o aluno não tem acesso e não oferecia onde resolver.
 
+**9g-bis. Trocar e-mail e senha é do aluno, e a senha atual é o pedágio.**
+Até aqui a tela terminava com "fale com o Ronny — essa parte ainda é feita à
+mão". Era o único pedido de suporte que o produto criava sozinho, e ele chega
+sempre: adolescente troca de e-mail ao sair do colégio, e senha se esquece.
+
+**As duas trocas pedem a senha atual, e isso não é enfeite.** Sem ela, quem
+encontrar a aba aberta — o mesmo notebook de irmãos e o mesmo laboratório de
+escola que motivaram o botão de sair (9g) — põe o próprio e-mail na conta e
+fica com ela. Um aluno pagante perderia o acesso sem ter errado nada.
+
+A conferência roda num cliente **avulso** (`persistSession: false`), não no
+cliente com cookie. `signInWithPassword` no cliente com cookie faria o Supabase
+emitir uma sessão nova e o `setAll` gravaria os cookies dela por cima: o aluno
+seria trocado de sessão só por ter digitado a senha para conferir. Com o cliente
+avulso nada é gravado, e a conferência é o que promete ser — sim ou não.
+
+**O e-mail NÃO muda quando o formulário é enviado.** `updateUser({ email })` só
+abre a troca e dispara o link; ela acontece quando o link é aberto. É isso que
+impede um `gmial.com` de virar perda de conta: o link nunca chega, a troca
+simplesmente não ocorre, e o endereço de sempre continua valendo. Por isso a
+tela fala em "troca pendente" e mostra o `new_email`, em vez de dizer que deu
+certo — sem essa linha, quem não achou o e-mail voltaria, veria o endereço
+antigo e concluiria que o site falhou.
+
+**A senha, ao contrário, vale na hora — e derruba as outras sessões.**
+`signOut({ scope: 'others' })`, nunca o padrão: o padrão é `'global'` e
+expulsaria também quem acabou de trocar a senha. Metade do motivo de trocar
+senha é pôr o outro para fora, e o cookie já emitido não deixa de valer só
+porque a senha mudou.
+
+**A cópia de e-mail em `planos_usuarios` ganhou um trigger de update.** O de
+20260808120000 era `after insert`: a cópia nascia com a conta e nunca mais era
+tocada, o que bastava enquanto a troca era feita à mão no SQL Editor. Agora que
+ela acontece sozinha, `trg_sincronizar_email_do_usuario` mantém as duas pontas
+juntas — senão `/admin/pessoas` mostraria para sempre o endereço que a pessoa
+trocou porque não usa mais. `of email` na declaração do trigger não é detalhe:
+`auth.users` é escrita a cada login, e sem a coluna no gatilho a função rodaria
+em toda navegação de todo aluno.
+
+**`getUser()` em `/conta`, contra a decisão 5.** Aquela regra é sobre a
+NAVEGAÇÃO, onde a ida à rede se paga em toda página. Aqui é uma tela só, e ela
+precisa de duas coisas que o JWT não tem: o e-mail conferido agora (o do token é
+cópia de até uma hora atrás, e pode ser justo o que a troca aposentou) e o
+`new_email`, que só existe na resposta do servidor.
+
+**`app/auth/confirmar/route.ts` aceita três formatos de link** —
+`token_hash`+`type`, `code` (PKCE) e nenhum dos dois. O terceiro é o modelo
+PADRÃO do Supabase, em que o `/auth/v1/verify` deles já conferiu tudo antes de
+redirecionar: é ele que faz a troca funcionar sem ninguém mexer no painel. O
+`next` da URL é conferido antes de virar destino (`/` sim, `//` não) — sem isso
+o site redirecionaria para fora com a própria credibilidade junto. O que o
+painel do Supabase ainda precisa ter está em `docs/emails-do-supabase.md`.
+
 **9h. A marca vive em `components/Marca.tsx`, e a logo tem um encaixe pronto.**
 O nome estava escrito à mão em cinco lugares — landing (topo e rodapé), login e
 as duas versões da barra lateral. Agora é um componente com quatro tamanhos.

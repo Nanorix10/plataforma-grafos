@@ -33,6 +33,18 @@ const POR_CODIGO: Record<string, string> = {
   signup_disabled: 'O cadastro está fechado no momento.',
   email_provider_disabled: 'O cadastro por e-mail está desligado no momento.',
 
+  // --- trocar e-mail e senha em /conta ---
+  same_password: 'A senha nova precisa ser diferente da atual.',
+  session_not_found: 'Sua sessão expirou. Entre de novo e refaça a troca.',
+  refresh_token_not_found: 'Sua sessão expirou. Entre de novo e refaça a troca.',
+  /* Só aparece se alguém ligar "Secure password change" no painel do Supabase.
+     Com ele, `updateUser({ password })` passa a exigir um código enviado por
+     e-mail — um segundo fator que a tela de `/conta` não pede, porque ela já
+     pede a senha atual. Não é erro do aluno e não há nada que ele possa
+     digitar diferente, então a frase manda para quem consegue resolver. */
+  reauthentication_needed:
+    'A troca de senha está pedindo uma confirmação extra que o site ainda não faz. Fale com o Ronny.',
+
   // --- limites ---
   over_email_send_rate_limit:
     'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.',
@@ -58,8 +70,34 @@ const POR_STATUS: Record<number, string> = {
 
 const GENERICO = 'Não deu para concluir. Tente de novo em instantes.'
 
-export function mensagemDeErro(erro: AuthError): string {
+/**
+ * O mesmo código de erro, dito de outro jeito quando a tela é outra.
+ *
+ * `email_exists` é o caso que obrigou isto a existir: na tela de acesso a saída
+ * é "troque para Entrar", e em `/conta` essa frase não faz sentido nenhum —
+ * quem está ali JÁ entrou, e o e-mail que colidiu é o de outra pessoa. Mandar o
+ * aluno "trocar para Entrar" seria mandá-lo tentar entrar numa conta alheia.
+ *
+ * A tabela por código continua sendo a de cima; isto é só um remendo por
+ * contexto, e por isso é curto de propósito. Se um dia crescer a ponto de
+ * duplicar o mapa inteiro, o certo é dividir em dois arquivos, não engordar
+ * este objeto.
+ */
+export type Contexto = 'acesso' | 'conta'
+
+const POR_CONTEXTO: Record<Contexto, Record<string, string>> = {
+  acesso: {},
+  conta: {
+    email_exists: 'Este e-mail já pertence a outra conta.',
+    user_already_exists: 'Este e-mail já pertence a outra conta.',
+    identity_already_exists: 'Este e-mail já pertence a outra conta.',
+    validation_failed: 'Confira os campos e tente de novo.',
+  },
+}
+
+export function mensagemDeErro(erro: AuthError, contexto: Contexto = 'acesso'): string {
   const traduzido =
+    POR_CONTEXTO[contexto][erro.code ?? ''] ||
     (erro.code && POR_CODIGO[erro.code]) ||
     (erro.status && POR_STATUS[erro.status]) ||
     null

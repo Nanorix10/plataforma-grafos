@@ -5,19 +5,38 @@ import { PLANO_PROCESSOS, PLANOS } from '@/lib/planos'
 import { PROCESSOS } from '@/lib/processos'
 import BotaoEnviar from '@/components/BotaoEnviar'
 import { sair } from './actions'
+import { TrocarEmail, TrocarSenha } from './Credenciais'
 
-export default async function ContaPage() {
+export default async function ContaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ troca?: string }>
+}) {
   const { supabase, userId, plano, ativo, isAdminReal } = await getSessao()
   if (!userId) redirect('/login')
 
-  /* O e-mail sai de `planos_usuarios`, não de `auth.users`: aquela tabela não é
-     legível pelas policies normais, e o projeto roda só com a chave anônima.
-     A cópia existe desde a migration de gestão de pessoas — ver decisão 1b. */
+  /* `getUser()` aqui, apesar da decisão 5 mandar usar `getClaims()`.
+     A regra existe para a NAVEGAÇÃO, onde a ida à rede se paga em toda página;
+     esta é uma página só, que o aluno abre de vez em quando. E ela precisa de
+     duas coisas que o JWT não dá: o e-mail conferido agora (o do token é uma
+     cópia de até uma hora atrás, e pode ser justamente o que uma troca acabou
+     de aposentar) e o `new_email`, que só existe na resposta do servidor e é o
+     que permite dizer "falta abrir o link". */
+  const { data: usuario } = await supabase.auth.getUser()
+  const email = usuario.user?.email ?? null
+  const emailPendente = usuario.user?.new_email ?? null
+
+  /* A data de criação continua vindo de `planos_usuarios`: `auth.users` não é
+     legível pelas policies normais, e o projeto roda só com a chave anônima —
+     ver decisão 1b. O e-mail daquela tabela é a cópia que a tela do admin usa,
+     e não a fonte da verdade desta aqui. */
   const { data: linha } = await supabase
     .from('planos_usuarios')
-    .select('email, criado_em')
+    .select('criado_em')
     .eq('user_id', userId)
     .single()
+
+  const troca = (await searchParams).troca
 
   const liberados = PLANO_PROCESSOS[plano] ?? []
   const todos = Object.entries(PROCESSOS)
@@ -29,10 +48,41 @@ export default async function ContaPage() {
         Quem você é aqui e o que o seu plano libera.
       </p>
 
+      {/* Recado de quem acabou de voltar do link do e-mail (ver
+          `app/auth/confirmar/route.ts`). Vive numa região `status` porque
+          aparece por causa de uma navegação, e não de um clique nesta tela:
+          sem isso, quem usa leitor de tela chegaria aqui sem saber que a troca
+          que começou noutro aparelho tinha se concluído. */}
+      {troca === 'ok' || troca === 'falhou' ? (
+        <p
+          role="status"
+          className={`text-[13px] rounded-lg px-4 py-3 mb-6 ${
+            troca === 'ok'
+              ? 'text-[var(--ok)] bg-[var(--raised)]'
+              : 'text-[var(--erro)] bg-[var(--raised)]'
+          }`}
+        >
+          {troca === 'ok'
+            ? 'Confirmado. Se você trocou o e-mail, o endereço abaixo já é o novo.'
+            : 'Esse link não vale mais — eles expiram e só funcionam uma vez. Peça a troca de novo aqui embaixo.'}
+        </p>
+      ) : null}
+
       {/* ---- identidade ---- */}
       <section className="bg-[var(--raised)] rounded-lg p-5 mb-4">
         <div className="rotulo mb-1">E-mail</div>
-        <p className="text-[15px] break-words">{linha?.email ?? '—'}</p>
+        <p className="text-[15px] break-words">{email ?? '—'}</p>
+
+        {/* Troca pedida e ainda não confirmada. Dizer isto é o que separa
+            "o site não fez nada" de "falta um clique seu": sem a linha, quem
+            não achou o e-mail voltaria aqui, veria o endereço antigo e
+            concluiria que a troca falhou. */}
+        {emailPendente ? (
+          <p className="text-[12.5px] text-[var(--ink-dim)] mt-2.5 border-l-2 border-[var(--acento)] pl-2.5">
+            Troca pendente para <span className="break-words">{emailPendente}</span>. Abra o
+            link que enviamos para concluir — até lá, você entra com o endereço acima.
+          </p>
+        ) : null}
 
         {linha?.criado_em ? (
           <p className="text-[12px] text-[var(--ink-faint)] mt-2">
@@ -119,6 +169,10 @@ export default async function ContaPage() {
         ) : null}
       </section>
 
+      {/* ---- trocar e-mail e senha ---- */}
+      {email ? <TrocarEmail emailAtual={email} /> : null}
+      <TrocarSenha />
+
       {/* ---- sair ---- */}
       <section className="bg-[var(--raised)] rounded-lg p-5">
         <div className="rotulo mb-1">Sessão</div>
@@ -135,11 +189,6 @@ export default async function ContaPage() {
           </BotaoEnviar>
         </form>
       </section>
-
-      <p className="text-[12px] text-[var(--ink-faint)] mt-6">
-        Precisa trocar o e-mail ou a senha? Fale com o Ronny — essa parte ainda
-        é feita à mão.
-      </p>
     </div>
   )
 }
