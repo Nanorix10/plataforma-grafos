@@ -85,6 +85,35 @@ Duas armadilhas resolvidas ali, que vão morder de novo se alguém mexer:
   própria linha tranca a pessoa para fora da gestão, e a única saída seria o
   SQL Editor — exatamente o que a tela veio eliminar.
 
+**1c. `comum` é o processo de quem não é de um vestibular só.**
+`resumos.processo_slug` é escalar — um resumo pertence a UM processo. Isso
+bastou enquanto o acervo era só a 1ª etapa do PAS UEM, e rachou na 2ª etapa do
+PASSE: os dois editais pedem Medidas de tendência central e de dispersão, e os
+dois documentos do autor trazem o mesmo texto, palavra por palavra.
+
+Duplicar o resumo não era opção. Dois resumos com o MESMO título quebram os
+`[[wikilinks]]` **em silêncio**: o trigger `sync_conexoes_resumo` resolve o
+destino com `where titulo = …`, e com duas linhas iguais ele passa a ser
+indeterminado. E deixar o texto preso a um dos dois cobra do aluno do PASSE um
+conteúdo que cai na prova dele.
+
+Então entrou um quarto processo, `comum`, que todo plano à venda inclui
+(`lib/planos.ts`). Para o banco ele é igual aos outros: mesma tabela, mesma FK,
+mesma coluna. Quem o distingue é a marca `universal: true` em
+`lib/processos.ts`, lida pelas duas telas que listam "os vestibulares" — a
+conta do aluno e a tabela de cobertura de `/planos`. Lá ele não pode aparecer:
+ninguém presta Conteúdo comum, e uma linha com visto em todas as colunas não
+compara nada e ainda parece uma quarta prova. Quem o anuncia é o
+`INCLUI_SEMPRE`. No editor ele aparece, porque ali é o autor escolhendo onde o
+resumo mora.
+
+**`nenhum` continua com a lista vazia**, e não é esquecimento: cadastro é
+aberto (1b), então pôr `comum` ali entregaria acervo a quem só criou conta.
+
+É também o destino combinado do material de prova de escola (PR1G1, Simulado
+Harmonia, Simulado Poliedro), que não é de vestibular nenhum e que o autor quer
+liberado para todo mundo que paga.
+
 **2. `isAdmin` ≠ `isAdminReal`.**
 `getSessao()` devolve os dois. `isAdmin` é a visão **efetiva** (o que a interface
 deve usar); `isAdminReal` é a permissão de verdade, usada só pra decidir se o botão

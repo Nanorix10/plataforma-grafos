@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { PLANOS_A_VENDA, INCLUI_SEMPRE, precoLegivel } from '@/lib/planos'
-import { PROCESSOS } from '@/lib/processos'
+import { PROVAS } from '@/lib/processos'
 
 export const metadata: Metadata = {
   title: 'Planos — Plataforma Grafos',
@@ -156,7 +156,12 @@ export default function PlanosPage() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(PROCESSOS).map(([slug, proc]) => (
+              {/* `PROVAS`: a coluna se chama "Processo seletivo" e a
+                  tabela compara cobertura. `comum` entra em todos os
+                  planos, então viraria uma linha com três vistos — que
+                  não compara nada e ainda parece uma quarta prova.
+                  Quem o anuncia é o `INCLUI_SEMPRE`. */}
+              {Object.entries(PROVAS).map(([slug, proc]) => (
                 <tr key={slug}>
                   <th
                     scope="row"

@@ -21,7 +21,14 @@ import { PROCESSOS } from '@/lib/processos'
 export type Plano = {
   /** Como o aluno vê, na landing e na conta. Um nome só, no site inteiro. */
   nome: string
-  /** Processos seletivos que o plano libera. Vazio = não vê resumo nenhum. */
+  /**
+   * Processos seletivos que o plano libera. Vazio = não vê resumo nenhum.
+   *
+   * Todo plano à venda inclui `comum`, o conteúdo que não é de um vestibular
+   * só (ver `lib/processos.ts`). `nenhum` continua com a lista vazia de
+   * propósito: cadastro é aberto (decisão 1b), então pôr `comum` ali daria
+   * acervo de graça a quem só criou conta.
+   */
   processos: string[]
   /** Preço mensal em reais. `null` enquanto o Leandro não decidir. */
   preco: number | null
@@ -40,20 +47,20 @@ export type Plano = {
 export const PLANOS: Record<string, Plano> = {
   passe: {
     nome: 'Acesso PASSE',
-    processos: ['passe'],
+    processos: ['passe', 'comum'],
     preco: null,
     paraQuem: 'Você presta só o PASSE, da UFMS.',
   },
   completo: {
     nome: 'Acesso Completo',
-    processos: ['passe', 'pas-uem', 'pas-unb'],
+    processos: ['passe', 'pas-uem', 'pas-unb', 'comum'],
     preco: null,
     paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.',
     destaque: true,
   },
   pas: {
     nome: 'Acesso PAS',
-    processos: ['pas-uem', 'pas-unb'],
+    processos: ['pas-uem', 'pas-unb', 'comum'],
     preco: null,
     paraQuem: 'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE.',
   },
@@ -92,6 +99,7 @@ export const PLANO_PROCESSOS: Record<string, string[]> = Object.fromEntries(
  */
 export const INCLUI_SEMPRE = [
   'Todas as matérias do processo seletivo escolhido',
+  'O conteúdo comum a mais de um vestibular, seja qual for o plano',
   'Resumos interligados, com o mapa de conexões',
   'Linha do tempo dos eventos históricos',
   'Leitura no próprio site, sem baixar nada',
@@ -102,8 +110,16 @@ export const INCLUI_SEMPRE = [
 export const PLANOS_A_VENDA = (['passe', 'completo', 'pas'] as const).map((slug) => ({
   slug,
   ...PLANOS[slug],
-  /** "PASSE UFMS · PAS UEM · PAS UnB" — nome de verdade, não slug. */
+  /**
+   * "PASSE UFMS · PAS UEM · PAS UnB" — nome de verdade, não slug.
+   *
+   * `comum` sai daqui: a linha diz qual PROVA o plano cobre, e é isso que
+   * decide a compra. "Conteúdo comum" no meio da lista pareceria um quarto
+   * vestibular. Que ele entra em todos os planos, quem informa é o
+   * `INCLUI_SEMPRE`, logo abaixo na mesma página.
+   */
   processosLegiveis: PLANOS[slug].processos
+    .filter((p) => !PROCESSOS[p]?.universal)
     .map((p) => PROCESSOS[p]?.nome ?? p)
     .join(' · '),
 }))

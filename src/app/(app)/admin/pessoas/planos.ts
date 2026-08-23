@@ -19,10 +19,17 @@ export type Pessoa = {
   criado_em: string | null
 }
 
-/** Cada plano e, em nomes legíveis, o que ele abre. */
+/**
+ * Cada plano e, em nomes legíveis, o que ele abre.
+ *
+ * Só as provas: `comum` entra em todos os planos à venda, então repeti-lo em
+ * cada linha da lista de pessoas seria ruído que não distingue ninguém — e a
+ * pergunta desta tela é exatamente qual é a diferença entre um aluno e outro.
+ */
 export const PLANOS = Object.keys(PLANO_PROCESSOS).map((slug) => ({
   slug,
   processos: (PLANO_PROCESSOS[slug] ?? [])
+    .filter((p) => !PROCESSOS[p]?.universal)
     .map((p) => PROCESSOS[p]?.nome ?? p)
     .join(' · '),
 }))
