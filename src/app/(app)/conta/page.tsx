@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
 import { PLANO_PROCESSOS, PLANOS } from '@/lib/planos'
-import { PROCESSOS } from '@/lib/processos'
+import { PROVAS } from '@/lib/processos'
 import BotaoEnviar from '@/components/BotaoEnviar'
 import { sair } from './actions'
 import { TrocarEmail, TrocarSenha } from './Credenciais'
@@ -39,7 +39,9 @@ export default async function ContaPage({
   const troca = (await searchParams).troca
 
   const liberados = PLANO_PROCESSOS[plano] ?? []
-  const todos = Object.entries(PROCESSOS)
+  /* `PROVAS`, e não `PROCESSOS`: a lista abaixo se chama
+     "Vestibulares", e `comum` não é um. Ver `lib/processos.ts`. */
+  const todos = Object.entries(PROVAS)
 
   return (
     <div className="max-w-[680px] mx-auto px-5 py-8 sm:px-8 sm:py-11">

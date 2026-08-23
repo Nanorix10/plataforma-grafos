@@ -29,10 +29,13 @@ create table processos_seletivos (
   slug text primary key,
   nome text not null
 );
+-- `comum` não é prova: é o conteúdo que cai em mais de um edital (ou em
+-- nenhum) e que todo plano abre. Ver 20260823140000_processo_comum.
 insert into processos_seletivos (slug, nome) values
   ('passe', 'PASSE UFMS'),
   ('pas-uem', 'PAS UEM'),
-  ('pas-unb', 'PAS UnB');
+  ('pas-unb', 'PAS UnB'),
+  ('comum', 'Conteúdo comum');
 
 -- Resumos (as "notas" estilo Obsidian)
 create table resumos (
