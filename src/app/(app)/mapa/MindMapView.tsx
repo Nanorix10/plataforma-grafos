@@ -33,6 +33,12 @@ type Item = {
  */
 const ehDestino = (t: Item['tipo']) => t === 'resumo' || t === 'titulo'
 
+/** O id que este item usa no conjunto de expandidos. */
+function idDeExpansao(item: Item) {
+  if (item.tipo === 'materia') return idMateria(item.materiaSlug ?? '')
+  return item.no?.id ?? null
+}
+
 const LARGURA_CARTAO = 176
 const ALTURA_CARTAO = 30
 const ESCALA_MIN = 0.2
@@ -79,6 +85,33 @@ export default function MindMapView({
     pedirEnquadre.current = true
   }, [busca, materiasAtivas])
 
+  /**
+   * Onde estava, na tela, o cartão que acabou de ser aberto ou fechado.
+   *
+   * Guardar a transformação do zoom NÃO basta aqui, e a diferença é o que
+   * separa esta visão do grafo. Lá cada nó tem posição própria, guardada em
+   * `posicoes`, e quem não mudou fica onde estava. Aqui o `d3.tree` recebe uma
+   * altura (`folhas × 42`) e distribui TUDO dentro dela: abrir um ramo muda a
+   * altura, e com ela a coordenada de todo mundo. Repor a mesma transformação
+   * sobre um layout reescalado joga o cartão clicado para longe do dedo.
+   *
+   * Então a âncora é o cartão, não a moldura: depois do novo layout, a
+   * translação é recalculada para pousá-lo no mesmo ponto da tela em que ele
+   * foi clicado.
+   */
+  const ancora = useRef<{ id: string; x: number; y: number } | null>(null)
+
+  /* Mede pela transformação, e não pelo `getBoundingClientRect` do elemento
+     clicado: o selo mora 168px à direita da origem do nó, e a caixa do grupo
+     inclui cartão e selo. Qualquer um dos dois deslocaria o mapa por esse
+     tanto a cada clique. `applyX`/`applyY` dão o ponto exato do nó na tela. */
+  function marcarAncora(d: HierarchyPointNode<Item>, id: string) {
+    const t = transformAtual.current
+    if (!t) return
+    // layout horizontal: `d.y` é o eixo da tela e `d.x` é a vertical
+    ancora.current = { id, x: t.applyX(d.y), y: t.applyY(d.x) }
+  }
+
   useEffect(() => {
     const svgEl = svgRef.current
     if (!svgEl) return
@@ -118,11 +151,17 @@ export default function MindMapView({
       }
     }
 
-    const materiasNaTela = materias.filter(
-      (m) =>
-        nos.some((n) => n.materia === m.slug) &&
-        (materiasAtivas === null || materiasAtivas.has(m.slug))
-    )
+    /* Buscando, a matéria só entra se algum resultado mora nela. Sem isto, as
+       outras dez ficam na tela como becos sem saída, e o aluno tem de ler onze
+       cartões para descobrir em qual está o que ele procurou. Basta olhar os
+       filhos DIRETOS: um resultado no fundo do ramo já traz a linhagem inteira
+       para `visiveis`, e o topo dessa linhagem é um filho direto da matéria. */
+    const materiasNaTela = materias.filter((m) => {
+      if (materiasAtivas !== null && !materiasAtivas.has(m.slug)) return false
+      if (!nos.some((n) => n.materia === m.slug)) return false
+      if (!buscando) return true
+      return (filhosDe.get(idMateria(m.slug)) ?? []).some((n) => visiveis.has(n.id))
+    })
 
     const raiz: Item = {
       nome: titulo,
@@ -298,23 +337,22 @@ export default function MindMapView({
       .attr('pointer-events', 'none')
       .text((d) => (d.data.aberto ? '−' : String(d.data.paraAbrir)))
 
-    function idDeExpansao(d: HierarchyPointNode<Item>) {
-      if (d.data.tipo === 'materia') return idMateria(d.data.materiaSlug ?? '')
-      return d.data.no?.id ?? null
-    }
-
     selo
       .on('click', (e: MouseEvent, d) => {
         e.stopPropagation()
-        const id = idDeExpansao(d)
-        if (id) alternar(id)
+        const id = idDeExpansao(d.data)
+        if (!id) return
+        marcarAncora(d, id)
+        alternar(id)
       })
       .on('keydown', (e: KeyboardEvent, d) => {
         if (e.key !== 'Enter' && e.key !== ' ') return
         e.preventDefault()
         e.stopPropagation()
-        const id = idDeExpansao(d)
-        if (id) alternar(id)
+        const id = idDeExpansao(d.data)
+        if (!id) return
+        marcarAncora(d, id)
+        alternar(id)
       })
 
     // ---------- acessibilidade e interação ----------
@@ -325,11 +363,17 @@ export default function MindMapView({
       .attr('role', 'button')
       .attr('aria-expanded', (d) => String(!!d.data.aberto))
       .attr('aria-label', (d) => `Matéria ${d.data.nome}`)
-      .on('click', (_e, d) => alternar(idMateria(d.data.materiaSlug ?? '')))
+      .on('click', (_e, d) => {
+        const id = idMateria(d.data.materiaSlug ?? '')
+        marcarAncora(d, id)
+        alternar(id)
+      })
       .on('keydown', (e: KeyboardEvent, d) => {
         if (e.key !== 'Enter' && e.key !== ' ') return
         e.preventDefault()
-        alternar(idMateria(d.data.materiaSlug ?? ''))
+        const id = idMateria(d.data.materiaSlug ?? '')
+        marcarAncora(d, id)
+        alternar(id)
       })
 
     const resumoSel = itemSel.filter((d) => ehDestino(d.data.tipo))
@@ -433,9 +477,20 @@ export default function MindMapView({
         Math.min(1, (w - margem * 2) / larguraTotal)
       )
 
-      // cabendo na altura, centraliza; não cabendo, encosta no topo e rola
+      /* Cabendo na altura, centraliza na área ÚTIL — a faixa de cima é do
+         painel de busca, que flutua por cima do mapa. Não cabendo, encosta
+         logo abaixo do painel e deixa rolar. */
+      /* Reserva da faixa do painel: 12px do `top-3`, a linha do campo de
+         busca, e os chips de matéria — que com onze matérias quebram em DUAS
+         linhas na maioria das larguras. Medido na tela: o painel termina por
+         volta de 116px, e a folga leva o primeiro nó para longe da borda dele
+         em vez de encostado. */
+      const topo = 150
       const alturaEscalada = alturaMapa * escala
-      const y = alturaEscalada < h - 60 ? (h - alturaEscalada) / 2 : 30
+      const y =
+        alturaEscalada < h - topo - 40
+          ? topo + (h - topo - alturaEscalada) / 2
+          : topo
 
       const inicial = zoomIdentity
         .translate(margem + sobraEsquerda * escala, y)
@@ -444,13 +499,30 @@ export default function MindMapView({
       svg.call(comportamentoZoom.transform, inicial)
     }
 
-    /* Expandir mantém a vista do aluno; buscar e filtrar reenquadram. */
+    /* Buscar e filtrar reenquadram; expandir mantém o cartão clicado onde ele
+       estava. Note que a translação é recalculada a partir da posição NOVA do
+       cartão no layout — repor a transformação antiga não serviria, porque o
+       `d3.tree` reescala todo mundo quando a altura muda. */
     if (pedirEnquadre.current || !transformAtual.current) {
       enquadrar()
       pedirEnquadre.current = false
     } else {
-      svg.call(comportamentoZoom.transform, transformAtual.current)
+      const t = transformAtual.current
+      const marca = ancora.current
+      const alvo = marca
+        ? arvore.descendants().find((d) => idDeExpansao(d.data) === marca.id)
+        : undefined
+
+      // no layout horizontal, `d.y` é o eixo da tela e `d.x` é a vertical
+      const t2 =
+        alvo && marca
+          ? zoomIdentity.translate(marca.x - t.k * alvo.y, marca.y - t.k * alvo.x).scale(t.k)
+          : t
+
+      transformAtual.current = t2
+      svg.call(comportamentoZoom.transform, t2)
     }
+    ancora.current = null
 
     ;(svgEl as SVGSVGElement & { __reset?: () => void }).__reset = enquadrar
 
@@ -466,6 +538,7 @@ export default function MindMapView({
     titulo,
     router,
     visiveis,
+    buscando,
     expandidos,
     casados,
     filhosDe,

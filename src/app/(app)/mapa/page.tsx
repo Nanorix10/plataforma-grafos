@@ -106,11 +106,13 @@ export default async function MapaPage({
     destino: c.destino?.slug,
   })).filter((l) => l.origem && l.destino)
 
-  const listaMaterias = Object.entries(MATERIAS).map(([slug, m]) => ({
-    slug,
-    nome: m.nome,
-    cor: m.cor,
-  }))
+  /* Só matéria que TEM resumo. Redação está no `MATERIAS` e não tem nenhum:
+     sem este filtro ela vira um chip que, clicado, esvazia o mapa sem dizer
+     por quê. A barra lateral já conta 11 pelo mesmo critério. */
+  const comResumo = new Set(nos.map((n) => n.materia))
+  const listaMaterias = Object.entries(MATERIAS)
+    .filter(([slug]) => comResumo.has(slug))
+    .map(([slug, m]) => ({ slug, nome: m.nome, cor: m.cor }))
 
   return (
     <div className="h-[calc(100vh-3rem)] lg:h-screen flex flex-col">

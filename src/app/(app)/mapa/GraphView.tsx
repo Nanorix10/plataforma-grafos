@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 // submódulos (geo, chord, contour…) pra usar quatro
 import { select } from 'd3-selection'
 import { drag } from 'd3-drag'
-import { zoom, zoomIdentity } from 'd3-zoom'
+import { zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom'
 // import só pelo efeito colateral: é ele que adiciona .transition() ao Selection.
 // Não custa nada no bundle — o d3-zoom já depende do d3-transition.
 import 'd3-transition'
@@ -181,6 +181,25 @@ export default function GraphView({
    */
   const jaRodou = useRef(false)
 
+  /**
+   * A moldura: o que o aluno está olhando, e se foi ELE quem escolheu.
+   *
+   * O efeito é remontado a cada expansão, e a remontagem apaga o `<g>` do palco
+   * com a transformação junto — as posições dos nós sobrevivem em `posicoes`,
+   * o enquadramento não sobrevivia. Guardá-la aqui é o que impede o mapa de
+   * saltar para a escala 1 na origem a cada clique num selo.
+   *
+   * `mexeuNoZoom` decide quem manda. O gatilho antigo era "primeira montagem",
+   * lido de um ref que sobrevive à remontagem: em desenvolvimento o StrictMode
+   * monta o efeito duas vezes, a segunda passada já não era a primeira, e o
+   * mapa abria SEM enquadramento nenhum — com onze bolhas, ele nascia no canto
+   * de cima, metade escondida atrás do painel de busca. `event.sourceEvent` é
+   * o idioma do d3 para "isto partiu de um gesto", e não de um `zoom.transform`
+   * que o próprio código chamou.
+   */
+  const transformAtual = useRef<ZoomTransform | null>(null)
+  const mexeuNoZoom = useRef(false)
+
   useEffect(() => {
     const svgEl = svgRef.current
     if (!svgEl) return
@@ -199,11 +218,14 @@ export default function GraphView({
        e, com filtro ligado, só as escolhidas. A matéria some do anel junto com
        os resumos dela: deixá-la ali, vazia, diria que a disciplina não tem
        conteúdo, que é o contrário do que o filtro fez. */
-    const materiasUsadas = materias.filter(
-      (m) =>
-        nos.some((n) => n.materia === m.slug) &&
-        (materiasAtivas === null || materiasAtivas.has(m.slug))
-    )
+    const materiasUsadas = materias.filter((m) => {
+      if (materiasAtivas !== null && !materiasAtivas.has(m.slug)) return false
+      if (!nos.some((n) => n.materia === m.slug)) return false
+      // buscando, a matéria sem resultado sai junto: um nó de matéria sozinho
+      // no anel diz "procure aqui" apontando para nada
+      if (!buscando) return true
+      return (filhosDe.get(idMateria(m.slug)) ?? []).some((n) => visiveis.has(n.id))
+    })
 
     const simNodes: NoSim[] = [
       ...materiasUsadas.map((m) => ({
@@ -526,6 +548,7 @@ export default function GraphView({
        não: as posições já vieram de `posicoes.current`, e o que falta acomodar
        são só os filhos que acabaram de nascer. Com 1, o mapa inteiro se
        reorganizava a cada clique num selo. */
+    let jaEnquadrou = false
     const primeiraMontagem = !jaRodou.current
     if (!primeiraMontagem) sim.alpha(0.35)
     jaRodou.current = true
@@ -538,7 +561,18 @@ export default function GraphView({
         .attr('y2', (l) => (l.target as NoSim).y ?? 0)
       noSel.attr('transform', (d) => `translate(${d.x ?? 0},${d.y ?? 0})`)
     }
-    sim.on('tick', posicionar)
+    /* Um primeiro enquadramento assim que a simulação ESFRIA (alpha < 0.06),
+       além do que acontece no `end`. Não é redundância: `end` só dispara se a
+       simulação chegar sozinha ao fim, e o `ResizeObserver` pode reaquecê-la
+       antes disso — sem este, o mapa passaria esse tempo todo fora da tela.
+       0.06 é onde os nós já pararam de andar de forma visível. */
+    sim.on('tick', () => {
+      posicionar()
+      if (!jaEnquadrou && !mexeuNoZoom.current && sim.alpha() < 0.06) {
+        jaEnquadrou = true
+        enquadrar(semMovimento ? 0 : 400)
+      }
+    })
 
     // guarda onde cada nó parou, pra próxima expansão abrir no lugar
     sim.on('end', () => {
@@ -548,7 +582,11 @@ export default function GraphView({
       /* Assentou pela primeira vez: enquadra. `enquadrar` é declaração de
          função (içada) e este callback é assíncrono, então quando ele roda o
          `comportamentoZoom` lá de baixo já existe. */
-      if (primeiraMontagem && !jaEnquadrou) {
+      /* Enquadra DE NOVO, mesmo já tendo enquadrado no tick. O primeiro
+         enquadramento acontece com alpha ~0.06, quando o mapa já dá para ler
+         mas os nós ainda estão andando; sem este segundo, o desenho terminava
+         deslocado para o lado, do tanto que eles ainda se moveram depois. */
+      if (!mexeuNoZoom.current) {
         jaEnquadrou = true
         enquadrar(semMovimento ? 0 : 500)
       }
@@ -724,6 +762,10 @@ export default function GraphView({
       .on('zoom', (event) => {
         // o balão foi medido na posição antiga; some em vez de ficar torto
         setBalao(null)
+        transformAtual.current = event.transform
+        // só gesto do aluno conta; `zoom.transform` chamado por nós vem sem
+        // `sourceEvent` e não deve tirar o enquadramento automático do mapa
+        if (event.sourceEvent) mexeuNoZoom.current = true
         palco.attr('transform', event.transform.toString())
         // rótulo some quando o mapa está longe: senão vira um borrão de texto
         const k = event.transform.k
@@ -731,6 +773,14 @@ export default function GraphView({
       })
 
     svg.call(comportamentoZoom).on('dblclick.zoom', null)
+
+    /* Repõe a moldura de antes da remontagem. Sem isto, expandir um ramo
+       devolvia o palco à escala 1 na origem: as posições dos nós sobrevivem em
+       `posicoes`, mas o `<g>` que carrega a transformação é recriado a cada
+       passada do efeito. */
+    if (transformAtual.current) {
+      svg.call(comportamentoZoom.transform, transformAtual.current)
+    }
 
     // ---------- responder ao tamanho da janela ----------
     /* O observador era uma fonte de tremor por conta própria, por dois
@@ -742,34 +792,23 @@ export default function GraphView({
           rolagem, e cada aparição mudava a altura em alguns pixels. O mapa
           reaquecia a cada roçada de dedo.
 
-       Agora: a primeira notificação é ignorada, mudanças pequenas não contam,
-       e o reaquecimento é fraco (0.12) — o bastante para reacomodar as âncoras
-       novas, não para redesenhar o mapa. */
+       Agora: mudanças pequenas não contam, e o reaquecimento é fraco (0.12) —
+       o bastante para reacomodar as âncoras novas, não para redesenhar o mapa.
+
+       A primeira notificação deixou de ser descartada em bloco: agora ela sai
+       cedo quando o tamanho é o MESMO que o efeito já tinha lido — que é o caso
+       normal e o motivo do descarte original — e é adotada quando difere. O
+       descarte cego apostava que a medida do efeito estivesse sempre certa; se
+       o contêiner ainda não tiver altura naquele instante, as âncoras ficam
+       calculadas para uma caixa que não é a da tela e ninguém corrige depois. */
     let larguraVista = width
     let alturaVista = height
     let primeiraMedicao = true
 
-    const observer = new ResizeObserver(() => {
-      const l = svgEl.clientWidth || larguraVista
-      const a = svgEl.clientHeight || alturaVista
-
-      if (primeiraMedicao) {
-        primeiraMedicao = false
-        larguraVista = l
-        alturaVista = a
-        return
-      }
-      if (Math.abs(l - larguraVista) < 24 && Math.abs(a - alturaVista) < 24) return
-
-      larguraVista = l
-      alturaVista = a
-      width = l
-      height = a
-
-      /* Reinstalar as forças, e não só mexer no alpha: `forceX`/`forceY` leem o
-         acessador uma vez, no `initialize()`, e guardam o alvo de cada nó. Sem
-         trocar a força, as âncoras continuariam apontando para o centro da
-         janela ANTIGA. */
+    /* `forceX`/`forceY` leem o acessador uma vez, no `initialize()`, e guardam
+       o alvo de cada nó. Trocar só o alpha deixaria as âncoras apontando para o
+       centro da janela ANTIGA — por isso a força inteira é reinstalada. */
+    function reancorar() {
       sim.force(
         'x',
         forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
@@ -778,7 +817,32 @@ export default function GraphView({
         'y',
         forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
       )
-      sim.alpha(0.12).restart()
+    }
+
+    const observer = new ResizeObserver(() => {
+      const l = svgEl.clientWidth || larguraVista
+      const a = svgEl.clientHeight || alturaVista
+
+      const primeira = primeiraMedicao
+      primeiraMedicao = false
+
+      if (!primeira && Math.abs(l - larguraVista) < 24 && Math.abs(a - alturaVista) < 24) return
+
+      larguraVista = l
+      alturaVista = a
+      if (l === width && a === height) return
+
+      width = l
+      height = a
+      reancorar()
+
+      /* Reaquece SEMPRE que o tamanho mudou de verdade, inclusive na primeira
+         medida. Não reaquecer ali era apostar que a simulação ainda estivesse
+         quente quando o observador chegasse — e quando ela já esfriou, as
+         âncoras novas ficam instaladas sem ninguém para puxar os nós até elas.
+         O caso que este `return` acima protege (reaquecer à toa) já está
+         coberto: tamanho igual sai antes de chegar aqui. */
+      sim.alpha(primeira ? 0.3 : 0.12).restart()
     })
     observer.observe(svgEl)
 
@@ -800,6 +864,16 @@ export default function GraphView({
       const comPosicao = simNodes.filter((n) => n.x != null && n.y != null)
       if (comPosicao.length === 0) return
 
+      /* Mede na hora, em vez de usar o `width`/`height` do início do efeito:
+         enquadrar é a última coisa a rodar e não custa nada ler o tamanho de
+         agora, o que torna o resultado imune a qualquer defasagem entre as
+         variáveis e a tela. O `alvo()` das forças continua lendo as variáveis,
+         que o observador mantém em dia. */
+      // `svgRef.current` e não `svgEl`: declaração de função é içada, e o
+      // TypeScript descarta ali o estreitamento feito na guarda do efeito
+      const larguraAgora = svgRef.current?.clientWidth || width
+      const alturaAgora = svgRef.current?.clientHeight || height
+
       const margem = 48
       const x1 = Math.min(...comPosicao.map((n) => n.x! - raioDeColisao(n)))
       const x2 = Math.max(...comPosicao.map((n) => n.x! + raioDeColisao(n)))
@@ -808,11 +882,24 @@ export default function GraphView({
 
       const larg = Math.max(1, x2 - x1)
       const alt = Math.max(1, y2 - y1)
+
+      /* A faixa de cima é do painel de busca e dos chips de matéria, que
+         flutuam por cima do mapa. Centrar na altura CHEIA punha o desenho
+         debaixo deles — com as onze matérias fechadas, quatro bolhas nasciam
+         atrás dos chips. A área útil começa abaixo do painel. */
+      /* Reserva da faixa do painel: 12px do `top-3`, a linha do campo de
+         busca, e os chips de matéria — que com onze matérias quebram em DUAS
+         linhas na maioria das larguras. Medido na tela: o painel termina por
+         volta de 116px, e a folga leva o primeiro nó para longe da borda dele
+         em vez de encostado. */
+      const topo = 150
+      const util = Math.max(120, alturaAgora - topo)
+
       // nunca AMPLIA além de 1: um mapa de três nós não deve aparecer gigante
-      const escala = Math.min(1, (width - margem * 2) / larg, (height - margem * 2) / alt)
+      const escala = Math.min(1, (larguraAgora - margem * 2) / larg, (util - margem * 2) / alt)
 
       const transform = zoomIdentity
-        .translate(width / 2, height / 2)
+        .translate(larguraAgora / 2, topo + util / 2)
         .scale(escala)
         .translate(-(x1 + x2) / 2, -(y1 + y2) / 2)
 
@@ -822,7 +909,6 @@ export default function GraphView({
     /* Enquadra sozinho quando a simulação assenta pela primeira vez. Só a
        primeira: depois disso o enquadramento é do autor — ele deu zoom onde
        queria olhar, e reenquadrar a cada expansão desfaria isso na cara dele. */
-    let jaEnquadrou = false
 
     /* Saídas imperativas para os botões do canto. O padrão já existia para o
        "Centralizar": o d3 vive dentro deste efeito e o botão vive no JSX, e
@@ -845,7 +931,7 @@ export default function GraphView({
        primeira vez precisa ser pedido aqui — e daqui, não lá em cima, porque
        `enquadrar` depende do `comportamentoZoom`, que só existe a esta altura
        do efeito. */
-    if (semMovimento && primeiraMontagem && !jaEnquadrou) {
+    if (semMovimento && !mexeuNoZoom.current && !jaEnquadrou) {
       jaEnquadrou = true
       enquadrar(0)
     }
@@ -861,6 +947,7 @@ export default function GraphView({
     router,
     expandidos,
     visiveis,
+    buscando,
     casados,
     filhosDe,
     porId,
