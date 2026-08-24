@@ -375,6 +375,13 @@ Dois cuidados que a migration precisa ter:
   em `word/media/`. A primeira leva da Biologia entrou pelo texto e teve de
   ganhar uma segunda migration só para devolver as quinze figuras — e uma delas
   era um tópico inteiro ("Níveis de organização") que só existia como desenho.
+- **O extrator do `.docx` é versionado**, em
+  `supabase/ferramentas/docx_para_migration.py`. Ele existia solto, reescrito a
+  cada sessão, e foi assim que três palavras saíram coladas na Geografia
+  ("aqualidade", "linhademontagem") e chegaram ao ar — o espaço entre elas caía
+  num run sublinhado sozinho e a junção de marcas o apagava. O cabeçalho do
+  arquivo conta o defeito. Ele NÃO gera SQL: o HTML do `corpo` continua escrito
+  à mão, porque o mapeamento é julgamento.
 - **Imagem importada mora em `public/img/resumos/<matéria>/`, em WebP.** O que
   o autor sobe pelo editor vai para o bucket `imagens` do Supabase, cuja policy
   de INSERT exige sessão de admin — que uma migration não tem. As duas origens
