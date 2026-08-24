@@ -57,7 +57,6 @@
 -- - "Diminuição do Estado mínimo" — o neoliberalismo defende o Estado mínimo,
 --   então "diminuição do Estado" ou "Estado mínimo", não os dois.
 -- - "São os pinheiros da industrialização", por pioneiros.
--- - "aqualidade" e "linhademontagem", sem o espaço, em Toyotismo e Taylorismo.
 -- - "Clicólise", por ciclólise.
 -- - "Bei Doun", por BeiDou.
 -- - "Custo elevado de implementação de baixo de manutenção", no Ferroviário.
@@ -82,6 +81,15 @@
 -- Não há fórmula nem `[[wikilink]]` nesta leva, então não há
 -- `update corpo = corpo` no fim. `on conflict (slug) do nothing` deixa rodar de
 -- novo sem duplicar.
+--
+-- ## Retificação
+--
+-- Esta migration entrou creditando ao autor dois erros que eram MEUS:
+-- "aqualidade" e "linhademontagem" saíram colados porque o extrator com que li
+-- o `.docx` apagava o espaço quando ele caía sozinho num run sublinhado. Havia
+-- um terceiro caso, "Just in Time- carros". Os três estão consertados na
+-- `20260823200000_conserta_espacos_perdidos_na_geografia`, que explica o
+-- defeito e o alcance da varredura.
 
 insert into resumos (slug, titulo, materia_slug, processo_slug, definicao, corpo, pai_id)
 values (
