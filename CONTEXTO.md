@@ -610,6 +610,41 @@ As cinco sobras do template do Next (`public/file.svg`, `globe`, `next`,
 `vercel`, `window`) saíram: nenhuma era referenciada, e o site as servia
 publicamente.
 
+**9i. "É cobrado em" é o quarto eixo, e tem tabela própria.**
+`pai_id` significa **contém**, e só. Em 23/08 ele passou a carregar um segundo
+sentido sem que ninguém decidisse isso: os resumos-sumário de edital ("Física na
+2ª etapa do PAS UEM") seguravam tópicos como se fossem filhos. Não são —
+"Dinâmica contém Leis de Newton" é verdade, "a 2ª etapa contém Calor latente"
+não é. A etapa COBRA o tópico.
+
+O estrago foi três organizações convivendo no mesmo acervo: a 1ª etapa do PAS
+UEM por conteúdo, a 2ª por edital, e os 114 resumos de `comum` sem hierarquia
+nenhuma.
+
+A saída repete a da decisão 9d, que não enfiou "quando" dentro de `resumos`:
+**`edital_topicos`**, com `processo_slug`, `etapa`, `materia_slug`, `ordem`,
+`texto` e um `resumo_id` que pode ser nulo. Os 21 sumários foram apagados — nada
+apontava para eles — e quem mostra a lista agora é `/edital`, com a contagem de
+cobertura que a página de lista não sabia dar.
+
+**Por que tabela e não uma coluna `etapa` em `resumos`.** Porque a relação é
+N-para-N, e a coluna escalar já mordeu este projeto uma vez: foi ela que obrigou
+o processo `comum` a existir (decisão 1c). A prova aparece na própria carga —
+"Medidas de tendência central" é um resumo `comum` que consta do edital do PASSE
+E do PAS UEM ao mesmo tempo, o que `pai_id` não sabia representar.
+
+`resumo_id` é `on delete set null`, como em `eventos`: apagar o resumo não pode
+apagar a linha do edital. O tópico continua sendo cobrado; o que se perde é o
+texto que o cobria.
+
+**A 1ª etapa do PAS UEM entrou pela metade, e não é falha de extração.** O
+documento dela não é um edital — é o conteúdo escrito. A lista de nível 0 dele é
+meio a meio: onde o autor ainda não escreveu, ele colou o edital; onde escreveu,
+os itens são os títulos do texto. Sete matérias entraram; Língua Portuguesa,
+Física e Química ficaram de fora por serem conteúdo, a Geografia porque a seção
+dela traz a lista da Filosofia colada por engano, e a Redação porque tem um
+tópico só, a letra "R". Ver o cabeçalho de `20260824120000`.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito

@@ -47,15 +47,37 @@ export async function salvarResumo(formData: FormData) {
     throw new Error('Um resumo não pode estar dentro de si mesmo.')
   }
 
-  const { error } = id
-    ? await supabase.from('resumos').update(dados).eq('id', id)
-    : await supabase.from('resumos').insert(dados)
+  const { data: salvo, error } = id
+    ? await supabase.from('resumos').update(dados).eq('id', id).select('id').single()
+    : await supabase.from('resumos').insert(dados).select('id').single()
 
   if (error) throw new Error(error.message)
+
+  /* O quarto eixo (decisão 9i): que tópicos do edital este resumo cobre.
+     Mora em `edital_topicos.resumo_id`, e não numa coluna daqui, porque a
+     relação é N-para-N — o mesmo resumo cai em mais de uma prova.
+
+     São DUAS escritas, e a ordem importa: primeiro solta tudo o que apontava
+     para este resumo, depois marca o que veio do formulário. Sem a primeira,
+     desmarcar uma caixa não desfazia nada — o vínculo velho continuaria lá, e
+     a tela do edital mostraria o tópico como escrito para sempre.
+
+     `.select('id').single()` acima existe por isto: num resumo NOVO o id só
+     nasce depois do insert, e sem ele não há o que marcar. */
+  const idFinal = salvo?.id ?? id
+  if (idFinal) {
+    const topicos = formData.getAll('topicos_edital').map(String).filter(Boolean)
+
+    await supabase.from('edital_topicos').update({ resumo_id: null }).eq('resumo_id', idFinal)
+    if (topicos.length > 0) {
+      await supabase.from('edital_topicos').update({ resumo_id: idFinal }).in('id', topicos)
+    }
+  }
 
   revalidatePath('/admin/editor')
   revalidatePath('/resumos')
   revalidatePath('/mapa')
+  revalidatePath('/edital')
   revalidatePath(`/resumos/${dados.slug}`)
   redirect('/admin/editor')
 }

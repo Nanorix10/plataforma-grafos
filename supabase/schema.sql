@@ -267,3 +267,49 @@ create policy "admin exclui eventos"
 -- balão pequeno, então formatação atrapalharia.
 -- ============================================
 alter table resumos add column if not exists definicao text not null default '';
+
+-- ============================================
+-- edital_topicos — o quarto eixo: "é cobrado em"
+-- ============================================
+-- Criada em 20260824120000. Ver a decisão 9i do CONTEXTO.md.
+--
+-- Os outros três eixos são `resumos.pai_id` (contém), `conexoes` (cita) e
+-- `eventos.ano_inicio` (quando). Este diz o que cada prova cobra, e existe
+-- porque o sentido estava escondido dentro do `pai_id`: resumos-sumário
+-- chamados "Física na 2ª etapa do PAS UEM" seguravam tópicos como filhos.
+--
+-- É N-para-N de propósito: o mesmo resumo é cobrado em mais de uma prova (a
+-- Estatística está nos dois editais). Uma coluna escalar em `resumos`
+-- repetiria o problema que forçou o processo `comum` a existir.
+-- ============================================
+create table edital_topicos (
+  id            uuid primary key default gen_random_uuid(),
+  processo_slug text not null references processos_seletivos(slug) on delete cascade,
+  etapa         smallint not null check (etapa between 1 and 4),
+  materia_slug  text not null references materias(slug) on delete cascade,
+  ordem         int not null,
+  texto         text not null check (length(btrim(texto)) > 0),
+  -- `on delete set null` como em eventos.resumo_id: apagar o resumo não apaga
+  -- a linha do edital — o tópico continua sendo cobrado na prova.
+  resumo_id     uuid references resumos(id) on delete set null,
+  criado_em     timestamptz default now(),
+  atualizado_em timestamptz default now(),
+  unique (processo_slug, etapa, materia_slug, ordem)
+);
+
+create index edital_topicos_resumo on edital_topicos (resumo_id);
+create index edital_topicos_prova on edital_topicos (processo_slug, etapa, materia_slug, ordem);
+
+alter table edital_topicos enable row level security;
+
+-- Ler: qualquer autenticado. O edital não é gateado por plano — o conteúdo
+-- gateado é o resumo, e a página dele já barra quem não tem acesso. Mesmo
+-- raciocínio dos eventos da linha do tempo.
+create policy "usuarios autenticados podem ler edital" on edital_topicos
+  for select using (true);
+create policy "admin insere edital" on edital_topicos
+  for insert with check (eh_admin());
+create policy "admin edita edital" on edital_topicos
+  for update using (eh_admin()) with check (eh_admin());
+create policy "admin exclui edital" on edital_topicos
+  for delete using (eh_admin());

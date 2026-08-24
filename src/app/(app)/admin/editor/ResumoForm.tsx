@@ -102,14 +102,29 @@ function opcoesPai(
   return saida
 }
 
+/** Um tópico de edital que este resumo pode cobrir. */
+type TopicoDoEdital = {
+  id: string
+  texto: string
+  etapa: number
+  materia_slug: string
+  processo_nome: string
+  /** id do resumo que já cobre este tópico, se houver outro. */
+  resumo_id: string | null
+}
+
 export default function ResumoForm({
   resumo,
   titulos = [],
   candidatosPai = [],
+  topicosEdital = [],
+  topicosMarcados = [],
 }: {
   resumo?: ResumoExistente
   titulos?: string[]
   candidatosPai?: CandidatoPai[]
+  topicosEdital?: TopicoDoEdital[]
+  topicosMarcados?: string[]
 }) {
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
@@ -123,6 +138,12 @@ export default function ResumoForm({
     dir: resumo?.margem_dir ?? MARGEM_PADRAO,
   })
   const [paiId, setPaiId] = useState(resumo?.pai_id ?? '')
+  const [cobrado, setCobrado] = useState<Set<string>>(() => new Set(topicosMarcados))
+
+  /* Filtra pela matéria do ESTADO, e não pela que está salva: trocar o
+     <select> de matéria tem de trocar a lista de tópicos junto, senão o autor
+     marcaria um tópico de Biologia num resumo que acabou de virar de Química. */
+  const topicosDaMateria = topicosEdital.filter((t) => t.materia_slug === materia)
 
   // não depende da matéria escolhida: um assunto pode segurar tópicos de
   // disciplinas diferentes
@@ -256,6 +277,66 @@ export default function ResumoForm({
           esconde os que já estão dentro deste.
         </span>
       </div>
+
+      {/* "Cobrado em" é o QUARTO eixo (decisão 9i), e vive ao lado de "Está
+          dentro de" de propósito: são as duas perguntas de estrutura que o
+          autor responde sobre um resumo, e ficam lado a lado para a diferença
+          entre elas ficar visível. Uma é "faz parte de", a outra é "cai na
+          prova". */}
+      {topicosDaMateria.length > 0 ? (
+        <div>
+          <span className="block text-[13px] text-[var(--ink-dim)] mb-1.5">
+            Cobrado em
+            <span className="ml-2 opacity-70">
+              tópicos do edital que este resumo cobre
+            </span>
+          </span>
+          <div className="max-h-52 overflow-y-auto border border-[var(--line)] rounded-md divide-y divide-[var(--line)]">
+            {topicosDaMateria.map((t) => {
+              const marcado = cobrado.has(t.id)
+              // tópico que JÁ tem outro resumo aparece apagado e explicado —
+              // marcar aqui roubaria o vínculo sem o autor perceber
+              const deOutro = !!t.resumo_id && t.resumo_id !== resumo?.id
+              return (
+                <label
+                  key={t.id}
+                  className={`flex gap-2.5 items-start px-3 py-2 text-[12.5px] leading-snug cursor-pointer hover:bg-[var(--raised)] ${
+                    deOutro && !marcado ? 'opacity-55' : ''
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="topicos_edital"
+                    value={t.id}
+                    checked={marcado}
+                    onChange={(e) =>
+                      setCobrado((atual) => {
+                        const novo = new Set(atual)
+                        if (e.target.checked) novo.add(t.id)
+                        else novo.delete(t.id)
+                        return novo
+                      })
+                    }
+                    className="mt-[3px] shrink-0"
+                  />
+                  <span>
+                    {t.texto}
+                    <span className="ml-2 text-[11px] text-[var(--ink-faint)]">
+                      {t.processo_nome} · {t.etapa}ª etapa
+                      {deOutro && !marcado ? ' · já coberto por outro resumo' : ''}
+                    </span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          <span className="block text-[11.5px] text-[var(--ink-dim)] mt-1">
+            Um resumo pode cobrir tópicos de mais de uma prova — é o caso do
+            conteúdo comum, que cai nos dois editais. A lista mostra só os
+            tópicos da matéria escolhida acima.
+          </span>
+        </div>
+      ) : null}
       </div>
 
       <div>

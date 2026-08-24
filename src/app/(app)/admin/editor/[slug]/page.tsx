@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
+import { PROCESSOS } from '@/lib/processos'
 import ResumoForm from '../ResumoForm'
 
 export default async function EditarResumoPage({
@@ -28,6 +29,27 @@ export default async function EditarResumoPage({
   ])
   if (!resumo) notFound()
 
+  /* Os tópicos do edital que este resumo pode cobrir (decisão 9i). A lista vem
+     inteira e o formulário filtra pela matéria escolhida — buscar de novo a
+     cada troca de <select> custaria uma ida ao servidor por clique. */
+  const { data: topicos } = await supabase
+    .from('edital_topicos')
+    .select('id, texto, etapa, processo_slug, materia_slug, resumo_id')
+    .order('processo_slug')
+    .order('etapa')
+    .order('ordem')
+
+  const topicosEdital = (topicos ?? []).map((x) => ({
+    id: x.id,
+    texto: x.texto,
+    etapa: x.etapa,
+    materia_slug: x.materia_slug,
+    processo_nome: PROCESSOS[x.processo_slug]?.nome ?? x.processo_slug,
+    resumo_id: x.resumo_id,
+  }))
+  const topicosMarcados = topicosEdital.filter((x) => x.resumo_id === resumo.id).map((x) => x.id)
+
+
   // títulos dos outros resumos, pro autocomplete de [[wikilinks]]
   const titulos = (todos ?? []).map((r) => r.titulo).filter((t) => t !== resumo.titulo)
 
@@ -42,7 +64,13 @@ export default async function EditarResumoPage({
           ver publicado
         </Link>
       </div>
-      <ResumoForm resumo={resumo} titulos={titulos} candidatosPai={todos ?? []} />
+      <ResumoForm
+        resumo={resumo}
+        titulos={titulos}
+        candidatosPai={todos ?? []}
+        topicosEdital={topicosEdital}
+        topicosMarcados={topicosMarcados}
+      />
     </div>
   )
 }

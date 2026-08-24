@@ -475,6 +475,9 @@ export default function Sidebar({
         <ItemNav href="/linha-do-tempo" ativo={pathname === '/linha-do-tempo'}>
           <Ponto ativo={pathname === '/linha-do-tempo'} /> Linha do tempo
         </ItemNav>
+        <ItemNav href="/edital" ativo={pathname === '/edital'}>
+          <Ponto ativo={pathname === '/edital'} /> Edital
+        </ItemNav>
         {isAdmin ? (
           <>
             <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin/editor')}>
