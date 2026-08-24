@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // imports granulares de propósito: `import * as d3 from 'd3'` arrastaria os 30
 // submódulos (geo, chord, contour…) pra usar quatro
 import { select } from 'd3-selection'
@@ -22,21 +22,12 @@ import {
 } from 'd3-force'
 import { useRouter } from 'next/navigation'
 import Balao, { type PosicaoBalao } from './Balao'
+import Controles from './Controles'
+// `No`, `Materia` e a lógica de expansão vivem fora daqui porque as DUAS visões
+// do mapa precisam da mesma resposta; ver o cabeçalho de `useExpansao.ts`.
+import { idMateria, useExpansao, type Materia, type No } from './useExpansao'
 
-type No = {
-  id: string
-  titulo: string
-  materia: string
-  cor: string
-  liberado: boolean
-  definicao: string
-  /** id do resumo que contém este; null = assunto principal da matéria */
-  pai: string | null
-  /** `titulo` é uma seção de dentro de um resumo (decisão 12), não um resumo. */
-  tipo: 'resumo' | 'titulo'
-}
 type Link = { origem: string; destino: string }
-type Materia = { slug: string; nome: string; cor: string }
 
 type NoSim = SimulationNodeDatum & {
   id: string
@@ -48,6 +39,7 @@ type NoSim = SimulationNodeDatum & {
   grau: number
   filhos: number
   expandido: boolean
+  casou: boolean
 }
 type LinkSim = SimulationLinkDatum<NoSim> & { tipo: 'contem' | 'cita' }
 
@@ -110,10 +102,9 @@ function raioDeColisao(d: NoSim) {
  * bloqueado (que usa 1) voltaria com a espessura do liberado.
  */
 function larguraDoAnel(d: NoSim) {
+  if (d.casou) return 3
   return d.tipo === 'materia' ? 2 : d.liberado ? 2 : 1
 }
-
-const idMateria = (slug: string) => `materia:${slug}`
 
 export default function GraphView({
   nos,
@@ -129,14 +120,25 @@ export default function GraphView({
   const [balao, setBalao] = useState<PosicaoBalao | null>(null)
   const router = useRouter()
 
-  /**
-   * Quem está aberto. As matérias começam abertas e os resumos fechados: assim
-   * o mapa abre mostrando as matérias e os assuntos principais de cada uma, e
-   * não os 200 tópicos de uma vez.
-   */
-  const [expandidos, setExpandidos] = useState<Set<string>>(
-    () => new Set(materias.map((m) => idMateria(m.slug)))
-  )
+  const [busca, setBusca] = useState('')
+  const [materiasAtivas, setMateriasAtivas] = useState<Set<string> | null>(null)
+
+  /* Quem está aberto, quem casou com a busca e quem aparece por causa disso —
+     tudo em `useExpansao`, compartilhado com o mapa mental. Ver o cabeçalho
+     daquele arquivo para saber por que as matérias agora nascem FECHADAS. */
+  const {
+    expandidos,
+    casados,
+    visiveis,
+    buscando,
+    porId,
+    filhosDe,
+    contarFilhos,
+    alternar,
+    abrirTudo,
+    fecharTudo,
+    algumAberto,
+  } = useExpansao({ nos, materias, busca, materiasAtivas })
 
   /**
    * Posições da última passada, guardadas por id.
@@ -179,49 +181,6 @@ export default function GraphView({
    */
   const jaRodou = useRef(false)
 
-  const alternar = useCallback((id: string) => {
-    setExpandidos((atual) => {
-      const novo = new Set(atual)
-      if (novo.has(id)) novo.delete(id)
-      else novo.add(id)
-      return novo
-    })
-  }, [])
-
-  const porId = useMemo(() => new Map(nos.map((n) => [n.id, n])), [nos])
-
-  const filhosDe = useMemo(() => {
-    const m = new Map<string, No[]>()
-    for (const n of nos) {
-      const chave = n.pai ?? idMateria(n.materia)
-      m.set(chave, [...(m.get(chave) ?? []), n])
-    }
-    return m
-  }, [nos])
-
-  /**
-   * Um resumo aparece quando toda a cadeia acima dele está aberta. Subir a
-   * cadeia (em vez de descer a partir das raízes) mantém a regra num lugar só e
-   * imune à ordem em que os resumos chegam.
-   */
-  const visiveis = useMemo(() => {
-    const ok = new Set<string>()
-    for (const n of nos) {
-      let atual: No | undefined = n
-      let visivel = true
-      // sobe até a raiz; qualquer ancestral fechado esconde este nó
-      while (atual?.pai) {
-        if (!expandidos.has(atual.pai)) {
-          visivel = false
-          break
-        }
-        atual = porId.get(atual.pai)
-      }
-      if (visivel && expandidos.has(idMateria(n.materia))) ok.add(n.id)
-    }
-    return ok
-  }, [nos, porId, expandidos])
-
   useEffect(() => {
     const svgEl = svgRef.current
     if (!svgEl) return
@@ -236,8 +195,15 @@ export default function GraphView({
       grausPorId.set(l.destino, (grausPorId.get(l.destino) ?? 0) + 1)
     }
 
-    // só entram matérias que têm resumo — uma matéria vazia seria um nó solto
-    const materiasUsadas = materias.filter((m) => nos.some((n) => n.materia === m.slug))
+    /* Só entram matérias que têm resumo — uma matéria vazia seria um nó solto —
+       e, com filtro ligado, só as escolhidas. A matéria some do anel junto com
+       os resumos dela: deixá-la ali, vazia, diria que a disciplina não tem
+       conteúdo, que é o contrário do que o filtro fez. */
+    const materiasUsadas = materias.filter(
+      (m) =>
+        nos.some((n) => n.materia === m.slug) &&
+        (materiasAtivas === null || materiasAtivas.has(m.slug))
+    )
 
     const simNodes: NoSim[] = [
       ...materiasUsadas.map((m) => ({
@@ -248,8 +214,9 @@ export default function GraphView({
         definicao: '',
         tipo: 'materia' as const,
         grau: 0,
-        filhos: (filhosDe.get(idMateria(m.slug)) ?? []).length,
+        filhos: contarFilhos(idMateria(m.slug)),
         expandido: expandidos.has(idMateria(m.slug)),
+        casou: false,
       })),
       ...nos
         .filter((n) => visiveis.has(n.id))
@@ -261,8 +228,9 @@ export default function GraphView({
           definicao: n.definicao,
           tipo: n.tipo,
           grau: grausPorId.get(n.id) ?? 0,
-          filhos: (filhosDe.get(n.id) ?? []).length,
+          filhos: contarFilhos(n.id),
           expandido: expandidos.has(n.id),
+          casou: casados.has(n.id),
         })),
     ]
 
@@ -385,10 +353,13 @@ export default function GraphView({
       // das arestas que passam por trás. No título o anel é da cor da matéria,
       // porque sem preenchimento é ele que dá a cor ao nó.
       .attr('stroke', (d) => {
+        // quem casou com a busca ganha o anel de acento: num ramo aberto cheio
+        // de irmãos parecidos, é o que separa o resultado do resto
+        if (d.casou) return 'var(--acento)'
         if (d.tipo === 'titulo') return d.cor
         return d.tipo === 'materia' ? d.cor : d.liberado ? 'var(--canvas)' : 'var(--ink-faint)'
       })
-      .attr('stroke-opacity', (d) => (d.tipo === 'titulo' ? 0.55 : 1))
+      .attr('stroke-opacity', (d) => (d.casou ? 1 : d.tipo === 'titulo' ? 0.55 : 1))
       .attr('stroke-width', larguraDoAnel)
       .attr('stroke-dasharray', (d) => (d.tipo === 'resumo' && !d.liberado ? '3,2' : 'none'))
 
@@ -883,7 +854,20 @@ export default function GraphView({
       observer.disconnect()
       sim.stop()
     }
-  }, [nos, links, materias, router, expandidos, visiveis, filhosDe, porId, alternar])
+  }, [
+    nos,
+    links,
+    materias,
+    router,
+    expandidos,
+    visiveis,
+    casados,
+    filhosDe,
+    porId,
+    alternar,
+    contarFilhos,
+    materiasAtivas,
+  ])
 
   if (nos.length === 0) {
     return (
@@ -896,35 +880,30 @@ export default function GraphView({
     )
   }
 
-  const totalExpansiveis = nos.filter((n) => nos.some((o) => o.pai === n.id)).length
-
   return (
     <div ref={wrapRef} className="relative h-full overflow-hidden quadro">
+      <Controles
+        busca={busca}
+        setBusca={setBusca}
+        materias={materias}
+        materiasAtivas={materiasAtivas}
+        setMateriasAtivas={setMateriasAtivas}
+        achados={casados.size}
+        buscando={buscando}
+      />
+
       <svg ref={svgRef} className="w-full h-full block touch-none" />
 
       <Balao dados={balao} />
 
       <div className="absolute bottom-4 right-4 flex gap-2">
-        {totalExpansiveis > 0 ? (
-          <button
-            type="button"
-            onClick={() =>
-              setExpandidos((atual) => {
-                // se já há algum assunto aberto, o botão fecha tudo; senão abre
-                const algumAberto = nos.some((n) => atual.has(n.id))
-                return algumAberto
-                  ? new Set(materias.map((m) => idMateria(m.slug)))
-                  : new Set([
-                      ...materias.map((m) => idMateria(m.slug)),
-                      ...nos.map((n) => n.id),
-                    ])
-              })
-            }
-            className="text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
-          >
-            {nos.some((n) => expandidos.has(n.id)) ? 'Recolher tudo' : 'Expandir tudo'}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => (algumAberto ? fecharTudo() : abrirTudo())}
+          className="text-[11.5px] bg-[var(--raised)]/90 backdrop-blur border border-[var(--line-forte)] rounded-lg px-2.5 py-1.5 text-[var(--ink-dim)] hover:text-[var(--ink)] hover:bg-[var(--raised)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+        >
+          {algumAberto ? 'Recolher tudo' : 'Expandir tudo'}
+        </button>
         {/* Só aparece quando há o que soltar: um botão permanentemente inútil
             ensinaria menos do que este, que surge no instante em que o autor
             prende o primeiro nó e explica sozinho o que aconteceu. */}

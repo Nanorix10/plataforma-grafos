@@ -6,6 +6,7 @@ import { getSessao } from '@/lib/sessao'
 import { extrairTitulos } from '@/lib/titulos'
 import GraphView from './GraphView'
 import MindMapView from './MindMapView'
+import type { No as NoMapa } from './useExpansao'
 
 type Visao = 'grafo' | 'mental'
 
@@ -40,17 +41,6 @@ export default async function MapaPage({
   // o grafo trabalha por slug (é o que vai na URL do resumo), mas a hierarquia
   // é gravada por id — este mapa traduz um no outro
   const slugPorId = new Map((resumos ?? []).map((r) => [r.id, r.slug]))
-
-  type NoMapa = {
-    id: string
-    titulo: string
-    materia: string
-    cor: string
-    liberado: boolean
-    pai: string | null
-    definicao: string
-    tipo: 'resumo' | 'titulo'
-  }
 
   const nos: NoMapa[] = []
 
