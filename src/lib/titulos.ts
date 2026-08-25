@@ -155,3 +155,74 @@ export function ancorarTitulos(html: string | null | undefined): string {
     return `<h${nivel}${limpos} id="${a.ancora}">${interno}</h${nivel}>`
   })
 }
+
+/**
+ * Um item do trilho de leitura, na coluna à esquerda da folha.
+ *
+ * O trilho é o grafo DESTA página desenhado enquanto se lê: as seções, que já
+ * são nós do mapa (decisão 12), e as arestas que saem daqui — os
+ * `[[wikilinks]]` do corpo, recuados sob a seção em que aparecem.
+ *
+ * Mora aqui, e não num módulo próprio, pela mesma razão que obriga
+ * `extrairTitulos` e `ancorarTitulos` a andarem juntas: a âncora de cada seção
+ * tem que sair do MESMO `percorrer`, senão o trilho leva a um destino que a
+ * página não gravou.
+ */
+export type ItemTrilho =
+  | { tipo: 'secao'; nivel: number; texto: string; ancora: string }
+  | { tipo: 'liga'; texto: string; slug: string; indice: number }
+
+/** Casa um título inteiro OU um wikilink solto, em ordem de documento. */
+const TITULO_OU_LINK = /<h([234])\b[^>]*>([\s\S]*?)<\/h\1>|\[\[(.+?)\]\]/gi
+
+/**
+ * O trilho de um resumo, em ordem de leitura.
+ *
+ * **`indice` é a posição do link no HTML final, não no corpo cru**, e é por ele
+ * que o componente do trilho acha o `<a>` correspondente na página. Contam
+ * apenas os wikilinks que `renderizarWikilinks` consegue resolver: título que
+ * não existe vira `<span>`, não `<a>`, e incluí-lo aqui deslocaria todos os
+ * seguintes em um.
+ *
+ * Pela mesma conta, um wikilink DENTRO de um título também ocupa índice — ele
+ * vira `<a>` no HTML como qualquer outro. Ele não entra no trilho (seria a
+ * seção repetindo o próprio nome um nível abaixo), mas precisa ser contado.
+ *
+ * Destino repetido aparece uma vez só. O trilho é o mapa de para ONDE esta
+ * página leva; citar "Tordesilhas" três vezes não são três arestas.
+ */
+export function extrairTrilho(
+  html: string | null | undefined,
+  tituloParaSlug: Record<string, string>
+): ItemTrilho[] {
+  if (!html) return []
+
+  const achados = percorrer(html)
+  const itens: ItemTrilho[] = []
+  const jaVistos = new Set<string>()
+  let iTitulo = 0
+  let iLiga = 0
+
+  for (const m of html.matchAll(new RegExp(TITULO_OU_LINK))) {
+    // wikilink solto no corpo
+    if (m[3] !== undefined) {
+      const slug = tituloParaSlug[m[3]]
+      if (!slug) continue
+      const indice = iLiga++
+      if (jaVistos.has(slug)) continue
+      jaVistos.add(slug)
+      itens.push({ tipo: 'liga', texto: m[3], slug, indice })
+      continue
+    }
+
+    // título: os wikilinks de dentro dele não viram item, mas gastam índice
+    for (const dentro of String(m[2]).matchAll(/\[\[(.+?)\]\]/g)) {
+      if (tituloParaSlug[dentro[1]]) iLiga++
+    }
+
+    const a = achados[iTitulo++]
+    if (a?.ancora) itens.push({ tipo: 'secao', nivel: a.nivel, texto: a.texto, ancora: a.ancora })
+  }
+
+  return itens
+}

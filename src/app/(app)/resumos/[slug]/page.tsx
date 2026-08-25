@@ -9,9 +9,11 @@ import { renderizarWikilinks } from '@/lib/wikilinks'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
-import { ancorarTitulos } from '@/lib/titulos'
+import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
 import { getSessao } from '@/lib/sessao'
 import { estiloDaPagina } from '@/lib/pagina'
+import { PROCESSOS } from '@/lib/processos'
+import Trilho from './Trilho'
 
 export default async function ResumoPage({
   params,
@@ -46,8 +48,9 @@ export default async function ResumoPage({
     )
   }
 
-  // todos os títulos (pra resolver os [[wikilinks]]) e os backlinks, em paralelo
-  const [{ data: todosResumos }, { data: backlinksRaw }] = await Promise.all([
+  // todos os títulos (pra resolver os [[wikilinks]]), os backlinks e as provas
+  // que cobram este resumo, em paralelo
+  const [{ data: todosResumos }, { data: backlinksRaw }, { data: cobrancas }] = await Promise.all([
     supabase.from('resumos').select('slug, titulo'),
     supabase
       .from('conexoes')
@@ -56,8 +59,26 @@ export default async function ResumoPage({
       // disciplina, e é justamente isso que a lista mostra.
       .select('origem:resumos!conexoes_origem_id_fkey(slug, titulo, materia_slug)')
       .eq('destino_id', resumo.id),
+    // "cai em": o quarto eixo (decisão 9i). A relação é N-para-N, então um
+    // resumo `comum` como "Medidas de tendência central" volta com duas linhas
+    // — uma por prova que o cobra —, e é justamente isso que a tela mostra.
+    supabase.from('edital_topicos').select('processo_slug, etapa').eq('resumo_id', resumo.id),
   ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
+
+  // Um resumo costuma cobrir VÁRIOS tópicos do mesmo edital, e o aluno não quer
+  // saber quantos: quer saber em que provas isto cai. Daí o par prova+etapa ser
+  // reduzido a um conjunto antes de virar etiqueta.
+  const provas = [
+    ...new Map(
+      (cobrancas ?? []).map((c: { processo_slug: string; etapa: number }) => [
+        `${c.processo_slug}#${c.etapa}`,
+        c,
+      ])
+    ).values(),
+  ].sort((a, b) => a.processo_slug.localeCompare(b.processo_slug) || a.etapa - b.etapa)
+
+  const trilho = extrairTrilho(resumo.corpo, tituloParaSlug)
 
   const materia = MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]
   // A ordem importa, e é sempre a mesma: do estrutural para o miúdo.
@@ -114,10 +135,25 @@ export default async function ResumoPage({
           É o que fecha o WYSIWYG: sem isto, a folha do editor mostraria uma
           coluna e o aluno leria outra. Abaixo de `md` as margens são ignoradas
           e vale um recuo fixo — 150px numa tela de celular não sobraria texto. */}
-      <article
-        className="max-w-[var(--pagina)] mx-auto px-6 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] py-10 md:py-14"
-        style={estiloDaPagina(resumo.margem_esq ?? 150, resumo.margem_dir ?? 150)}
+      {/* O par trilho + folha, centralizado como um bloco só. As variáveis da
+          régua ficam AQUI, e não no `<article>`, porque a grade precisa da
+          largura da folha para dimensionar a própria coluna — e custom
+          property herda, então o artigo continua lendo as mesmas. */}
+      <div
+        className="leitura"
+        style={
+          {
+            ...estiloDaPagina(resumo.margem_esq ?? 150, resumo.margem_dir ?? 150),
+            // O trilho é irmão do `.conteudo-resumo`, não filho: sem a cor
+            // aqui em cima, a seção ativa nele cairia no `inherit` de reserva
+            // enquanto os títulos que ela aponta saem na cor da matéria.
+            '--cor-materia': materia?.cor,
+          } as CSSProperties
+        }
       >
+        <Trilho itens={trilho} />
+
+      <article className="max-w-[var(--pagina)] mx-auto px-6 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] py-10 md:py-14">
         {/* A etiqueta é contornada na cor da matéria, e o texto vai na mesma
             cor. Ela já foi a ÚNICA peça colorida da página, quando o título
             ficava neutro; agora a cor da matéria vale para todo título do
@@ -141,6 +177,25 @@ export default async function ResumoPage({
         >
           {resumo.titulo}
         </h1>
+
+        {/* Em que provas isto cai (decisão 9i). Some quando o resumo não é
+            cobrado por edital nenhum — a maior parte do acervo de `comum` é
+            assim, e uma linha "Cai em —" só ocuparia o lugar sem informar.
+            Não são links: `/edital` não recebe filtro por prova, e etiqueta
+            que não leva a lugar nenhum é pior do que etiqueta que não clica. */}
+        {provas.length > 0 ? (
+          <div className="cai-em">
+            <h2>Cai em</h2>
+            <ul>
+              {provas.map((p) => (
+                <li key={`${p.processo_slug}#${p.etapa}`}>
+                  {PROCESSOS[p.processo_slug]?.nome ?? p.processo_slug}
+                  <span> · {p.etapa}ª etapa</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {/* A cor da matéria desce por variável, e o CSS decide onde ela pinta
             (hoje: títulos de seção e termos em negrito). Resumo de matéria
@@ -190,6 +245,7 @@ export default async function ResumoPage({
           )}
         </section>
       </article>
+      </div>
     </>
   )
 }

@@ -156,6 +156,13 @@
   /* --- escala de tipos ---
      Seis degraus, e nada entre eles. Diferenças de 0,5px não são
      percebidas como intenção, só como desleixo. */
+  /* ---- o trilho de leitura ----
+     Largura escolhida pelo que ela consegue mostrar: 128px cabem dois níveis
+     de recuo e um título de seção em duas linhas a 12px, que é o formato real
+     dos títulos do acervo. Mais estreito, todo rótulo vira reticência. */
+  --trilho-largura: 128px;
+  --trilho-gap: 24px;
+
   --t-mini: 0.75rem; /* 12px — rótulos, contadores */
   --t-peq: 0.8125rem; /* 13px — texto de apoio, itens de menu */
   --t-base: 0.9375rem; /* 15px — interface */
@@ -1172,4 +1179,178 @@ h3 {
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* ================================================================
+   TRILHO DE LEITURA — a coluna estreita à esquerda da folha
+   ================================================================
+   O grafo desta página desenhado enquanto se lê: as seções, que já são nós do
+   mapa (decisão 12), e as arestas que saem daqui.
+
+   **Ele não encosta na coluna de texto.** A folha continua com os 920px e as
+   margens que o autor arrastou na régua (decisão 11), e o par trilho+folha é
+   centralizado como um bloco só — o trilho ocupa o vão morto à esquerda, que
+   antes não servia para nada. Abaixo de 1340px de janela esse vão deixa de
+   existir e o trilho SOME, em vez de espremer o texto: apertar a coluna de
+   leitura para caber o enfeite que a acompanha seria trocar o certo pelo
+   acessório.
+
+   A conta do ponto de corte: barra lateral (260) + trilho (128) + vão (24) +
+   folha (920) = 1332, e sobram 8px de folga. Quem mexer num desses números
+   mexe no `@media` junto. */
+.leitura {
+  display: grid;
+  grid-template-columns: minmax(0, var(--pagina));
+  justify-content: center;
+  column-gap: var(--trilho-gap);
+}
+@media (min-width: 1340px) {
+  .leitura {
+    grid-template-columns: var(--trilho-largura) minmax(0, var(--pagina));
+  }
+  .trilho {
+    display: block;
+  }
+}
+
+/* `-2` e não `2`: com uma coluna só (sem trilho) a última linha da grade é a
+   primeira, e com duas é a segunda. Contando do fim, o artigo cai no lugar
+   certo nos dois casos sem uma segunda regra dentro do `@media`. */
+.leitura > article {
+  grid-column: -2;
+}
+
+.trilho {
+  display: none;
+  grid-column: 1;
+  padding-top: 2.5rem;
+}
+.trilho-fixa {
+  position: sticky;
+  /* a barra do caminho tem 3rem e é fixa; o resto é respiro */
+  top: 5.5rem;
+}
+.trilho h2 {
+  margin: 0 0 0.75rem;
+  padding-left: 0.8125rem;
+  font-size: var(--t-mini);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.trilho ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--line);
+}
+.trilho a {
+  display: block;
+  position: relative;
+  padding: 0.3125rem 0 0.3125rem 0.8125rem;
+  font-size: var(--t-mini);
+  line-height: 1.35;
+  color: var(--ink-faint);
+}
+.trilho a:hover {
+  color: var(--ink);
+}
+
+/* A seção ativa marca o próprio traço do trilho, e não um ponto ao lado: o
+   traço É a linha do sumário engrossada, então o olho lê "estou aqui dentro"
+   em vez de "isto está selecionado". */
+.trilho-secao a::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.trilho-secao a[aria-current='true'] {
+  color: var(--cor-materia, var(--ink));
+  font-weight: 500;
+}
+.trilho-secao a[aria-current='true']::before {
+  background: var(--cor-materia, var(--ink));
+}
+
+/* As arestas ficam um grau abaixo das seções, recuadas e com marca redonda —
+   seção é lugar DESTA página, link é saída para outra. Lilás no hover porque é
+   a cor de link do site inteiro, inclusive a do wikilink que ele acende. */
+.trilho-liga a {
+  padding-left: 1.5rem;
+}
+.trilho-liga a::before {
+  content: '';
+  position: absolute;
+  left: 0.875rem;
+  top: 0.75rem;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--line-forte);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.trilho-liga a:hover {
+  color: var(--acento);
+}
+.trilho-liga a:hover::before {
+  border-color: var(--acento);
+  background: var(--acento);
+}
+
+/* O outro lado do gesto: passar o mouse numa aresta do trilho acende, no meio
+   do texto, o wikilink correspondente. Sem isto o trilho listaria destinos sem
+   dizer de ONDE eles saem, que é metade da informação. A classe é posta pelo
+   `Trilho.tsx`; o sublinhado do link continua vindo das utilitárias que
+   `renderizarWikilinks` escreve, e nada aqui as desfaz. */
+.conteudo-resumo a.aceso {
+  background: var(--acento-fraco);
+  border-radius: 3px;
+  box-shadow: 0 0 0 3px var(--acento-fraco);
+}
+
+/* ---- "cai em": as provas que cobram este resumo (decisão 9i) ----
+   Fica no cabeçalho e não no rodapé de propósito: quem estuda para UMA prova
+   decide pelo que cai nela, e essa decisão acontece antes de ler, não depois. */
+.cai-em {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--line);
+}
+.cai-em h2 {
+  margin: 0;
+  font-size: var(--t-mini);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cai-em ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cai-em li {
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--line-forte);
+  border-radius: 999px;
+  font-size: var(--t-mini);
+  color: var(--ink-dim);
+}
+.cai-em li span {
+  color: var(--ink-faint);
 }
