@@ -41,3 +41,7 @@ desktop.ini
 # TypeScript / editores
 *.tsbuildinfo
 .idea/
+
+# cache do Python, criado quando o inventario_de_provas.py importa o extrator
+__pycache__/
+*.pyc
