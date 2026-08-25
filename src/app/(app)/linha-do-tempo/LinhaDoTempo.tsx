@@ -355,6 +355,34 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   const alturaConteudo = Math.max(altura, 2 * Math.max(precisaCima, precisaBaixo))
   const centro = alturaConteudo / 2
 
+  /* ---- e o eixo tem que estar À VISTA, não só no meio do palco ----
+
+     `alturaConteudo` é o dobro do lado mais cheio, então com muitos eventos
+     empilhados o palco fica bem mais alto que a caixa — 3.036px contra 632px,
+     medido com os 85 eventos que entraram em 25/08. A caixa rola, e rolagem
+     começa no TOPO: o eixo, que mora em `centro`, nascia fora da tela, e quem
+     abria a página caía num campo vazio acima de tudo.
+
+     Enquanto o eixo coube na caixa isto não existia — com um evento só, o
+     palco tinha a altura da caixa. É defeito que só aparece com acervo, e por
+     isso ficou dois meses invisível.
+
+     A regra copia o `mexeuNoZoom` do grafo: o ajuste automático vale ENQUANTO
+     a pessoa não tiver rolado. A partir do primeiro gesto dela, a posição é
+     dela — rolar para ver a quarta faixa de cima e ser puxado de volta ao
+     centro seria pior que o defeito. */
+  const mexeuNaRolagem = useRef(false)
+  const rolagemNossa = useRef(false)
+
+  useEffect(() => {
+    const el = caixaRef.current
+    if (!el || mexeuNaRolagem.current) return
+    const alvo = centro - el.clientHeight / 2
+    if (alvo <= 0 || Math.abs(el.scrollTop - alvo) < 1) return
+    rolagemNossa.current = true
+    el.scrollTop = alvo
+  }, [centro])
+
   /** Marcas do eixo, em anos redondos dentro da janela visível. */
   const marcas = useMemo(() => {
     if (largura === 0) return []
@@ -460,6 +488,16 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         onPointerUp={aoSoltar}
         onPointerCancel={aoSoltar}
         onPointerLeave={() => setGuia(null)}
+        /* A rolagem que o efeito acima faz também dispara este evento. A
+           bandeira distingue as duas: sem ela, o próprio ajuste automático se
+           cancelaria na primeira vez que rodasse. */
+        onScroll={() => {
+          if (rolagemNossa.current) {
+            rolagemNossa.current = false
+            return
+          }
+          mexeuNaRolagem.current = true
+        }}
         onDoubleClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect()
           aplicarZoom(1 / 2, e.clientX - r.left)
