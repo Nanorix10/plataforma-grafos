@@ -1041,6 +1041,45 @@ margens que o navegador dá de graça a `p` e `h1..h6` (15px) desalinham o par e
 empurram a última linha. O primeiro teste caiu exatamente nessa e acusou um
 defeito que não existia.
 
+**12d. O trilho mostra o grafo enquanto o resumo é lido.**
+Coluna estreita à esquerda da folha, em `resumos/[slug]/Trilho.tsx`, com as
+seções do resumo (que são nós do mapa, decisão 12) e as arestas que saem daqui
+— os `[[wikilinks]]` do corpo, recuados sob a seção em que aparecem.
+
+A tese do produto é "resumos interligados", e até aqui a tela onde o aluno passa
+o dia mostrava o grafo só como lista de cartões no rodapé.
+
+**Ele não encosta na coluna de texto, e some antes de encostar.** A folha
+continua com os 920px e as margens da régua (decisão 11); o trilho ocupa o vão
+à esquerda e desaparece abaixo de 1340px de janela, onde esse vão acaba. A
+conta do ponto de corte está no `globals.css` — barra lateral (260) + trilho
+(128) + vão (24) + folha (920) = 1332. Quem mexer num desses números mexe no
+`@media` junto.
+
+**A armadilha, e ela quebra em silêncio:** o trilho acha o `<a>` do wikilink no
+texto pela POSIÇÃO, contando os links na ordem em que `renderizarWikilinks` os
+escreve. Não é por `id` porque gravar um mudaria também o HTML que o editor
+mostra, e o WYSIWYG (decisão 4) obriga os dois a serem o mesmo documento. Duas
+coisas desalinham essa contagem, e as duas existem no acervo:
+
+- wikilink que NÃO resolve vira `<span>`, não `<a>`, e não pode gastar índice;
+- wikilink DENTRO de um título vira `<a>` como qualquer outro, e gasta índice
+  sem virar item do trilho.
+
+`extrairTrilho` (em `lib/titulos.ts`, junto de `percorrer`, pelo mesmo motivo
+que obriga `extrairTitulos` e `ancorarTitulos` a andarem juntas) trata as duas.
+Quem mexer em `renderizarWikilinks` tem que conferir se a contagem ainda bate —
+o sintoma é o link errado acendendo no texto, e nada avisa.
+
+**12e. "Cai em" põe a decisão 9i na página do resumo.**
+`edital_topicos` sabe desde 24/08 em que provas cada resumo é cobrado, e a
+página nunca mostrou. As etiquetas vão no CABEÇALHO: quem estuda para uma prova
+decide pelo que cai nela, e essa decisão acontece antes de ler.
+
+Não são links — `/edital` não recebe filtro por prova, e etiqueta que não leva a
+lugar nenhum é pior que etiqueta que não clica. Somem quando o resumo não é
+cobrado por edital nenhum, que é a maior parte do acervo de `comum`.
+
 ## Imagem: feito em agosto/2026
 
 O site já exibe imagem. Colar (Ctrl+V), arrastar o arquivo e o botão da barra
