@@ -148,13 +148,49 @@ export type EventoEmLote = {
   ano_fim: number | null
   rotulo_data: string
   materia_slugs: string[]
+  /** null = evento sem resumo que o explique; é o padrão. */
+  resumo_id: string | null
 }
 
-/** Sem acento e em minúsculas, para casar "História" com `historia`. */
+/**
+ * Título normalizado e slug de cada resumo → id, para o quinto campo do lote.
+ *
+ * Quem monta é quem tem a lista: a tela usa os resumos que `admin/eventos` já
+ * carrega para o `<select>`, e o servidor monta o DELE, com a própria consulta.
+ * A função continua pura — ela recebe o mapa, nunca vai buscá-lo —, e é isso
+ * que permite ao servidor reanalisar o texto bruto sem confiar no navegador.
+ */
+export type ResumosPorNome = Map<string, string>
+
+export function mapearResumos(
+  resumos: { id: string; titulo: string; slug?: string }[]
+): ResumosPorNome {
+  const m: ResumosPorNome = new Map()
+  for (const r of resumos) {
+    m.set(normalizar(r.titulo), r.id)
+    if (r.slug) m.set(normalizar(r.slug), r.id)
+  }
+  return m
+}
+
+/**
+ * Sem acento, sem caixa, e com todo traço virando hífen simples.
+ *
+ * O acento e a caixa são para casar "História" com `historia`. O traço entrou
+ * junto com o quinto campo do lote: títulos de resumo trazem travessão —
+ * `Período regencial (1831–1840)`, `Congresso de Viena (1814–1815)` —, e
+ * ninguém digita travessão. Sem esta dobra, o autor escreveria o título certo,
+ * veria "Resumo desconhecido" e não teria como saber o que está errado, porque
+ * as duas strings são visualmente iguais.
+ *
+ * É a mesma tolerância que `INTERVALO` já dá ao ano, onde `–`, `—` e `-` valem
+ * a mesma coisa. Seguro para as matérias, cujos slugs não têm traço nenhum.
+ */
 function normalizar(t: string) {
   return t
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    .replace(/[‐-―−]/g, '-')
     .trim()
     .toLowerCase()
 }
@@ -204,17 +240,29 @@ function lerPeriodo(campo: string): { inicio: number; fim: number | null } | nul
  * 1789        | Queda da Bastilha | historia
  * 1453-1492   | Renascimento      | História, Arte, Literatura
  * -500        | Grécia clássica   | filosofia | séc. V a.C.
+ * 1840        | Golpe da Maioridade | historia |  | Período regencial (1831–1840)
  * ```
  *
  * Os três primeiros campos são obrigatórios; o quarto é o `rotulo_data`, para
- * quando a data escrita não cabe num inteiro ("séc. XV", "14/07/1789").
+ * quando a data escrita não cabe num inteiro ("séc. XV", "14/07/1789"); o
+ * quinto é o RESUMO que explica o evento, por título ou por slug.
+ *
+ * O quinto campo existe porque sem ele o lote gravava `resumo_id` nulo para a
+ * remessa inteira, e ligar cada evento ao seu resumo era abrir um por um num
+ * `<select>` de duzentas e trinta opções sem busca. Ele é o que faz o eixo
+ * virar porta de entrada para o acervo em vez de uma lista solta.
+ *
+ * Nome desconhecido é ERRO, nunca silêncio: até aqui um quinto campo era
+ * ignorado sem aviso, que é a mesma armadilha do ano de fim que engolia
+ * `séc XV` e gravava um ponto.
  *
  * Função pura, sem rede: é o que permite a tela mostrar o resultado enquanto o
  * autor digita, e é o que deixa o servidor reanalisar tudo sem confiar no que
  * o navegador mandou.
  */
 export function analisarLinhaDeEvento(
-  linha: string
+  linha: string,
+  resumos?: ResumosPorNome
 ): { ok: true; evento: EventoEmLote } | { ok: false; erro: string } {
   const campos = linha.split('|').map((c) => c.trim())
 
@@ -247,6 +295,23 @@ export function analisarLinhaDeEvento(
     if (!slugs.includes(slug)) slugs.push(slug)
   }
 
+  /* O quinto campo é opcional, mas quando vem preenchido tem de casar. Sem o
+     mapa (a tela ainda não carregou os resumos), o campo é aceito e ignorado —
+     senão a pré-visualização acusaria erro em linha boa enquanto os dados não
+     chegam. Quem grava de verdade é o servidor, e lá o mapa existe sempre. */
+  const pedido = campos[4]?.trim() ?? ''
+  let resumoId: string | null = null
+  if (pedido && resumos) {
+    const achado = resumos.get(normalizar(pedido))
+    if (!achado) {
+      return {
+        ok: false,
+        erro: `Resumo desconhecido: "${pedido}". Use o título exato ou o slug.`,
+      }
+    }
+    resumoId = achado
+  }
+
   return {
     ok: true,
     evento: {
@@ -255,6 +320,7 @@ export function analisarLinhaDeEvento(
       ano_fim: periodo.fim,
       rotulo_data: campos[3] ?? '',
       materia_slugs: slugs,
+      resumo_id: resumoId,
     },
   }
 }

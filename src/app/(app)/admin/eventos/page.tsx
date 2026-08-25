@@ -11,7 +11,9 @@ export default async function AdminEventosPage() {
 
   const [eventos, { data: resumos }] = await Promise.all([
     getEventos(),
-    supabase.from('resumos').select('id, titulo, materia_slug').order('titulo'),
+    // o `slug` entra por causa do quinto campo do lote: lá o resumo é indicado
+    // por título OU por slug, e o slug é o que não muda quando o autor renomeia
+    supabase.from('resumos').select('id, titulo, slug, materia_slug').order('titulo'),
   ])
 
   return (

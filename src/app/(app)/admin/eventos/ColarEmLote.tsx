@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import { MATERIAS } from '@/lib/materias'
-import { analisarLinhaDeEvento, rotuloDoEvento } from '@/lib/tempo'
+import { analisarLinhaDeEvento, mapearResumos, rotuloDoEvento } from '@/lib/tempo'
 import BotaoEnviar from '@/components/BotaoEnviar'
 import { salvarEventosEmLote } from './actions'
 
 const EXEMPLO = `1789 | Queda da Bastilha | historia
 1453-1492 | Renascimento | História, Arte, Literatura
--500--300 | Grécia clássica | filosofia | séc. V–III a.C.`
+-500--300 | Grécia clássica | filosofia | séc. V–III a.C.
+1840 | Golpe da Maioridade | historia |  | Período regencial (1831–1840)`
 
 /**
  * Cadastro de vários eventos de uma vez.
@@ -34,10 +35,21 @@ const EXEMPLO = `1789 | Queda da Bastilha | historia
  * tabela. Como a função é a mesma (`analisarLinhaDeEvento`, no lado puro de
  * `lib/tempo.ts`), os dois lados nunca discordam.
  */
-export default function ColarEmLote() {
+export default function ColarEmLote({
+  resumos,
+}: {
+  resumos: { id: string; titulo: string; slug: string }[]
+}) {
   const [texto, setTexto] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [recado, setRecado] = useState<string | null>(null)
+
+  const porNome = useMemo(() => mapearResumos(resumos), [resumos])
+  /** id → título, para a pré-visualização dizer COM QUE o quinto campo casou. */
+  const tituloPorId = useMemo(
+    () => new Map(resumos.map((r) => [r.id, r.titulo])),
+    [resumos]
+  )
 
   /* Cada linha analisada, com o número que o autor vê. As linhas em branco
      somem daqui: elas são respiro no meio de uma lista colada, e numerá-las
@@ -48,8 +60,8 @@ export default function ColarEmLote() {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)
-      .map((linha, i) => ({ n: i + 1, linha, r: analisarLinhaDeEvento(linha) }))
-  }, [texto])
+      .map((linha, i) => ({ n: i + 1, linha, r: analisarLinhaDeEvento(linha, porNome) }))
+  }, [texto, porNome])
 
   const comErro = analisadas.filter((a) => !a.r.ok).length
   const validas = analisadas.length - comErro
@@ -71,12 +83,15 @@ export default function ColarEmLote() {
         </label>
         <p id="lote-ajuda" className="text-[11.5px] text-[var(--ink-faint)] mb-2">
           <code className="font-[family-name:var(--fonte-mono)]">
-            ano | título | matérias | data escrita
+            ano | título | matérias | data escrita | resumo
           </code>
-          {' — '}o quarto campo é opcional. O ano aceita <code>1789</code>,{' '}
+          {' — '}os dois últimos campos são opcionais. O ano aceita <code>1789</code>,{' '}
           <code>-350</code>, <code>350 a.C.</code> e intervalos como{' '}
           <code>1453-1492</code>. As matérias vão separadas por vírgula, pelo nome ou
-          pelo slug.
+          pelo slug. O <strong>resumo</strong> é o que explica o evento, pelo título
+          exato ou pelo slug — é ele que faz aparecer o link{' '}
+          <em>Abrir o resumo</em> na linha do tempo. Para pular a data escrita e
+          indicar só o resumo, deixe o quarto campo vazio entre duas barras.
         </p>
         <textarea
           id="lote-linhas"
@@ -138,6 +153,16 @@ export default function ColarEmLote() {
                         />
                       ))}
                     </span>
+                    {/* o TÍTULO do resumo casado, pelo mesmo motivo das cores
+                        acima: um slug inexistente é recusado, mas um slug
+                        válido e trocado passa — e ver o nome do que casou é o
+                        que denuncia antes de o evento entrar no banco */}
+                    {r.evento.resumo_id && (
+                      <span className="ml-2 text-[var(--ink-dim)]">
+                        {'→ '}
+                        {tituloPorId.get(r.evento.resumo_id) ?? r.evento.resumo_id}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <>

@@ -5,7 +5,7 @@ import { getSessao } from '@/lib/sessao'
 // `lerAno` morava aqui. Foi para o lado puro porque a pré-visualização do lote
 // roda no navegador e precisa da mesma leitura de ano — duas cópias
 // discordariam no primeiro formato exótico.
-import { analisarLinhaDeEvento, lerAno, type EventoEmLote } from '@/lib/tempo'
+import { analisarLinhaDeEvento, lerAno, mapearResumos, type EventoEmLote } from '@/lib/tempo'
 
 async function exigirAdmin() {
   const { supabase, userId, isAdmin } = await getSessao()
@@ -18,12 +18,34 @@ export async function salvarEvento(formData: FormData) {
 
   const id = String(formData.get('id') ?? '')
   const titulo = String(formData.get('titulo') ?? '').trim()
-  const anoInicio = lerAno(String(formData.get('ano_inicio') ?? ''))
-  const anoFim = lerAno(String(formData.get('ano_fim') ?? ''))
+
+  /* As strings CRUAS ficam guardadas, e não só o que `lerAno` devolveu.
+     `lerAno` responde `null` para campo vazio E para valor que ele não
+     entendeu, e os dois casos são coisas opostas: vazio no ano de fim
+     significa "evento pontual", e inválido significa "o autor tentou dizer
+     alguma coisa e eu não li". Sem a string crua para distinguir, digitar
+     `séc XV` no ano de fim gravava um ponto em silêncio, onde devia haver uma
+     barra — e o erro só aparecia olhando o eixo, dias depois. */
+  const anoInicioBruto = String(formData.get('ano_inicio') ?? '').trim()
+  const anoFimBruto = String(formData.get('ano_fim') ?? '').trim()
+  const anoInicio = lerAno(anoInicioBruto)
+  const anoFim = lerAno(anoFimBruto)
 
   if (!titulo) return { ok: false as const, erro: 'O evento precisa de um título.' }
-  if (anoInicio === null) {
+  if (!anoInicioBruto) {
     return { ok: false as const, erro: 'O ano de início é obrigatório (use -350 ou 350 a.C.).' }
+  }
+  if (anoInicio === null) {
+    return {
+      ok: false as const,
+      erro: `Não entendi o ano de início "${anoInicioBruto}". Use 1789, -350 ou 350 a.C.`,
+    }
+  }
+  if (anoFimBruto && anoFim === null) {
+    return {
+      ok: false as const,
+      erro: `Não entendi o ano de fim "${anoFimBruto}". Use 1789, -350 ou 350 a.C., ou deixe vazio para um evento de data única.`,
+    }
   }
   if (anoFim !== null && anoFim < anoInicio) {
     return { ok: false as const, erro: 'O ano de fim não pode ser anterior ao de início.' }
@@ -101,11 +123,21 @@ export async function salvarEventosEmLote(formData: FormData) {
     return { ok: false as const, erro: 'Cole pelo menos uma linha.' }
   }
 
+  /* O mapa de resumos é montado AQUI, com a consulta do servidor, e não vem do
+     navegador — pela mesma razão que o texto é reanalisado: aceitar um id
+     mandado pelo cliente deixaria qualquer um apontar um evento para qualquer
+     linha de `resumos`. A tela monta o mapa dela só para pré-visualizar. */
+  const { data: resumos, error: erroResumos } = await supabase
+    .from('resumos')
+    .select('id, titulo, slug')
+  if (erroResumos) return { ok: false as const, erro: erroResumos.message }
+  const porNome = mapearResumos(resumos ?? [])
+
   const prontos: EventoEmLote[] = []
   const recusadas: string[] = []
 
   linhas.forEach((linha, i) => {
-    const r = analisarLinhaDeEvento(linha)
+    const r = analisarLinhaDeEvento(linha, porNome)
     // numera pela posição na LISTA LIMPA, que é a que o autor vê na
     // pré-visualização — contar as linhas em branco apontaria para o lugar
     // errado justamente na hora de consertar
@@ -117,9 +149,11 @@ export async function salvarEventosEmLote(formData: FormData) {
     return { ok: false as const, erro: recusadas.join('\n') }
   }
 
-  const { error } = await supabase.from('eventos').insert(
-    prontos.map((e) => ({ ...e, resumo_id: null, descricao: '' }))
-  )
+  // `resumo_id` já vem resolvido de `analisarLinhaDeEvento`; a `descricao`
+  // continua vazia, porque escrevê-la seria inventar texto do autor
+  const { error } = await supabase
+    .from('eventos')
+    .insert(prontos.map((e) => ({ ...e, descricao: '' })))
   if (error) return { ok: false as const, erro: error.message }
 
   revalidatePath('/admin/eventos')

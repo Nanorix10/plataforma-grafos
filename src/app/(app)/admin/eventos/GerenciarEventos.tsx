@@ -14,7 +14,7 @@ import BotaoEnviar from '@/components/BotaoEnviar'
 import ColarEmLote from './ColarEmLote'
 import { salvarEvento, excluirEvento } from './actions'
 
-type ResumoOpcao = { id: string; titulo: string; materia_slug: string }
+type ResumoOpcao = { id: string; titulo: string; slug: string; materia_slug: string }
 
 /** Campos vazios = formulário de evento novo. */
 type Rascunho = {
@@ -151,7 +151,7 @@ export default function GerenciarEventos({
         </div>
 
         <div id="painel-lote" role="tabpanel" aria-labelledby="aba-lote" hidden={modo !== 'lote'}>
-          <ColarEmLote />
+          <ColarEmLote resumos={resumos} />
         </div>
 
       {/* ---- formulário ---- */}

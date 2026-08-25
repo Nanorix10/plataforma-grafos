@@ -297,9 +297,22 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
       lado: Lado
       faixa: number
     }[] = []
-    let lado: Lado = 'cima'
+    /* O lado sai do ÍNDICE em `visiveis`, e não de um contador que avança
+       dentro do laço. A diferença aparece ao navegar: o descarte do que está
+       fora da tela (o `continue` logo abaixo) acontece ANTES de o cartão ser
+       empilhado, então um contador só alternaria entre os DESENHADOS — e o lado
+       de cada evento passaria a depender de quais vizinhos calharam de estar na
+       moldura. Arrastar o eixo fazia os cartões pularem de cima para baixo.
 
-    for (const e of visiveis) {
+       `visiveis` é a lista cronológica já filtrada e não muda com o zoom nem
+       com o arrasto, então o lado fica estável. Ele muda só quando o filtro de
+       matéria muda, que é quando deve mudar mesmo. E a alternância continua
+       valendo entre vizinhos na tela: quem está visível é um trecho contíguo
+       da lista, então os índices seguem alternando a paridade. */
+    const ladoDoIndice = (i: number): Lado => (i % 2 === 0 ? 'cima' : 'baixo')
+
+    for (const [i, e] of visiveis.entries()) {
+      const lado = ladoDoIndice(i)
       const x1 = escala(e.ano_inicio)
       const periodo = e.ano_fim !== null
       const x2 = periodo ? escala(e.ano_fim as number) : x1
@@ -322,7 +335,6 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
       fim[lado][faixa] = extensao
 
       saida.push({ e, x1, x2, xCartao, lado, faixa })
-      lado = lado === 'cima' ? 'baixo' : 'cima'
     }
 
     return {
