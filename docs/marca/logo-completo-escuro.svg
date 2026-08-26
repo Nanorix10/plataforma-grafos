@@ -1,0 +1,36 @@
+<svg viewBox="0 0 620 160" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo completo (badge + wordmark) — modo escuro, para uso sobre a
+       faixa #1A1822 ou fundos escuros em geral. -->
+
+  <!-- ── badge (sem fundo circular) ── -->
+  <g transform="translate(20,20) scale(0.6)">
+    <g fill="none" stroke="#8F86D9" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round">
+      <path d="M100,45 L147.6,72.5"/>
+      <path d="M147.6,72.5 L147.6,127.5"/>
+      <path d="M147.6,127.5 L100,155"/>
+      <path d="M100,155 L52.4,127.5"/>
+      <path d="M52.4,127.5 L52.4,72.5"/>
+      <path d="M52.4,72.5 L100,45"/>
+    </g>
+    <g stroke="#8F86D9" stroke-linecap="round" fill="none">
+      <path d="M100,100 L100,45"      stroke-width="4"/>
+      <path d="M100,100 L147.6,72.5"  stroke-width="3.2" stroke-dasharray="6 5"/>
+      <path d="M100,100 L147.6,127.5" stroke-width="2.4" stroke-dasharray="1.2 5"/>
+      <path d="M100,100 L100,155"     stroke-width="4"/>
+      <path d="M100,100 L52.4,127.5"  stroke-width="3.2" stroke-dasharray="6 5"/>
+      <path d="M100,100 L52.4,72.5"   stroke-width="2.4" stroke-dasharray="1.2 5"/>
+    </g>
+    <g>
+      <circle cx="100.0" cy="45.0" r="11" fill="#C2334D"/>
+      <circle cx="147.6" cy="72.5" r="11" fill="#1F5F9E"/>
+      <circle cx="147.6" cy="127.5" r="11" fill="#3F7848"/>
+      <circle cx="100.0" cy="155.0" r="11" fill="#9E2E70"/>
+      <circle cx="52.4" cy="127.5" r="11" fill="#A65224"/>
+      <circle cx="52.4" cy="72.5" r="11" fill="#4A5C8C"/>
+    </g>
+    <circle cx="100" cy="100" r="15" fill="#8F86D9"/>
+  </g>
+
+  <!-- ── wordmark ── -->
+  <text x="165" y="94" font-family="Gabarito, 'Gabarito Fallback', Inter, sans-serif" font-weight="500" font-size="42" fill="#FCFAF6">Plataforma Grafos</text>
+</svg>

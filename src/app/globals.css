@@ -110,6 +110,12 @@
      O lilás do escuro ficaria lavado sobre branco, então o claro usa o mesmo
      matiz puxado para baixo, até passar de 4,5:1 sobre `--paper`. */
   --acento: light-dark(#5B4BC4, #9184D9);
+  /* Opacidade do anel externo do badge da marca (`components/Marca.tsx`). Os
+     dois SVGs de origem em `docs/marca/` diferem nela — 0,35 no claro, 0,5 no
+     escuro —, e o anel precisa da mão mais pesada no escuro para não sumir.
+     É a única coisa além do acento que separava os dois arquivos, então virou
+     token e o par de arquivos não virou par de componentes. */
+  --marca-anel: light-dark(0.35, 0.5);
   --acento-claro: light-dark(#3F32A0, #D2CEFD); /* o realce do hover: escurece no claro, clareia no escuro */
   --acento-fraco: light-dark(rgba(91, 75, 196, 0.10), rgba(145, 132, 217, 0.14));
 
