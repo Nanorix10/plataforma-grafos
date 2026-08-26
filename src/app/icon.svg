@@ -1,35 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 30 140 140">
   <!--
-    Marca de aba, NÃO a logo. O `Simbolo` de `components/Marca.tsx` continua
-    devolvendo null, esperando o desenho do autor.
+    A marca de aba — a REDUÇÃO da logo, não a logo.
 
-    Segue as três regras que o próprio Marca.tsx escreveu para este arquivo:
+    A logo (`components/Marca.tsx`, originais em `docs/marca/`) é o hexágono de
+    seis nós de matéria com o nó de acento no centro, e seis raios em três
+    espécies de aresta: sólida (contém), tracejada (cita), pontilhada
+    (relaciona). Isto aqui é desenhado com 16px de lado, onde cada unidade do
+    quadro de 140 vale 0,11px. Duas coisas não sobrevivem a isso e por isso
+    saíram:
 
-    1. **Uma cor só, cravada, e nada de `currentColor`.** Na aba do navegador
-       não existe texto do qual herdar. O tom é o meio-caminho entre os dois
-       acentos do site (#5B4BC4 no claro, #9184D9 no escuro), então ele tem
-       massa suficiente para ler tanto na aba clara quanto na escura — nenhum
-       dos dois extremos consegue isso sozinho.
-    2. **Forma cheia.** Isto é desenhado com 16px de lado; contorno fino
-       viraria mancha.
-    3. **Sem `<text>`.** Fonte dentro de SVG depende de a fonte existir na
-       máquina de quem lê.
+    1. **O anel externo.** A 16px ele sairia com 0,23px — véu, não traço. É a
+       primeira baixa de qualquer redução, e o que ele fazia (fechar a forma)
+       o próprio hexágono de nós já faz.
+    2. **A distinção entre os três traçados.** O ponto do pontilhado sairia
+       com 0,14px. Três padrões de traço a 16px não leem como três espécies:
+       leem como sujeira. Os raios ficaram sólidos e de espessura única.
 
-    O desenho é o grafo, que é o nome da empresa: três nós e duas arestas, com
-    a base ABERTA de propósito. Triângulo fechado leria como um símbolo de
-    "portanto"; a base aberta lê como coisa que se ramifica, que é o que o
-    produto faz.
+    O que fica é o que RECONHECE: o hexágono, as seis cores de matéria e o nó
+    de acento no meio. A 16px o trabalho é ser reconhecida, não ser lida — a
+    leitura acontece no cabeçalho, onde a marca inteira cabe.
 
-    Substitui o `favicon.ico` de 25 KB que veio do template do Next e que
-    anunciava o site como "projeto Next recém-criado" na aba.
+    Os nós foram engrossados (r 11 → 15) e o traço também, pela mesma regra que
+    o `traco()` do `Marca.tsx` aplica: quadro menor pede traço mais pesado. É o
+    que o material de marca do autor prescreve.
+
+    O acento vai CRAVADO, e no meio-caminho entre os dois tons do site
+    (#5B4BC4 no claro, #9184D9 no escuro): na aba do navegador não existe texto
+    do qual herdar cor, e nenhum dos dois extremos lê bem nas duas abas. Este
+    valor foi herdado da marca de aba anterior, onde já tinha sido escolhido
+    por esse motivo.
+
+    As cores das matérias são as mesmas da logo, sem alteração.
   -->
-  <g fill="none" stroke="#766ACE" stroke-width="2.6" stroke-linecap="round">
-    <path d="M8.5 22 L16 8.5" />
-    <path d="M16 8.5 L24.5 19.5" />
+  <g stroke="#766ACE" stroke-width="8" stroke-linecap="round" fill="none">
+    <path d="M100,100 L100,45" />
+    <path d="M100,100 L147.6,72.5" />
+    <path d="M100,100 L147.6,127.5" />
+    <path d="M100,100 L100,155" />
+    <path d="M100,100 L52.4,127.5" />
+    <path d="M100,100 L52.4,72.5" />
   </g>
-  <g fill="#766ACE">
-    <circle cx="16" cy="8.5" r="4.6" />
-    <circle cx="8.5" cy="22" r="4.2" />
-    <circle cx="24.5" cy="19.5" r="4.2" />
+  <g>
+    <circle cx="100.0" cy="45.0" r="15" fill="#C2334D" />
+    <circle cx="147.6" cy="72.5" r="15" fill="#1F5F9E" />
+    <circle cx="147.6" cy="127.5" r="15" fill="#3F7848" />
+    <circle cx="100.0" cy="155.0" r="15" fill="#9E2E70" />
+    <circle cx="52.4" cy="127.5" r="15" fill="#A65224" />
+    <circle cx="52.4" cy="72.5" r="15" fill="#4A5C8C" />
   </g>
+  <circle cx="100" cy="100" r="20" fill="#766ACE" />
 </svg>
