@@ -32,8 +32,25 @@ export type Plano = {
   processos: string[]
   /** Preço mensal em reais. `null` enquanto o Leandro não decidir. */
   preco: number | null
-  /** O cartão em destaque na landing. No máximo um. */
-  destaque?: boolean
+  /**
+   * O selo do cartão em destaque, **e o texto dele**. No máximo um plano tem.
+   *
+   * É um campo só, e não um `destaque: boolean` mais um texto escrito no JSX,
+   * porque era assim que estava e o texto tinha divergido do fato: a landing e
+   * a página de planos escreviam **"Mais escolhido"** à mão, cada uma na sua
+   * cópia. Ninguém escolheu nada — não há um aluno pagante sequer. Era uma
+   * afirmação de popularidade sem dado nenhum atrás, numa página cujo
+   * argumento inteiro é que nada aqui é inventado (o `Depoimentos.tsx` devolve
+   * `null` em vez de mostrar depoimento de exemplo, pelo mesmo motivo).
+   *
+   * "Mais completo" é comparação entre os três planos desta mesma página, e a
+   * tabela de cobertura em `/planos` a comprova. Não depende de aluno nenhum
+   * para ser verdade.
+   *
+   * O selo volta a poder falar de escolha no dia em que houver escolha para
+   * contar — e muda aqui, num lugar só.
+   */
+  selo?: string
   /**
    * Para quem este plano serve, em uma frase que o aluno reconheça.
    *
@@ -56,7 +73,7 @@ export const PLANOS: Record<string, Plano> = {
     processos: ['passe', 'pas-uem', 'pas-unb', 'comum'],
     preco: null,
     paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.',
-    destaque: true,
+    selo: 'Mais completo',
   },
   pas: {
     nome: 'Acesso PAS',
@@ -135,3 +152,38 @@ export function precoLegivel(preco: number | null): string {
   if (preco === null) return 'A definir'
   return preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
+
+/**
+ * Se já dá para falar de preço na vitrine.
+ *
+ * Derivado, e não uma chave escrita à mão, porque um interruptor separado do
+ * `preco` é a coisa que fica ligada depois que o fato mudou.
+ */
+export const PRECOS_ANUNCIADOS = PLANOS_A_VENDA.every((p) => p.preco !== null)
+
+/**
+ * O que a vitrine diz **no lugar** do preço, enquanto não há preço.
+ *
+ * O `precoLegivel` já resolvia o cartão isolado ("A definir" em vez de um
+ * `R$ 00` de mentira). O que ele não resolve é a seção: três cartões repetindo
+ * "A definir" e um botão "Criar conta" deixavam o visitante sem resposta
+ * justamente no ponto em que ele decide — e as três não-respostas juntas leem
+ * como site inacabado, não como produto que ainda não abriu.
+ *
+ * As três frases abaixo não inventam nada e não prometem nada. Cada uma já era
+ * verdade escrita em outro lugar do repositório; o que faltava era estarem no
+ * momento da decisão, e não coladas embaixo:
+ *
+ * - o preço não decidido é o `preco: null` daqui de cima;
+ * - a conta que nasce sem acesso é o plano `nenhum` (decisão 1b do
+ *   `CONTEXTO.md`);
+ * - a liberação manual é a primeira resposta do `lib/faq.ts`, que hoje só
+ *   aparece se o visitante abrir o acordeão no fim da página.
+ *
+ * Some sozinho quando o preço entrar. Nenhuma tela precisa lembrar de o tirar.
+ */
+export const AVISO_SEM_PRECO = {
+  titulo: 'Os preços ainda não foram anunciados.',
+  texto:
+    'Criar conta agora é de graça e não gera cobrança: ela nasce sem acesso, e a liberação é feita por nós depois do pagamento.',
+} as const
