@@ -38,15 +38,16 @@
  * reconhece pelo nome e serve sozinho. (O `favicon.ico` do template do Next
  * saiu quando ele entrou.)
  *
- * **Atenção — hoje ele desenha OUTRA marca.** O `icon.svg` traz três nós e
- * duas arestas com a base aberta, de antes de a logo existir; a logo é o
- * hexágono de sete nós. São dois símbolos para o mesmo produto, um na aba e
- * outro no cabeçalho. Alinhar os dois está pendente, e é decisão do autor:
- * o badge tem sete nós e três traçados de aresta, o que a 16px empasta —
- * então não é copiar, é desenhar a redução.
+ * Desde 26/08 ele desenha a **redução** desta marca: o mesmo hexágono, sem o
+ * anel externo e com os seis raios sólidos. Não é preguiça de copiar — a 16px
+ * o anel sairia com 0,23px e o ponto do pontilhado com 0,14px, e três padrões
+ * de traço nesse tamanho leem como sujeira, não como três espécies. O que fica
+ * é o que reconhece: o hexágono, as seis cores e o acento no meio. O arquivo
+ * explica cada corte.
  *
  * As regras do favicon são outras: 16 a 32px de lado, forma cheia, uma cor
  * cravada e nada de `currentColor` — na aba não existe texto do qual herdar.
+ * Por isso o acento lá é o meio-caminho `#766ACE`, e não o token.
  */
 /**
  * Os seis nós do hexágono, na ordem do desenho do autor e nas cores das
@@ -78,14 +79,70 @@ const NOS_DA_MARCA: [number, number, string][] = [
  * A marca desenha o modelo de dados — é a mesma tese do `marca/Grafo.tsx`, de
  * que a identidade cresce do que o produto é em vez de ser somada por cima.
  */
-const RAIOS: [number, number, number, string][] = [
-  [100, 45, 4, ''],
-  [147.6, 72.5, 3.2, '6 5'],
-  [147.6, 127.5, 2.4, '1.2 5'],
-  [100, 155, 4, ''],
-  [52.4, 127.5, 3.2, '6 5'],
-  [52.4, 72.5, 2.4, '1.2 5'],
+const RAIOS: [number, number, number, 'solido' | 'tracejado' | 'pontilhado'][] = [
+  [100, 45, 4, 'solido'],
+  [147.6, 72.5, 3.2, 'tracejado'],
+  [147.6, 127.5, 2.4, 'pontilhado'],
+  [100, 155, 4, 'solido'],
+  [52.4, 127.5, 3.2, 'tracejado'],
+  [52.4, 72.5, 2.4, 'pontilhado'],
 ]
+
+/**
+ * Espessura de traço corrigida para o tamanho em que o símbolo vai ser
+ * desenhado. **É o que faz a marca sobreviver ao cabeçalho.**
+ *
+ * O desenho vive num quadro de 140 unidades, então a 28px cada unidade vale
+ * 0,2px: o anel de 2 unidades sai com 0,4px e o ponto do raio pontilhado com
+ * 0,24px. Sub-pixel vira véu, não traço — e as três espécies de aresta, que são
+ * a ideia inteira da marca, somem. Aumentar o símbolo não resolve isso sozinho:
+ * para o anel chegar a 1px o símbolo precisaria de **70px**, que não é tamanho
+ * de cabeçalho.
+ *
+ * Então o traço engrossa quando o quadro encolhe. Não é invenção: é o que o
+ * material de marca do próprio autor prescreve ao dizer que o arquivo de 16–32px
+ * "tem traço reforçado e não empasta". A GEOMETRIA não muda — nós, posições e
+ * proporções entre as três espessuras seguem as do arquivo original.
+ *
+ * `alvoPx` é a espessura mínima desejada em pixels. Acima de ~70px a conta se
+ * desliga sozinha (o `max` devolve o valor original) e o desenho volta a ser
+ * exatamente o exportado.
+ */
+function traco(lado: number, unidadesOriginais: number, alvoPx: number) {
+  const unidadesPorPixel = 140 / lado
+  return Math.max(unidadesOriginais, unidadesPorPixel * alvoPx)
+}
+
+/**
+ * Os alvos em pixels, conferidos OLHANDO — rasterizando o símbolo a 28px e
+ * ampliando, não estimando.
+ *
+ * A primeira tentativa mirou mais alto (1,6px no raio sólido) e ficou pior que
+ * o problema: o sólido virou uma barra vertical atravessando o centro, e o
+ * traçado esticou tanto que o primeiro risco cobria 60% do raio e o resto
+ * sumia — os raios tracejados viravam tocos que não chegavam nos nós.
+ *
+ * Estes valores foram escolhidos contra três alternativas renderizadas lado a
+ * lado: raios uniformes (legível, mas perde a hierarquia de peso, que é parte
+ * do desenho) e sem raios nenhum (limpo, mas vira um anel de pontos e perde o
+ * eixo, que é a ideia). Estes mantêm as três espessuras E os três traçados
+ * distinguíveis, sem nenhum dominar.
+ */
+const ALVO_PX = {
+  anel: 1.0,
+  solido: 1.1,
+  tracejado: 0.9,
+  pontilhado: 0.75,
+  /** [risco, vão] em px. O vão é curto para caber 3 repetições nos 55 do raio. */
+  riscoTracejado: [2.0, 1.6],
+  riscoPontilhado: [0.45, 1.8],
+} as const
+
+/** O padrão do arquivo original, em unidades do quadro — o piso do traçado. */
+const RISCO_ORIGINAL = {
+  tracejado: [6, 5],
+  pontilhado: [1.2, 5],
+} as const
 
 /**
  * O badge da marca, desenhado pelo autor em `docs/marca/`.
@@ -106,6 +163,23 @@ const RAIOS: [number, number, number, string][] = [
  * passa a acompanhar o acento se ele mudar, em vez de discordar dele.
  */
 function Simbolo({ lado }: { lado: number }) {
+  /* O traçado some pelo mesmo motivo que o traço fino: o risco e o vão são
+     medidos em unidades do quadro, e a 28px cada unidade vale 0,2px. Aqui eles
+     passam a ser medidos em pixels do resultado. */
+  const upp = 140 / lado
+  /* O `max` contra o padrão do arquivo é o que faz isto ser CORREÇÃO e não
+     substituição: abaixo de ~70px o alvo em pixels ganha e o traçado sobrevive;
+     acima, o original ganha e o desenho volta a ser o exportado. Sem ele, um
+     símbolo grande (o `apple-icon`, de 132px) recebia riscos calibrados para
+     28px — dezenas de traços miúdos que se fundiam de volta numa linha sólida,
+     exatamente o defeito que a correção existe para evitar. */
+  const traçado = (
+    alvo: readonly [number, number],
+    original: readonly [number, number]
+  ) => `${Math.max(original[0], alvo[0] * upp)} ${Math.max(original[1], alvo[1] * upp)}`
+  const tracejado = traçado(ALVO_PX.riscoTracejado, RISCO_ORIGINAL.tracejado)
+  const pontilhado = traçado(ALVO_PX.riscoPontilhado, RISCO_ORIGINAL.pontilhado)
+
   return (
     <svg
       /* O desenho vive em 0–200; este recorte é o conteúdo real (34–166 no
@@ -127,7 +201,7 @@ function Simbolo({ lado }: { lado: number }) {
         fill="none"
         stroke="var(--acento)"
         strokeOpacity="var(--marca-anel)"
-        strokeWidth="2"
+        strokeWidth={traco(lado, 2, ALVO_PX.anel)}
         strokeLinecap="round"
       >
         <path d="M100,45 L147.6,72.5" />
@@ -139,12 +213,18 @@ function Simbolo({ lado }: { lado: number }) {
       </g>
 
       <g stroke="var(--acento)" strokeLinecap="round" fill="none">
-        {RAIOS.map(([x, y, largura, traco]) => (
+        {RAIOS.map(([x, y, largura, especie]) => (
           <path
             key={`${x}-${y}`}
             d={`M100,100 L${x},${y}`}
-            strokeWidth={largura}
-            strokeDasharray={traco || undefined}
+            /* A hierarquia do arquivo (4 / 3,2 / 2,4) vira 1,1 / 0,9 / 0,75px:
+               a sólida continua a mais pesada e a pontilhada a mais leve, que
+               é o que distingue as três espécies quando o traçado já não se
+               distingue sozinho. */
+            strokeWidth={traco(lado, largura, ALVO_PX[especie])}
+            strokeDasharray={
+              especie === 'tracejado' ? tracejado : especie === 'pontilhado' ? pontilhado : undefined
+            }
           />
         ))}
       </g>
@@ -160,11 +240,27 @@ function Simbolo({ lado }: { lado: number }) {
   )
 }
 
+/**
+ * O símbolo é maior que a altura do texto, de propósito.
+ *
+ * Os valores antigos (17 a 22px) casavam o símbolo com a caixa da letra, que é
+ * o que se faz quando não HÁ símbolo e o número é só um espaço reservado. Marca
+ * não segue a altura do texto: ela é o elemento que o olho pega primeiro, e o
+ * badge aqui carrega sete nós — a essa escala, casado com a linha, cada nó
+ * saía com menos de 3px.
+ *
+ * Ficaram em ~1,85× o corpo do texto. É o que dá aos nós 4 a 5px de diâmetro,
+ * onde as cores das matérias passam a se distinguir umas das outras em vez de
+ * virarem uma fileira de pontos escuros.
+ *
+ * **Mexer aqui não desacerta o traço:** o `traco()` lê o `lado` e recalcula
+ * sozinho. Foi para isso que ele existe.
+ */
 const TAMANHOS = {
-  peq: { texto: 'text-[14px]', simbolo: 17 },
-  medio: { texto: 'text-[15px]', simbolo: 18 },
-  grande: { texto: 'text-[17px]', simbolo: 21 },
-  landing: { texto: 'text-[18px]', simbolo: 22 },
+  peq: { texto: 'text-[14px]', simbolo: 26 },
+  medio: { texto: 'text-[15px]', simbolo: 28 },
+  grande: { texto: 'text-[17px]', simbolo: 32 },
+  landing: { texto: 'text-[18px]', simbolo: 34 },
 } as const
 
 export default function Marca({
