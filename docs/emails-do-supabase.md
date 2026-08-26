@@ -79,12 +79,40 @@ Trocando `TIPO` conforme o modelo:
 |---|---|---|
 | Confirm signup | `signup` | `/resumos` |
 | Change Email Address | `email_change` | `/conta` |
-| Reset Password | `recovery` | `/conta` |
+| Reset Password | `recovery` | `/nova-senha` |
 
-(O modelo de recuperação de senha está aqui para o dia em que a tela de
-"esqueci minha senha" existir. Hoje ela **não existe**: `/login` só entra e
-cadastra, e quem esquece a senha ainda depende do Ronny. É a última peça de
-suporte manual que sobrou nesta área.)
+**A tela de "esqueci minha senha" existe desde 26/08**, e com ela caiu a última
+peça de suporte manual desta área. O caminho é:
+
+1. `/login` → "Esqueci minha senha" (ao lado do rótulo do campo, só no modo de
+   entrar).
+2. `/recuperar` chama `resetPasswordForEmail` **do navegador**, com
+   `redirectTo` apontando para `/auth/confirmar?next=/nova-senha`. É do
+   navegador porque o cliente do `@supabase/ssr` usa PKCE: ele guarda um
+   verificador em cookie, e é ele que faz o `code` do link casar depois.
+3. O link cai em `app/auth/confirmar/route.ts` — a mesma rota das outras duas
+   confirmações, sem nenhuma mudança —, que troca o código por sessão, grava os
+   cookies e redireciona.
+4. `/nova-senha` pede a senha nova e a repetição. Não pede a senha atual: quem
+   chega ali é justamente quem a esqueceu.
+
+**Funciona com o modelo PADRÃO do painel.** Trocar o modelo de Reset Password
+pela linha acima melhora a mesma coisa que melhora nos outros dois: a
+conferência passa a acontecer neste site, com `verifyOtp`.
+
+O que o painel PRECISA ter é o `redirect_to` na lista: **Authentication → URL
+Configuration → Redirect URLs** tem que cobrir `/auth/confirmar` em cada
+domínio de onde alguém possa pedir o link (produção, pré-visualização de deploy,
+`localhost:3000` no desenvolvimento). O que não casar cai na Site URL, e aí o
+aluno clica no link e aterrissa na landing sem entender por quê. Um curinga por
+domínio resolve: `https://plataforma-grafos.vercel.app/**`.
+
+> **Quem pode abrir `/nova-senha`.** Só quem tem sessão nascida de link de
+> e-mail — a página lê o `amr` do token (`src/app/nova-senha/sessao-de-recuperacao.ts`).
+> Sessão de quem entrou digitando a senha NÃO passa, e isso é o que impede que
+> a aba esquecida no laboratório da escola troque a senha sem pedágio nenhum.
+> Depois de salvar, todas as sessões caem (`signOut` global) e o aluno entra de
+> novo com a senha nova.
 
 ---
 
