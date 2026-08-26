@@ -1319,17 +1319,31 @@ h3 {
 /* ---- "cai em": as provas que cobram este resumo (decisão 9i) ----
    Fica no cabeçalho e não no rodapé de propósito: quem estuda para UMA prova
    decide pelo que cai nela, e essa decisão acontece antes de ler, não depois. */
-.cai-em {
+/* A ficha do resumo — hoje "Cai em" e "Quando", uma linha cada.
+   O traço de cima e o respiro de baixo vivem AQUI e não em `.cai-em`: eram
+   dela enquanto havia uma linha só, e com duas o resumo ganharia dois traços
+   separados por um vão, que lê como duas seções em vez de uma ficha. */
+.ficha {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 2.5rem;
   padding-top: 0.875rem;
   border-top: 1px solid var(--line);
 }
+.cai-em {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
 .cai-em h2 {
   margin: 0;
+  /* alinha os rótulos das linhas da ficha numa coluna só: "Cai em" e "Quando"
+     têm larguras diferentes, e sem o piso as etiquetas de cada linha começam
+     em pontos distintos. Continua encolhendo quando a linha quebra no celular,
+     porque é MIN e não largura fixa. */
+  min-width: 3.75rem;
   font-size: var(--t-mini);
   font-weight: 500;
   letter-spacing: 0.07em;
@@ -1353,4 +1367,33 @@ h3 {
 }
 .cai-em li span {
   color: var(--ink-faint);
+}
+
+/* A etiqueta que clica. O recheio sai do `li` e vai para o `<a>`, senão a área
+   sensível seria só o texto e a borda arredondada ficaria de fora dela.
+
+   `min-height: 24px` é o critério 2.5.8 da WCAG 2.2, o mesmo já resolvido no
+   Hero: a etiqueta parada tem 3px de recuo vertical sobre `--t-mini`, o que dá
+   um alvo de ~19px. Isso bastava enquanto nenhuma delas clicava. */
+.cai-em li.tem-link {
+  padding: 0;
+}
+.cai-em li.tem-link a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+}
+.cai-em li.tem-link:hover {
+  border-color: var(--acento);
+}
+.cai-em li.tem-link a:hover {
+  color: var(--acento-claro);
+  background: var(--acento-fraco);
+}
+.cai-em li.tem-link a:hover span {
+  color: inherit;
 }

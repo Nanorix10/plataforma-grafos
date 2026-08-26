@@ -9,9 +9,11 @@ import {
   anoFinal,
   coresDoEvento,
   corDoRotulo,
+  enquadrar,
   formatarAno,
   fundoDoMarcador,
   rotuloDoEvento,
+  JANELA_MINIMA,
   type Evento,
 } from '@/lib/tempo'
 
@@ -31,8 +33,9 @@ const ERAS = [
   { nome: 'Contemporânea', de: 1789, ate: new Date().getFullYear() },
 ] as const
 
-/** Menor janela em anos. Sem piso, o zoom continua até o eixo perder sentido. */
-const JANELA_MINIMA = 5
+/* O piso da janela (`JANELA_MINIMA`) mudou para `lib/tempo.ts`: o link de
+   "Quando" do resumo pede enquadramento por ali, e o mesmo número tem de valer
+   para o zoom manual, para a vista cheia e para o link. */
 /* Teto do afastamento. Não é estética: `marcas` percorre a janela de passo em
    passo, e sem limite um afastamento insistente monta uma lista de milhares de
    marcas invisíveis a cada quadro. */
@@ -73,7 +76,22 @@ function passoDoEixo(span: number, largura: number) {
   return opcoes.find((o) => o >= bruto) ?? 10000
 }
 
-export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
+export default function LinhaDoTempo({
+  eventos,
+  janelaInicial,
+}: {
+  eventos: Evento[]
+  /**
+   * Enquadramento pedido pela URL (`?de=&ate=`), quando o aluno chegou pelo
+   * "Quando" de um resumo. Ausente, o eixo abre mostrando tudo, como sempre.
+   *
+   * É só o valor INICIAL: a partir daí a janela é do aluno, e nenhum efeito a
+   * traz de volta. Voltar ao enquadramento do resumo depois de ele ter
+   * arrastado seria o mesmo erro que o "Home" evita ao ser um botão em vez de
+   * um comportamento automático.
+   */
+  janelaInicial?: { de: number; ate: number }
+}) {
   const caixaRef = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
   const [altura, setAltura] = useState(0)
@@ -111,12 +129,17 @@ export default function LinhaDoTempo({ eventos }: { eventos: Evento[] }) {
     if (lista.length === 0) return { de: 1000, ate: new Date().getFullYear() }
     const min = Math.min(...lista.map((e) => e.ano_inicio))
     const max = Math.max(...lista.map(anoFinal))
-    const span = Math.max(JANELA_MINIMA, max - min)
-    const folga = span * 0.06
-    return { de: Math.floor(min - folga), ate: Math.ceil(max + folga) }
+    /* A folga e o piso saem do `enquadrar`, que é o mesmo que o link do resumo
+       usa. Antes o piso era calculado aqui e perdido em seguida: a folga de 6%
+       vinha de `min` e `max`, não da janela, então um recorte de um evento só
+       terminava com 2 anos de janela — menos que o mínimo. Nunca apareceu
+       porque a única entrada era o acervo inteiro. */
+    return enquadrar(min, max)
   }, [])
 
-  const [janela, setJanela] = useState<Janela>(() => janelaCheia(eventos))
+  const [janela, setJanela] = useState<Janela>(
+    () => janelaInicial ?? janelaCheia(eventos)
+  )
 
   // mede a caixa; a ALTURA importa tanto quanto a largura, porque é ela que
   // decide onde fica o meio da página

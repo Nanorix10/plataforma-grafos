@@ -13,6 +13,7 @@ import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
 import { getSessao } from '@/lib/sessao'
 import { estiloDaPagina } from '@/lib/pagina'
 import { PROCESSOS } from '@/lib/processos'
+import { periodoDosEventos } from '@/lib/tempo'
 import Trilho from './Trilho'
 
 export default async function ResumoPage({
@@ -48,23 +49,37 @@ export default async function ResumoPage({
     )
   }
 
-  // todos os títulos (pra resolver os [[wikilinks]]), os backlinks e as provas
-  // que cobram este resumo, em paralelo
-  const [{ data: todosResumos }, { data: backlinksRaw }, { data: cobrancas }] = await Promise.all([
-    supabase.from('resumos').select('slug, titulo'),
-    supabase
-      .from('conexoes')
-      // `materia_slug` vem junto porque cada backlink é pintado na cor da
-      // matéria DELE, não na deste resumo: quem cita costuma ser de outra
-      // disciplina, e é justamente isso que a lista mostra.
-      .select('origem:resumos!conexoes_origem_id_fkey(slug, titulo, materia_slug)')
-      .eq('destino_id', resumo.id),
-    // "cai em": o quarto eixo (decisão 9i). A relação é N-para-N, então um
-    // resumo `comum` como "Medidas de tendência central" volta com duas linhas
-    // — uma por prova que o cobra —, e é justamente isso que a tela mostra.
-    supabase.from('edital_topicos').select('processo_slug, etapa').eq('resumo_id', resumo.id),
-  ])
+  // todos os títulos (pra resolver os [[wikilinks]]), os backlinks, as provas
+  // que cobram este resumo e os eventos que ele explica, em paralelo
+  const [{ data: todosResumos }, { data: backlinksRaw }, { data: cobrancas }, { data: datas }] =
+    await Promise.all([
+      supabase.from('resumos').select('slug, titulo'),
+      supabase
+        .from('conexoes')
+        // `materia_slug` vem junto porque cada backlink é pintado na cor da
+        // matéria DELE, não na deste resumo: quem cita costuma ser de outra
+        // disciplina, e é justamente isso que a lista mostra.
+        .select('origem:resumos!conexoes_origem_id_fkey(slug, titulo, materia_slug)')
+        .eq('destino_id', resumo.id),
+      // "cai em": o quarto eixo (decisão 9i). A relação é N-para-N, então um
+      // resumo `comum` como "Medidas de tendência central" volta com duas linhas
+      // — uma por prova que o cobra —, e é justamente isso que a tela mostra.
+      supabase.from('edital_topicos').select('processo_slug, etapa').eq('resumo_id', resumo.id),
+      // "quando": os eventos que este resumo explica (decisão 9d). O vínculo
+      // `eventos.resumo_id` existia desde agosto e era usado numa direção só —
+      // do eixo para o resumo. Sem esta consulta, quem acabava de ler não tinha
+      // como se situar no tempo sem abrir a linha do tempo e procurar.
+      supabase
+        .from('eventos')
+        .select('titulo, ano_inicio, ano_fim, rotulo_data')
+        .eq('resumo_id', resumo.id),
+    ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
+
+  // Um resumo pode explicar muitos eventos — `o-conceito-de-idade-media`
+  // sozinho carrega mais de dez. O cabeçalho mostra o PERÍODO e a contagem, e
+  // o eixo mostra o resto; ver `periodoDosEventos`.
+  const periodo = periodoDosEventos(datas ?? [])
 
   // Um resumo costuma cobrir VÁRIOS tópicos do mesmo edital, e o aluno não quer
   // saber quantos: quer saber em que provas isto cai. Daí o par prova+etapa ser
@@ -178,22 +193,51 @@ export default async function ResumoPage({
           {resumo.titulo}
         </h1>
 
-        {/* Em que provas isto cai (decisão 9i). Some quando o resumo não é
-            cobrado por edital nenhum — a maior parte do acervo de `comum` é
-            assim, e uma linha "Cai em —" só ocuparia o lugar sem informar.
-            Não são links: `/edital` não recebe filtro por prova, e etiqueta
-            que não leva a lugar nenhum é pior do que etiqueta que não clica. */}
-        {provas.length > 0 ? (
-          <div className="cai-em">
-            <h2>Cai em</h2>
-            <ul>
-              {provas.map((p) => (
-                <li key={`${p.processo_slug}#${p.etapa}`}>
-                  {PROCESSOS[p.processo_slug]?.nome ?? p.processo_slug}
-                  <span> · {p.etapa}ª etapa</span>
-                </li>
-              ))}
-            </ul>
+        {/* A ficha do resumo: em que provas ele cai, e quando ele acontece.
+            Cada linha some sozinha quando não tem o que dizer, e a ficha
+            inteira some quando nenhuma das duas tem — é ela que carrega o
+            traço de cima e o respiro de baixo, para duas linhas presentes não
+            desenharem dois traços. */}
+        {provas.length > 0 || periodo ? (
+          <div className="ficha">
+            {/* Em que provas isto cai (decisão 9i). Some quando o resumo não é
+                cobrado por edital nenhum — a maior parte do acervo de `comum`
+                é assim, e uma linha "Cai em —" só ocuparia o lugar sem
+                informar. Não são links: `/edital` não recebe filtro por prova,
+                e etiqueta que não leva a lugar nenhum é pior do que etiqueta
+                que não clica. */}
+            {provas.length > 0 ? (
+              <div className="cai-em">
+                <h2>Cai em</h2>
+                <ul>
+                  {provas.map((p) => (
+                    <li key={`${p.processo_slug}#${p.etapa}`}>
+                      {PROCESSOS[p.processo_slug]?.nome ?? p.processo_slug}
+                      <span> · {p.etapa}ª etapa</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Quando isto acontece (decisão 9d). Esta etiqueta CLICA, ao
+                contrário das de cima, e é a mesma regra que decide as duas: o
+                eixo recebe enquadramento por `?de=&ate=`, então há para onde
+                levar. Se um dia `/edital` aceitar filtro por prova, as de cima
+                viram link pelo mesmo critério. */}
+            {periodo ? (
+              <div className="cai-em">
+                <h2>Quando</h2>
+                <ul>
+                  <li className="tem-link">
+                    <Link href={`/linha-do-tempo?de=${periodo.de}&ate=${periodo.ate}`}>
+                      {periodo.rotulo}
+                      <span> · {periodo.legenda}</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
