@@ -85,6 +85,29 @@ Duas armadilhas resolvidas ali, que vão morder de novo se alguém mexer:
   própria linha tranca a pessoa para fora da gestão, e a única saída seria o
   SQL Editor — exatamente o que a tela veio eliminar.
 
+**E `/login` sabe disso desde 26/08.** Com a confirmação de e-mail ligada no
+painel, `signUp` devolve `session: null` e **nenhum erro** — a conta nasce, mas
+só vale depois do clique no link. A tela empurrava todo mundo para `/resumos`
+mesmo assim, e lá o guard do `(app)`, que só pergunta se há sessão, devolvia a
+pessoa para `/login`. Ela apertava "Criar conta", a tela piscava e voltava ao
+mesmo lugar, sem uma palavra: quem lê isso conclui que o site quebrou, não que
+falta abrir um e-mail.
+
+Agora `data.session` decide. Perguntar ao RETORNO, e não ler a configuração, é
+o que faz a tela funcionar com a confirmação ligada ou desligada sem ninguém
+tocar no arquivo — a chave mora do lado do Supabase.
+
+Cadastro de e-mail que JÁ tem conta cai no mesmo lugar, de propósito: com a
+proteção contra enumeração ligada (o padrão), o Supabase responde com um usuário
+de fachada e `session: null`, sem erro, justamente para a tela não virar um
+verificador de quem estuda aqui. Com ela desligada vem `user_already_exists`, e
+o `lib/erros-auth.ts` já traduz.
+
+A tela de espera repete a frase de `/conta` palavra por palavra — "a liberação é
+feita à mão depois do pagamento" —, e essa linha é consequência direta desta
+decisão: confirmado o e-mail, o aluno entra e não vê resumo algum. Sem o aviso,
+o caminho natural é achar que a confirmação falhou e cadastrar de novo.
+
 **1c. `comum` é o processo de quem não é de um vestibular só.**
 `resumos.processo_slug` é escalar — um resumo pertence a UM processo. Isso
 bastou enquanto o acervo era só a 1ª etapa do PAS UEM, e rachou na 2ª etapa do
@@ -613,6 +636,101 @@ redirecionar: é ele que faz a troca funcionar sem ninguém mexer no painel. O
 `next` da URL é conferido antes de virar destino (`/` sim, `//` não) — sem isso
 o site redirecionaria para fora com a própria credibilidade junto. O que o
 painel do Supabase ainda precisa ter está em `docs/emails-do-supabase.md`.
+
+**9g-ter. Quem esquece a senha se resolve sozinho, e o pedágio vira o e-mail.**
+`/conta` fechou a troca de senha de quem SABE a senha. Sobrava o caso oposto, e
+ele é o mais comum: o público é adolescente, senha se esquece, e até aqui a
+saída era falar com o Ronny. Era o último pedido de suporte que o produto criava
+sozinho.
+
+São três telas, e cada uma existe por um motivo diferente de "ficou mais
+organizado":
+
+| tela | o que faz | por que separada |
+|---|---|---|
+| `/login` | link "Esqueci minha senha" | ao lado do rótulo do campo, que é onde a pessoa descobre que esqueceu |
+| `/recuperar` | manda o link | endereço próprio: dá botão de voltar, URL para colar e leitor de tela sem "aba 3 de 3" numa aba que não é irmã das outras duas |
+| `/nova-senha` | grava a senha | precisa conferir a sessão ANTES de desenhar, então é componente de servidor |
+
+**O envio parte do NAVEGADOR**, ao contrário das escritas de `/conta`. O cliente
+do `@supabase/ssr` usa PKCE: ele guarda um verificador em cookie e o link volta
+com um `code` que só casa com ele. Quem troca o código por sessão é
+`app/auth/confirmar/route.ts` — a mesma rota das outras duas confirmações, que
+não precisou mudar em nada.
+
+**A senha atual não é pedida, e por isso o `amr` é conferido.** Se a única
+exigência fosse "estar logado", `/nova-senha` viraria o contrário da decisão
+9g-bis: quem encontrasse a aba aberta trocaria a senha e ficaria com a conta —
+exatamente o notebook de irmãos e o laboratório de escola que motivaram o botão
+de sair. O que separa os dois casos é a ORIGEM da sessão, e o token a registra:
+`password` para quem digitou a senha, `otp` para quem provou pela caixa de
+entrada. Só o segundo passa.
+
+Ela **falha para o lado fechado** de propósito: se o `amr` sumir numa
+atualização, a recuperação para de funcionar e o aluno volta a depender do
+Ronny, que é onde ele já estava. O outro lado seria deixar passar, e aí o preço
+não é um incômodo — é a conta de alguém. A conferência é refeita na server
+action, porque a página não é a única porta: server action é endereço público
+(mesmo princípio da lista colada da decisão 10c e das policies de RLS).
+
+**Salvar derruba TODAS as sessões**, inclusive a que está salvando —
+`scope: 'global'`, e não o `'others'` de `/conta`. Lá quem trocou digitou a
+senha atual e expulsá-lo seria prêmio por ter feito a coisa certa; aqui a sessão
+é descartável, nasceu do link para esta tarefa. Metade dos pedidos de senha nova
+vem de quem desconfia que perdeu a conta, e derrubar tudo é o que fecha a porta
+do outro lado. Entrar de novo ainda prova, ali mesmo, que a senha nova pegou —
+e, sem sessão, `/nova-senha` volta a ser inalcançável.
+
+**A resposta de `/recuperar` é a mesma exista a conta ou não.** Não é teatro:
+`resetPasswordForEmail` não devolve erro para e-mail desconhecido, então "se
+houver conta, enviamos" é literalmente o que o site sabe. Dizer o contrário
+transformaria a tela num verificador de quem estuda aqui.
+
+**9g-quater. As três telas de acesso são uma moldura só, e o cartão é
+centralizado.**
+`components/CartaoAcesso.tsx`. Copiar marca, cartão e botão de tema em cada uma
+das três repetiria o que a decisão 9h já desfez uma vez — e aqui seria pior: um
+cartão que desalinha entre `/login` e `/recuperar` faz o aluno achar que mudou
+de site no meio de uma recuperação de senha.
+
+O cartão saiu da esquerda (`px-24` com 360px de largura) para o meio da tela.
+Encostado, ele deixava a tela larga inteira vazia à direita, o que lê como
+"carregou torto" e não como escolha. **Centralizar é o enquadramento, não o
+alinhamento:** dentro do cartão tudo segue à esquerda, senão vira formulário de
+banco.
+
+As superfícies seguem a escada de `docs/identidade-visual.md` na ordem certa —
+`--page` no fundo, `--paper` no cartão, `--raised` no campo. Cartão em
+`--raised` faria os campos sumirem dentro dele, porque `.campo` usa esse mesmo
+token.
+
+**A marca leva para a landing, e é a única saída.** O `(site)/layout` mantém
+`/login` fora da barra pública porque uma barra com atalhos para matérias e
+planos convida a abandonar o cadastro no meio. Ficar sem saída nenhuma é o outro
+extremo: quem chegou por engano dependia do botão do navegador.
+
+**9g-quinquies. O campo de senha tem olho, e ele não pode controlar o campo.**
+`components/CampoSenha.tsx`. Senha é o único campo que se preenche sem ver, e é
+o que mais custa errar: uma letra trocada vira "E-mail ou senha incorretos" —
+frase que acusa as duas coisas sem dizer qual. No celular o teclado ainda troca
+maiúscula sozinho no primeiro caractere.
+
+Trocar o `type` não encosta no valor, então o campo **continua não controlado** —
+a decisão que a página de acesso já tinha tomado por causa do autofill segue
+valendo. Duas armadilhas fechadas junto:
+
+- **`type="button"` explícito.** Botão dentro de formulário é `submit` por
+  padrão: sem isso, clicar no olho ENVIARIA o formulário com a senha pela
+  metade, gastando uma tentativa no limite de requisições do Supabase.
+- **O recuo do campo é CSS sem camada** (`.campo-com-acao` no `globals.css`),
+  não um `pr-10` do Tailwind. `.campo` está fora de qualquer `@layer`, e CSS sem
+  camada ganha de todo utilitário por mais específico que seja — o utilitário
+  não teria efeito nenhum, em silêncio. É o mesmo motivo do `!rounded-lg` que já
+  existia nos botões.
+
+O nome acessível troca junto com o estado, e não há `aria-pressed`: com os dois,
+o leitor de tela anuncia o estado duas vezes e em ordens diferentes conforme o
+programa.
 
 **9h. A marca vive em `components/Marca.tsx`, e a logo tem um encaixe pronto.**
 O nome estava escrito à mão em cinco lugares — landing (topo e rodapé), login e

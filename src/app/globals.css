@@ -343,6 +343,20 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 0 3px var(--acento-fraco);
 }
 
+/* Campo que carrega um botão dentro dele — hoje só o olho de "mostrar senha".
+   O recuo abre o lugar do botão; sem ele a senha corre por baixo do ícone, e
+   quem pediu para VER o que digitou é justamente quem para de ver o fim.
+
+   Mora aqui e não num utilitário do Tailwind porque `.campo` está fora de
+   qualquer `@layer`, e CSS sem camada ganha de todo utilitário por mais
+   específico que seja — um `pr-10` no componente não teria efeito nenhum, em
+   silêncio. É o mesmo motivo do `!rounded-lg` que já existe nos botões.
+
+   2,625rem = 42px: 6px de folga + o botão de 32px + 4px até o texto. */
+.campo-com-acao {
+  padding-right: 2.625rem;
+}
+
 .botao {
   display: inline-flex;
   align-items: center;
@@ -425,6 +439,17 @@ h1, h2, h3, h4 {
   }
 }
 
+/* O anel de foco do site inteiro, e o ÚNICO lugar onde ele pode ser mudado.
+   Isto está fora de qualquer `@layer`, e CSS sem camada ganha de todo
+   utilitário do Tailwind por mais específico que seja — então
+   `focus-visible:outline-offset-1` num componente é código morto, que não
+   avisa. Quem precisar de outro anel muda AQUI, ou usa `style` embutido.
+   (Mesma armadilha do `!rounded-lg` nos botões e do `.campo-com-acao` acima.)
+
+   Consequência de desenho que já mordeu uma vez: o anel é desenhado FORA do
+   elemento, então um `overflow: hidden` no pai o recorta. Componente que
+   agrupa botões — a cápsula de abas do `/login` é o caso — não pode recortar;
+   ele arredonda os filhos em vez disso. */
 .botao:focus-visible,
 .campo:focus-visible,
 a:focus-visible,
