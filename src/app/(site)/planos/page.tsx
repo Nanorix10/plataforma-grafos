@@ -1,6 +1,12 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { PLANOS_A_VENDA, INCLUI_SEMPRE, precoLegivel } from '@/lib/planos'
+import {
+  PLANOS_A_VENDA,
+  INCLUI_SEMPRE,
+  PRECOS_ANUNCIADOS,
+  AVISO_SEM_PRECO,
+  precoLegivel,
+} from '@/lib/planos'
 import { PROVAS } from '@/lib/processos'
 
 export const metadata: Metadata = {
@@ -57,18 +63,29 @@ export default function PlanosPage() {
         </p>
       </div>
 
+      {!PRECOS_ANUNCIADOS && (
+        <div className="mb-9 max-w-[640px] rounded-[var(--raio)] border border-[var(--line-forte)] p-5">
+          <p className="text-[length:var(--t-base)] font-medium mb-1.5">
+            {AVISO_SEM_PRECO.titulo}
+          </p>
+          <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed">
+            {AVISO_SEM_PRECO.texto}
+          </p>
+        </div>
+      )}
+
       {/* ---- os três, com para-quem ---- */}
       <div className="grid md:grid-cols-3 gap-4 mb-14">
         {PLANOS_A_VENDA.map((p) => (
           <div
             key={p.slug}
             className={`bg-[var(--raised)] rounded-[var(--raio)] p-6 flex flex-col gap-4 ${
-              p.destaque ? 'shadow-[var(--sombra-alta)]' : 'shadow-[var(--sombra)]'
+              p.selo ? 'shadow-[var(--sombra-alta)]' : 'shadow-[var(--sombra)]'
             }`}
           >
-            {p.destaque && (
+            {p.selo && (
               <span className="self-start rotulo-secao border border-[var(--acento)] text-[var(--acento)] rounded-[var(--raio-peq)] px-2 py-0.5">
-                Mais escolhido
+                {p.selo}
               </span>
             )}
             <div>
@@ -78,14 +95,17 @@ export default function PlanosPage() {
               </p>
             </div>
 
-            <div className="text-[length:var(--t-titulo)] font-medium">
-              {precoLegivel(p.preco)}
-              {p.preco !== null && (
+            {/* Mesma regra da vitrine da landing: sem preço anunciado o cartão
+                não tem linha de preço, e quem responde por todos é o aviso
+                acima. As duas páginas leem o mesmo `PRECOS_ANUNCIADOS`. */}
+            {p.preco !== null && (
+              <div className="text-[length:var(--t-titulo)] font-medium">
+                {precoLegivel(p.preco)}
                 <span className="text-[length:var(--t-peq)] text-[var(--ink-faint)] font-normal">
                   /mês
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed border-t border-[var(--line)] pt-4">
               {p.paraQuem}
@@ -94,7 +114,7 @@ export default function PlanosPage() {
             <Link
               href="/login"
               className={`botao mt-auto w-full ${
-                p.destaque ? 'botao-primario' : 'botao-neutro'
+                p.selo ? 'botao-primario' : 'botao-neutro'
               }`}
             >
               Criar conta
