@@ -2,13 +2,19 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
 import { getEventos } from '@/lib/eventos'
+import { lerEnquadramento } from '@/lib/tempo'
 import LinhaDoTempo from './LinhaDoTempo'
 
-export default async function LinhaDoTempoPage() {
+export default async function LinhaDoTempoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ de?: string; ate?: string }>
+}) {
   const { userId, isAdmin } = await getSessao()
   if (!userId) redirect('/login')
 
-  const eventos = await getEventos()
+  const [eventos, params] = await Promise.all([getEventos(), searchParams])
+  const janelaInicial = lerEnquadramento(params)
 
   return (
     // mesma altura do mapa: é uma tela de trabalho, não um documento que rola
@@ -33,7 +39,7 @@ export default async function LinhaDoTempoPage() {
       </header>
 
       <div className="flex-1 min-h-0">
-        <LinhaDoTempo eventos={eventos} />
+        <LinhaDoTempo eventos={eventos} janelaInicial={janelaInicial} />
       </div>
     </div>
   )

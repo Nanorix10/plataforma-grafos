@@ -101,15 +101,136 @@ export function rotuloDoEvento(e: {
 }): string {
   if (e.rotulo_data.trim()) return e.rotulo_data.trim()
   if (e.ano_fim === null) return formatarAno(e.ano_inicio)
-  if (e.ano_inicio < 0 && e.ano_fim < 0) {
-    return `${Math.abs(e.ano_inicio)}–${Math.abs(e.ano_fim)} a.C.`
-  }
-  return `${formatarAno(e.ano_inicio)}–${formatarAno(e.ano_fim)}`
+  // a contração do "a.C." mora no `faixaDeAnos`, que o "Quando" do resumo
+  // também usa — duas cópias discordariam no primeiro ajuste
+  return faixaDeAnos(e.ano_inicio, e.ano_fim)
 }
 
 /** O ano em que o evento termina — o próprio início, se for pontual. */
 export function anoFinal(e: { ano_inicio: number; ano_fim: number | null }): number {
   return e.ano_fim ?? e.ano_inicio
+}
+
+/**
+ * Menor janela do eixo, em anos. Sem piso, o zoom continua até o eixo perder
+ * sentido — e o enquadramento vindo de fora pede um ponto.
+ *
+ * Mora aqui, e não no componente, porque `enquadrar` precisa dele e a página
+ * do resumo também: o mesmo número decidindo o zoom manual, a vista cheia e o
+ * link de "Quando" é o que impede os três de discordarem.
+ */
+export const JANELA_MINIMA = 5
+
+/**
+ * Uma faixa de anos vira a janela que o eixo abre nela.
+ *
+ * Duas coisas acontecem aqui, e a segunda é a que estava faltando:
+ *
+ * - **Folga de respiro**, para o primeiro e o último evento não nascerem
+ *   colados na margem.
+ * - **Piso de `JANELA_MINIMA`**, aplicado à janela RESULTANTE. O `janelaCheia`
+ *   do eixo calculava o piso e depois o perdia, porque tirava a folga de 6% de
+ *   `min` e `max` em vez de tirar da janela: com um evento pontual (`de` igual
+ *   a `ate`) a folga era 0,3 ano e saía uma janela de 2 anos — abaixo do
+ *   próprio mínimo que a linha acima tinha acabado de calcular. Ficou
+ *   invisível enquanto a única entrada era o acervo inteiro, que abre com
+ *   milênios; o link de um resumo com um evento só é a primeira entrada capaz
+ *   de pedir um ponto.
+ */
+export function enquadrar(de: number, ate: number): { de: number; ate: number } {
+  const bruto = Math.max(0, ate - de)
+  const comFolga = bruto + Math.max(bruto * 0.12, 1)
+  const span = Math.max(JANELA_MINIMA, comFolga)
+  // alarga em torno do meio: o que o aluno pediu continua centrado
+  const meio = (de + ate) / 2
+  return { de: Math.floor(meio - span / 2), ate: Math.ceil(meio + span / 2) }
+}
+
+/**
+ * O enquadramento pedido pela URL da linha do tempo (`?de=&ate=`), quando
+ * existe e faz sentido.
+ *
+ * Mora aqui, e não dentro da página, para poder ser PROVADA: a página redireciona
+ * para `/login` antes de chegar nesta linha, então exercitar a rota deslogado
+ * não exercita esta conta — e é ela que decide o que o aluno vê ao clicar no
+ * "Quando" de um resumo.
+ *
+ * Parâmetro ausente, vazio, não numérico ou invertido devolve `undefined`, e o
+ * eixo abre mostrando tudo — o comportamento de sempre. **Não é erro do
+ * aluno**: quem chega com `?de=abc` colou uma URL torta, e uma tela de erro no
+ * lugar da linha do tempo puniria alguém que só queria ver a linha do tempo.
+ */
+export function lerEnquadramento(p: {
+  de?: string
+  ate?: string
+}): { de: number; ate: number } | undefined {
+  // o teste do vazio vem antes do `Number`, que devolve 0 para '' e faria
+  // `?de=&ate=` enquadrar o ano zero em silêncio
+  if (!p.de?.trim() || !p.ate?.trim()) return undefined
+  const de = Number(p.de)
+  const ate = Number(p.ate)
+  if (!Number.isInteger(de) || !Number.isInteger(ate) || ate < de) return undefined
+  return enquadrar(de, ate)
+}
+
+/**
+ * Uma faixa de anos como se escreve.
+ *
+ * O "a.C." sai do primeiro quando os dois são a.C. — "500–300 a.C." e não
+ * "500 a.C.–300 a.C.", que é como o material do autor já traz. Dois anos
+ * iguais devolvem um ano só: "1789–1789" não é faixa, é gagueira.
+ */
+export function faixaDeAnos(de: number, ate: number): string {
+  if (de === ate) return formatarAno(de)
+  if (de < 0 && ate < 0) return `${Math.abs(de)}–${Math.abs(ate)} a.C.`
+  return `${formatarAno(de)}–${formatarAno(ate)}`
+}
+
+/** O que o cabeçalho do resumo diz em "Quando", e para onde ele leva. */
+export type PeriodoDoResumo = {
+  /** primeiro e último ano cobertos — o enquadramento pedido ao eixo */
+  de: number
+  ate: number
+  /** a data, como o aluno lê */
+  rotulo: string
+  /** o que vem depois do ponto: o título, com um evento; a contagem, com vários */
+  legenda: string
+}
+
+/**
+ * O período que um resumo cobre, a partir dos eventos ligados a ele.
+ *
+ * **Com um evento, mostra o evento**; com vários, mostra a faixa e quantos
+ * são. A regra existe porque os dois extremos do acervo são reais: a maior
+ * parte dos resumos datados tem um evento só, onde "1453 · 1 evento" seria
+ * bobo e "1453 · Queda de Constantinopla" diz tudo; e o
+ * `o-conceito-de-idade-media` carrega mais de dez, onde listar todos empurraria
+ * o texto do resumo para fora da tela justamente no celular.
+ *
+ * Com um evento o rótulo é o `rotuloDoEvento`, que respeita o `rotulo_data`
+ * escrito à mão — é ele que carrega "Séc. V a IX", que dois inteiros não sabem
+ * dizer. Com vários a faixa é derivada dos anos, porque misturar rótulos
+ * escritos à mão de eventos diferentes não daria uma frase.
+ *
+ * Devolve `null` sem evento nenhum, que é o caso da maioria do acervo: 84
+ * eventos cobrem uma fração dos resumos, e o bloco some inteiro em vez de
+ * aparecer vazio — a mesma regra do "Cai em" ausente e do `Depoimentos` sem
+ * depoimento.
+ */
+export function periodoDosEventos(
+  eventos: Pick<Evento, 'titulo' | 'ano_inicio' | 'ano_fim' | 'rotulo_data'>[]
+): PeriodoDoResumo | null {
+  if (eventos.length === 0) return null
+
+  const de = Math.min(...eventos.map((e) => e.ano_inicio))
+  const ate = Math.max(...eventos.map(anoFinal))
+
+  if (eventos.length === 1) {
+    const unico = eventos[0]
+    return { de, ate, rotulo: rotuloDoEvento(unico), legenda: unico.titulo }
+  }
+
+  return { de, ate, rotulo: faixaDeAnos(de, ate), legenda: `${eventos.length} eventos` }
 }
 
 /** As cores das matérias do evento, na ordem em que ele as lista. */

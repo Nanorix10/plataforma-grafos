@@ -406,15 +406,35 @@ Um documento do Docs vira **vários** resumos ligados por `pai_id`, não um só 
 conter e citar são os dois eixos da decisão 9, e linkar quem já está pendurado
 desenharia a mesma relação duas vezes.
 
-**9d. A linha do tempo é o terceiro eixo, e tem tabela própria.**
+**9d. A linha do tempo é a ferramenta de História, e tem tabela própria.**
 `/linha-do-tempo` situa eventos históricos num eixo único, com chip por matéria.
 Nasceu para as humanidades (História, Filosofia, Literatura, Arte, Sociologia),
 mas **nada no banco restringe a matéria** — um `check` só criaria migration no
 dia em que história da ciência entrar em Física. O chip aparece para a matéria
 que TEM evento, então o recorte acontece pelos dados.
 
-Já são três eixos, e o novo não substitui nenhum: `pai_id` é "contém",
-`conexoes` é "cita", e `eventos.ano_inicio` é "quando".
+`pai_id` é "contém", `conexoes` é "cita", `edital_topicos` é "é cobrado em"
+(decisão 9i) e `eventos.ano_inicio` é "quando" — quatro eixos, e nenhum
+substitui outro.
+
+**Ela NÃO é um eixo sobre o acervo inteiro, e chamá-la assim já enganou.** Dos
+84 eventos da carga de 25/08, **69 são de História**; Literatura tem 8,
+Filosofia 3, Sociologia 2 e Geografia 2. Biologia (46 resumos), Química (35),
+Física (30), Matemática e Língua Portuguesa têm **zero**.
+
+Isso é estrutural, não acidente da leva: a regra de carga (só vira evento quem
+tem o ano escrito pelo autor) cruzada com a natureza das matérias significa que
+não existe safra futura que equilibre a distribuição. O texto de venda já sabia
+— o `INCLUI_SEMPRE` anuncia "Linha do tempo dos eventos **históricos**".
+Confirmado com o autor em 26/08: a concentração é o desenho funcionando.
+
+**E ela é NAVEGAÇÃO, não material de estudo.** O aluno a abre para achar um
+resumo, para varrer uma era na véspera e para se situar depois de ler — nunca
+no lugar do resumo. Isso desempata uma ambiguidade que estava no código: o
+cartão é link e a `descricao` é sempre vazia (índice), mas o eixo linear é
+defendido como o que ensina que a Idade Média são mil anos (conteúdo). **Vale a
+de índice**: a escala é propriedade bem-vinda, e o trabalho da tela é levar ao
+resumo a partir do tempo. Onde as duas colidirem, decide esta.
 
 **Por que tabela nova e não um campo de ano em `resumos`.** Um resumo cobre
 vários eventos (1789, 1791, 1793 e 1799 estão todos dentro de "Revolução
@@ -1079,6 +1099,62 @@ decide pelo que cai nela, e essa decisão acontece antes de ler.
 Não são links — `/edital` não recebe filtro por prova, e etiqueta que não leva a
 lugar nenhum é pior que etiqueta que não clica. Somem quando o resumo não é
 cobrado por edital nenhum, que é a maior parte do acervo de `comum`.
+
+**12f. "Quando" põe a decisão 9d na página do resumo, e essa etiqueta CLICA.**
+`eventos.resumo_id` existia desde agosto e era usado numa direção só — do eixo
+para o resumo. `getEventos` era importado por dois lugares (a linha do tempo e
+`/admin/eventos`), e a página do resumo nunca tocava em evento: quem acabava de
+ler não tinha caminho nenhum para se situar no tempo.
+
+**A diferença para o 12e é o destino, e é o mesmo critério que decide os dois.**
+A regra de lá — etiqueta que não leva a lugar nenhum é pior que etiqueta que não
+clica — não é sobre "Cai em" ser especial: é sobre `/edital` não aceitar filtro
+por prova. Aqui há para onde levar, porque `/linha-do-tempo` passou a aceitar
+`?de=<ano>&ate=<ano>`. No dia em que `/edital` aceitar filtro, as etiquetas de
+cima viram link pelo mesmo critério.
+
+**O bloco mostra o PERÍODO, não os eventos.** Com um evento, a data e o título
+(`1453 · Queda de Constantinopla`); com vários, a faixa e a contagem
+(`476 – 1453 · 12 eventos`). Os dois extremos são reais: a maior parte dos
+resumos datados tem um evento só, onde "1453 · 1 evento" seria bobo, e
+`o-conceito-de-idade-media` sozinho carrega mais de dez, que empurrariam o texto
+do resumo para fora da tela no celular. Com um evento o rótulo respeita o
+`rotulo_data` escrito à mão ("Séc. V a IX"); com vários é derivado dos anos,
+porque misturar rótulos manuais de eventos diferentes não daria uma frase.
+
+O bloco some quando o resumo não tem evento — 84 eventos cobrem uma fração dos
+232 resumos —, e "Cai em" e "Quando" passaram a viver numa `.ficha` comum, que é
+quem carrega o traço de cima e o respiro de baixo. Estavam no `.cai-em` enquanto
+havia uma linha só; com duas, o resumo ganharia dois traços separados por um
+vão, que lê como duas seções em vez de uma ficha.
+
+**O enquadramento é só o valor INICIAL da janela.** A partir do primeiro gesto
+ela é do aluno, e nenhum efeito a traz de volta — voltar ao enquadramento do
+resumo depois de ele ter arrastado seria o mesmo erro que o "Home" evita ao ser
+botão em vez de comportamento automático. Parâmetro ausente, vazio, não numérico
+ou invertido cai em mostrar tudo, **em silêncio**: quem chega com `?de=abc`
+colou uma URL torta, e uma tela de erro puniria alguém que só queria ver a linha
+do tempo.
+
+**`lerEnquadramento` mora em `lib/tempo.ts` e não na página, para poder ser
+provada.** A página redireciona para `/login` antes de chegar nela, então
+exercitar a rota deslogado não exercita a conta que decide o que o aluno vê.
+
+**Isso destravou um defeito latente de quatro anos-luz de distância do óbvio.**
+O `janelaCheia` calculava o piso de `JANELA_MINIMA` e o jogava fora na linha
+seguinte: a folga de 6% saía de `min` e `max` em vez de sair da janela, então
+uma faixa de um ponto terminava com 2 anos de janela — abaixo do mínimo recém
+calculado. Nunca apareceu porque a única entrada era o acervo inteiro, que abre
+com milênios; um resumo com evento pontual é a primeira entrada capaz de pedir
+um ponto. Quem faz a conta agora é `enquadrar`, usado pelos dois. É o **quarto**
+defeito desta tela da mesma família: estado derivado de quem estava presente na
+hora, e não do dado.
+
+**O que este desenho escolhe pagar, e declara:** o link manda o aluno para o
+canvas de arrastar e dar zoom, que no celular — metade do uso, e o aparelho da
+véspera — não foi desenhado para ele. Quita-se dando ao eixo uma forma de lista
+nas telas estreitas, como `/mapa` e `/resumos` já convivem sobre o mesmo acervo.
+Ver `docs/superpowers/specs/2026-08-26-quando-no-resumo-design.md`.
 
 ## Imagem: feito em agosto/2026
 
