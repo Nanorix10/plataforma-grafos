@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Mono, Nunito } from "next/font/google";
+import { Bricolage_Grotesque, IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -11,11 +11,30 @@ import "./globals.css";
  * (texto aparece na hora, na fonte de sistema, e troca quando a real chega).
  */
 /**
- * Uma única fonte de interface. Antes eram duas — Fraunces (serifa) na marca
- * e nos títulos, Work Sans no resto. A serifa dava ao site um ar editorial
- * que competia com o conteúdo; a Inter some e deixa o texto do resumo falar.
+ * Uma única fonte de interface, e ela é a que aparece em mais lugar do site:
+ * menu, botões, cartões, barra lateral, rótulo de nó do mapa.
+ *
+ * Era a Inter até 27/08, e antes dela eram duas — Fraunces (serifa) na marca e
+ * nos títulos, Work Sans no resto. A Inter entrou para SUMIR do caminho, e
+ * sumiu bem demais: a landing precisou da Gabarito depois justamente porque
+ * não sobrava personalidade nenhuma para o `h1` da primeira dobra.
+ *
+ * A Bricolage Grotesque é o contrário disso — uma grotesca deliberadamente
+ * irregular. Duas consequências que quem for mexer precisa saber:
+ *
+ * 1. **Ela contrasta com a Plus Jakarta do corpo do resumo, e é para isso.**
+ *    Duas humanistas geométricas lado a lado leem como erro, não como par: o
+ *    corpo é redondo e aberto, a interface é irregular e seca.
+ * 2. **Ela desce a 11px no rótulo do mapa**, que é o texto mais miúdo e mais
+ *    repetido do site — são 232 resumos num canvas onde texto encosta em texto.
+ *    A largura média por caractere dela entra na conta da colisão elíptica
+ *    (`meiaLarguraDoRotulo`, em `mapa/GraphView.tsx`); trocar a família de novo
+ *    obriga a remedir aquela constante.
+ *
+ * A esta única fonte o `preload` fica LIGADO (padrão), porque ela pinta texto
+ * em toda rota — é a única das quatro em que isso se justifica.
  */
-const inter = Inter({
+const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--fonte-texto",
   display: "swap",
@@ -27,7 +46,7 @@ const inter = Inter({
  *
  * As três famílias são declaradas neste layout, que embrulha o site inteiro,
  * então o Next emitia `<link rel="preload">` das TRÊS em toda página. A landing
- * puxava 105 KB de fonte com prioridade alta e usava 47 KB: a Nunito só aparece
+ * puxava 105 KB de fonte com prioridade alta e usava 47 KB: a fonte do resumo só aparece
  * dentro de `.conteudo-resumo` e a Plex Mono só no editor, mas as duas
  * competiam com o CSS e o JS críticos de quem nunca vai abrir um resumo.
  *
@@ -46,8 +65,21 @@ const plexMono = IBM_Plex_Mono({
  * Fonte do corpo do resumo — o texto que o aluno realmente lê por longos
  * períodos. Separada da fonte de interface de propósito: a interface pode
  * mudar de cara sem afetar a leitura, e vice-versa.
+ *
+ * Era a Nunito até 27/08. A troca não é de gosto solto: a Nunito é arredondada
+ * e dava ao corpo do resumo um ar juvenil que competia com o que o texto está
+ * dizendo. A Plus Jakarta Sans é humanista com desenho próprio no `a`, no `g`
+ * e no `t`, e continua sendo texto de estudo.
+ *
+ * **Ela TEM de ser variável, e isso não é preferência.** A decisão 12 apoia a
+ * hierarquia inteira do resumo na distância entre o peso 800 (que marca o nó do
+ * mapa) e o 500 (que marca o termo). Numa fonte de dois pesos o navegador
+ * improvisaria os dois engrossando o traço, a distância fecharia e o resumo
+ * voltaria a ser um borrão de negrito. O eixo da Plus Jakarta vai de 200 a 800,
+ * então os dois extremos são desenhos de verdade — como eram na Nunito.
+ * Quem for trocar de novo: confira o eixo ANTES.
  */
-const nunito = Nunito({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--fonte-resumo",
   display: "swap",
@@ -118,7 +150,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`h-full antialiased ${inter.variable} ${plexMono.variable} ${nunito.variable}`}
+      className={`h-full antialiased ${bricolage.variable} ${plexMono.variable} ${jakarta.variable}`}
       // o script abaixo escreve `data-tema` antes do React assumir; sem isto o
       // React reclamaria de um atributo que não estava no HTML do servidor
       suppressHydrationWarning

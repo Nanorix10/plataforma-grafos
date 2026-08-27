@@ -18,8 +18,9 @@
  *
  * 1. **Só o badge entrou.** Os arquivos são o lockup inteiro, com o nome como
  *    `<text>`. O nome já é escrito aqui embaixo em HTML de verdade, então viria
- *    duplicado — e o `<text>` pede a fonte **Gabarito**, que o site não carrega
- *    (decisão 7): cairia para a Inter em quase toda máquina, sem avisar.
+ *    duplicado — e o `<text>` pede a fonte **Gabarito**, que só é declarada no
+ *    grupo `(site)`: dentro do `(app)`, que é onde a marca passa o dia na barra
+ *    lateral, ela cairia numa fonte qualquer, sem avisar.
  *    Símbolo + texto HTML é o lockup, montado.
  * 2. **O par de arquivos virou um componente só.** A única diferença entre
  *    claro e escuro é o acento (`#5B4BC4` / `#8F86D9`) e a opacidade do anel.
@@ -151,8 +152,8 @@ const RISCO_ORIGINAL = {
  * palavra "Plataforma Grafos" como `<text>`, e ela não pode vir junto por duas
  * razões independentes: o `Marca` abaixo já escreve o nome como texto HTML de
  * verdade (viria duplicado), e o `<text>` do arquivo pede a **Gabarito**, que
- * não é uma das três famílias que o site carrega (decisão 7) — cairia para a
- * Inter em quase toda máquina, em silêncio. Montar o lockup com símbolo +
+ * só é declarada no grupo `(site)` (decisão 7) — dentro do `(app)` ela cairia
+ * numa fonte qualquer, em silêncio. Montar o lockup com símbolo +
  * texto HTML é a saída que o próprio material de marca do autor recomenda.
  *
  * **Um componente, não dois arquivos.** Os SVGs de origem vêm em par
