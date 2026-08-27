@@ -257,18 +257,69 @@ inútil (o retorno é descartado) mas é ela que dispara tudo — **não remover
 
 **7. Fontes vêm de `next/font`, não de `@import` no CSS.**
 `@import url(fonts.googleapis...)` encadeia três viagens de rede antes do primeiro
-texto: baixar o CSS, descobrir o import, buscar no Google. O `layout.tsx` carrega
-Inter, Nunito e IBM Plex Mono por `next/font/google` e expõe `--fonte-texto`,
-`--fonte-resumo` e `--fonte-mono`, que o `globals.css` consome. Os woff2 são
-servidos pelo próprio domínio, com preload.
+texto: baixar o CSS, descobrir o import, buscar no Google. As famílias são
+declaradas por `next/font/google` e expostas como variável de CSS, que o
+`globals.css` consome. Os woff2 são servidos pelo próprio domínio.
 
-A Fraunces saiu no redesenho escuro: era a única serifa, valia só pra `.marca`
-e pros títulos, e puxava o site pra "revista" quando o pedido é material de
-estudo. A Work Sans saiu junto — Inter faz o papel das duas. Sobraram três
-famílias com papéis que não se cruzam: **Inter** na interface, **Nunito** no
-corpo do resumo (texto longo, escolha separada de propósito) e **IBM Plex Mono**
-só em código e fórmula. `--fonte-titulo` não existe mais; se aparecer alguma
-referência a ela, é resto.
+São **quatro famílias**, com papéis que não se cruzam:
+
+| variável | família | papel | onde é declarada | preload |
+|---|---|---|---|---|
+| `--fonte-texto` | **Bricolage Grotesque** | interface inteira, e a marca | `app/layout.tsx` | sim |
+| `--fonte-resumo` | **Plus Jakarta Sans** | corpo do resumo | `app/layout.tsx` | não |
+| `--fonte-mono` | **IBM Plex Mono** | código e fórmula | `app/layout.tsx` | não |
+| `--fonte-display` | **Gabarito** | `h1`/`h2` da landing | `(site)/layout.tsx` | sim |
+
+**`preload` só onde a fonte de fato pinta texto.** As famílias da raiz embrulham
+o site inteiro, então o Next emitia `<link rel="preload">` das três em TODA
+página: a landing puxava 105 KB com prioridade alta e usava 47. Sem preload elas
+continuam declaradas e são baixadas quando um elemento pede a família — só que
+aí é numa página que a usa. A Gabarito é declarada dentro do grupo `(site)` pelo
+mesmo motivo, e ali o preload fica ligado, porque ela pinta a primeira dobra.
+
+**A interface CONTRASTA com o corpo do resumo, e é de propósito.** Bricolage é
+uma grotesca deliberadamente irregular; Plus Jakarta é humanista, redonda e
+aberta. Duas humanistas geométricas lado a lado leem como erro — quase iguais,
+mas não. Quem trocar uma das duas precisa olhar para a outra no mesmo movimento.
+
+**A fonte do resumo TEM de ser variável**, e isso não é preferência: a decisão 12
+apoia a hierarquia inteira na distância entre o peso 800 (o nó do mapa) e o 500
+(o termo). Numa família de dois pesos o navegador improvisa os dois engrossando o
+traço, a distância fecha e o resumo vira um borrão de negrito. O eixo da Plus
+Jakarta vai de 200 a 800. Confira o eixo ANTES de trocar.
+
+**A largura da fonte de interface entra na física do mapa.** O
+`meiaLarguraDoRotulo` de `mapa/GraphView.tsx` usa 5,4px por caractere a 11px para
+dimensionar a elipse de colisão (decisão 10b-bis). O número foi medido na Inter e
+sobreviveu à Bricolage por acaso — ela é 0,04% mais estreita. Quem trocar de novo
+tem de remedir: somar o avanço dos glifos do título mais longo do acervo e
+dividir pelo número de caracteres.
+
+**Histórico, porque cada saída ensina uma coisa.** A **Fraunces** saiu no
+redesenho escuro: era a única serifa, valia só pra `.marca` e pros títulos, e
+puxava o site pra "revista" quando o pedido é material de estudo. A **Work Sans**
+saiu junto, e a Inter fez o papel das duas. A **Inter** entrou para SUMIR do
+caminho e sumiu bem demais — a landing precisou da Gabarito depois justamente
+porque não sobrava personalidade para o `h1` da primeira dobra; saiu em 27/08. A
+**Nunito** saiu no mesmo dia: arredondada, dava ao corpo do resumo um ar juvenil
+que competia com o que o texto diz.
+
+`--fonte-titulo` não existe mais; se aparecer alguma referência a ela, é resto.
+
+**Duas coisas ficaram em aberto de propósito**, e as duas são chamadas de quem
+manda no produto, não do código:
+
+- **A Gabarito ainda se paga?** Ela existe porque a Inter não tinha personalidade
+  para a primeira dobra. A Bricolage tem. Se a marca e o display passarem a ser
+  a mesma letra da interface, o site volta a três famílias.
+- **Os 17px do corpo do resumo (`--t-medio`).** Eles existiam para compensar a
+  altura-de-x menor da Nunito, e a conta fechava redonda: Nunito a 17px dava
+  8,23px de letra, Inter a 15px dava 8,19px — o resumo era nominalmente maior e
+  opticamente IGUAL à interface. A Plus Jakarta tem altura-de-x 10,7% maior, e
+  hoje o resumo lê 17% maior que a interface. Voltar ao equilíbrio antigo seria
+  ~15,4px; ler maior no material de estudo também é uma escolha defensável. O que
+  não vale é o número seguir lá sem ninguém saber que a justificativa dele
+  caducou.
 
 **8. Fórmulas são renderizadas no SERVIDOR, e gravadas em atributo.**
 Matemática e química usam KaTeX + mhchem (`\ce{...}`), um sistema só pros dois.
@@ -1114,8 +1165,8 @@ acompanhar quem o cerca quando estiver dentro de uma tabela ou lista.
 
 **O peso é 800 no título e 500 no `strong`, e a distância entre os dois é a
 decisão.** Se o negrito marca o grafo, ele não pode marcar mais nada — e era
-o que estava acontecendo: 700 contra 600 leem quase igual no desenho da
-Nunito, então o resumo virava um borrão de negrito onde o nó do mapa não se
+o que estava acontecendo: 700 contra 600 leem quase igual no desenho de uma
+humanista, então o resumo virava um borrão de negrito onde o nó do mapa não se
 distinguia de um termo qualquer. Agora o peso responde uma pergunta só: isto
 é um nó ou não é? Os dois valores são um par; mexer num sem o outro fecha a
 distância de novo.
@@ -1123,9 +1174,11 @@ distância de novo.
 O `strong` não desce a peso normal porque ele é a única marca que sobra
 dentro de grifo e de wikilink — nos dois a cor da matéria é anulada de
 propósito (senão o termo brigaria com o pastel e com o lilás). Sem peso E sem
-cor, o destaque ali sumiria. Vale notar que a Nunito entra como fonte
-variável, então 800 e 500 são desenhos de verdade, não o negrito sintético
-que o navegador improvisa engrossando o traço.
+cor, o destaque ali sumiria. Vale notar que a fonte de leitura entra como
+VARIÁVEL — hoje a Plus Jakarta Sans, eixo de 200 a 800 —, então 800 e 500 são
+desenhos de verdade, não o negrito sintético que o navegador improvisa
+engrossando o traço. É a amarra da decisão 7: trocar por uma família de dois
+pesos desfaz esta decisão inteira, em silêncio.
 
 **Isto NÃO contradiz a decisão 9**, e a diferença importa: lá o que se recusa é
 *inferir* hierarquia dos `[[wikilinks]]`, que formam um grafo sem raiz cuja

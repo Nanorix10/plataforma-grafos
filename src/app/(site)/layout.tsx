@@ -28,7 +28,7 @@ import Rodape from '@/components/site/Rodape'
  * primeira dobra. Sem preload o visitante veria o título trocar de desenho
  * depois da primeira pintura, que é pior do que a requisição.
  *
- * `subsets: ['latin']` acompanha a Inter. O `latin` cobre os acentos do
+ * `subsets: ['latin']` acompanha a fonte de interface. O `latin` cobre os acentos do
  * português; `latin-ext` é para o leste europeu e só engordaria o arquivo.
  */
 const gabarito = Gabarito({

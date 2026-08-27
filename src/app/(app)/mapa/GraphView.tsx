@@ -79,8 +79,15 @@ function rotuloCurto(titulo: string) {
 /**
  * Meia-largura do rótulo desenhado, em pixels.
  *
- * 5,4px por caractere é a largura média da Inter nos 11px usados aqui —
- * medida, não chutada, mas ainda uma média: título com muitos "i" ocupa menos.
+ * 5,4px por caractere é a largura média da fonte de interface nos 11px usados
+ * aqui — medida, não chutada, mas ainda uma média: título com muitos "i" ocupa
+ * menos.
+ *
+ * O número foi medido na Inter, e SOBREVIVEU à troca dela pela Bricolage
+ * Grotesque em 27/08: lendo as larguras de avanço direto no arquivo das duas,
+ * a Bricolage saiu 0,04% mais estreita. Quem trocar a família de novo tem de
+ * remedir — o jeito barato é somar o avanço dos glifos do título mais longo do
+ * acervo e dividir pelo número de caracteres.
  *
  * O teto de 40px existia para o título comprido não inflar um CÍRCULO de
  * exclusão gigante em volta de um ponto de 8px. Ele fica, agora por outro

@@ -8,7 +8,7 @@
    KaTeX, que passa de 250 KB, nunca é baixado por quem só está lendo. */
 
 /* As fontes são carregadas por next/font em src/app/layout.tsx, que expõe
-   --fonte-titulo, --fonte-texto e --fonte-mono. Não voltar pro @import do
+   --fonte-texto, --fonte-resumo e --fonte-mono. Não voltar pro @import do
    Google Fonts: ele serializa três viagens de rede antes do primeiro texto. */
 
 /* ================================================================
@@ -255,7 +255,7 @@ h1, h2, h3, h4 {
    Vale para h1 e h2 e para mais nada: h3/h4 na landing são rótulo dentro de
    cartão, e display em texto pequeno vira só uma fonte diferente sem virar
    hierarquia. Dentro do `(app)` a regra não alcança, então resumo, editor e
-   barra lateral seguem inteiros na Inter.
+   barra lateral seguem inteiros na fonte de interface.
 
    O tracking é MAIS fechado que os -0.015em da interface porque aqui o corpo
    é outro: a -0.015em o `h1` de 72px abre buracos entre as letras que a mesma
@@ -534,8 +534,10 @@ h3 {
    (/admin/editor) e na página publicada (/resumos/[slug]) — pra que o que
    o Ronny vê enquanto escreve seja igual ao que o aluno lê. */
 .conteudo-resumo {
-  /* Nunito: fonte de leitura do resumo. A Work Sans continua na interface.
-     Corpo levemente maior porque a Nunito tem altura-de-x menor. */
+  /* A fonte de leitura do resumo (`--fonte-resumo`, hoje Plus Jakarta Sans),
+     nunca a de interface. Os 17px vêm de quando a família era a Nunito, de
+     altura-de-x menor — quem trocar a família de novo confira se o corpo ainda
+     pede o passo a mais, porque altura-de-x não acompanha o nome do tamanho. */
   font-family: var(--fonte-resumo), sans-serif;
   font-size: var(--t-medio);
   line-height: 1.7;
@@ -549,7 +551,7 @@ h3 {
 .conteudo-resumo > * + * {
   margin-top: 0.9em;
 }
-/* Os títulos internos do resumo também vão de Nunito — sem isso eles
+/* Os títulos internos do resumo também vão da fonte de leitura — sem isso eles
    herdariam a fonte de interface da regra global `h1, h2, h3` e o resumo
    ficaria com duas famílias misturadas. O peso vem mais abaixo, junto da
    conta que o separa do `strong`. */
@@ -592,11 +594,11 @@ h3 {
    **800 aqui e 500 no `strong`, e a distância é o ponto.** Se o título é o
    nome de um grafo e o resto do resumo também é negrito, o negrito deixa de
    significar coisa alguma — era o que acontecia com 700 contra 600, que no
-   desenho da Nunito leem quase igual. Agora o peso responde uma pergunta só:
+   desenho de uma humanista leem quase igual. Agora o peso responde uma pergunta só:
    isto é um nó do mapa ou não é? Os dois valores andam juntos; mexer num sem
    o outro fecha a distância de novo.
 
-   A Nunito entra como fonte VARIÁVEL (o `next/font` não fixa lista de pesos
+   A fonte de leitura entra como VARIÁVEL (o `next/font` não fixa lista de pesos
    no `layout.tsx`), então 800 e 500 são desenhos de verdade, e não o negrito
    sintético que o navegador inventa engrossando o traço. */
 .conteudo-resumo h2,
@@ -1170,7 +1172,8 @@ h3 {
 }
 
 .conteudo-resumo .katex {
-  /* o KaTeX herda o tamanho do texto; 1.05 compensa a Nunito ser pequena */
+  /* o KaTeX herda o tamanho do texto; 1.05 compensa a fonte de leitura ser
+     pequena ao lado do desenho matemático do KaTeX */
   font-size: 1.05em;
 }
 
