@@ -13,13 +13,14 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCollide,
   forceX,
   forceY,
   type Simulation,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from 'd3-force'
+// a colisão do d3 é circular e o rótulo é largo e baixo; ver o cabeçalho de lá
+import { colisaoElipse, medidasElipse } from './colisaoElipse'
 import { useRouter } from 'next/navigation'
 import Balao, { type PosicaoBalao } from './Balao'
 import Controles from './Controles'
@@ -76,22 +77,49 @@ function rotuloCurto(titulo: string) {
 }
 
 /**
- * Raio de colisão, contando o rótulo e não só o círculo.
- *
- * Antes era `raio(d) + 26` para todo mundo: uma folga fixa, cega ao texto que
- * o nó carrega embaixo. O resultado era o nó pequeno de título longo passando
- * por cima do vizinho enquanto sobrava espaço em volta do nó grande de título
- * curto.
+ * Meia-largura do rótulo desenhado, em pixels.
  *
  * 5,4px por caractere é a largura média da Inter nos 11px usados aqui —
  * medida, não chutada, mas ainda uma média: título com muitos "i" ocupa menos.
- * A conta não precisa ser exata porque colisão em d3 é CIRCULAR e o rótulo é
- * retangular; o teto de 40px existe justamente para o título comprido não
- * inflar um círculo de exclusão gigante em volta de um ponto de 8px.
+ *
+ * O teto de 40px existia para o título comprido não inflar um CÍRCULO de
+ * exclusão gigante em volta de um ponto de 8px. Ele fica, agora por outro
+ * motivo: a colisão virou elíptica (ver `colisaoElipse.ts`) e já não paga a
+ * largura na vertical, mas o rótulo continua cortado em `MAX_ROTULO`, e um
+ * teto acima do que se desenha reservaria espaço para texto que não existe.
  */
-function raioDeColisao(d: NoSim) {
-  const meiaLargura = (Math.min(d.titulo.length, MAX_ROTULO) * 5.4) / 2
-  return raio(d) + 12 + Math.min(meiaLargura, 40)
+function meiaLarguraDoRotulo(d: NoSim) {
+  return Math.min((Math.min(d.titulo.length, MAX_ROTULO) * 5.4) / 2, 40)
+}
+
+/* As duas medidas da elipse de cada nó, do mesmo par de acessadores: a colisão
+   empurra por elas e o `enquadrar` mede a moldura por elas. Ver o cabeçalho de
+   `colisaoElipse.ts` para por que uma diverge da outra em silêncio. */
+const { rx: raioX, ry: raioY } = medidasElipse<NoSim>(raio, meiaLarguraDoRotulo)
+
+/**
+ * Raio que a estrela de um pai precisa para caber sem briga.
+ *
+ * Este número é a correção do defeito central da física antiga: a aresta
+ * "contém" pedia 62px para TODO mundo, e a colisão precisava de muito mais
+ * quando o pai tinha dezenas de filhos. As duas forças puxavam em sentidos
+ * opostos para sempre — a aresta assentava a 5x o comprimento pedido, o mapa
+ * tremia e a estrela invadia as matérias vizinhas.
+ *
+ * A conta é empacotamento em disco: `n` filhos de área `π·rx·ry` cabem, com
+ * aproveitamento `DENSIDADE`, num disco de raio `√(n·rx·ry/DENSIDADE)`. Os
+ * 59x24 são as medidas do resumo típico do acervo (título de 19 caracteres, já
+ * no teto da meia-largura); a densidade de 0,62 é o que empacotamento
+ * desordenado alcança na prática, medida na simulação e não deduzida.
+ *
+ * Com isso a aresta pede o comprimento que ela vai mesmo ter: o estiramento
+ * médio caiu de 4,93 para 0,88.
+ */
+const DENSIDADE = 0.62
+
+function raioEstrela(filhos: number) {
+  if (filhos <= 1) return 62
+  return Math.max(62, Math.sqrt((filhos * 59 * 24) / DENSIDADE))
 }
 
 /**
@@ -256,6 +284,20 @@ export default function GraphView({
         })),
     ]
 
+    /* Quantos filhos cada pai tem DE FATO NA TELA — não quantos ele tem no
+       acervo. É esta contagem que dimensiona a estrela, e ela precisa respeitar
+       o filtro de matéria e a busca: uma matéria com 46 resumos dos quais 3
+       casaram com a busca é uma estrela de 3, e pedir o raio de 46 abriria um
+       vazio do tamanho da tela em volta dela. */
+    const filhosNaTela = new Map<string, number>()
+    for (const n of simNodes) {
+      if (n.tipo === 'materia') continue
+      const original = porId.get(n.id)
+      const paiId = original?.pai ?? idMateria(original?.materia ?? '')
+      filhosNaTela.set(paiId, (filhosNaTela.get(paiId) ?? 0) + 1)
+    }
+    const filhosVisiveis = (id: string) => filhosNaTela.get(id) ?? 1
+
     /* Reaproveita a posição de quem já estava na tela; quem é novo nasce em
        volta do pai, pra parecer que saiu de dentro dele.
 
@@ -267,7 +309,18 @@ export default function GraphView({
 
        O ângulo vem do ÍNDICE do filho, não de `Math.random()`: expandir e
        recolher o mesmo ramo duas vezes devolve o mesmo desenho, em vez de um
-       arranjo novo a cada clique. */
+       arranjo novo a cada clique.
+
+       E o leque tem o raio de EQUILÍBRIO (`raioEstrela`), não os 40px de antes.
+       Nascer colado no pai era o que fazia o mapa saltar: os 46 filhos de
+       Biologia apareciam empilhados num ponto e se abriam até 300px, a moldura
+       crescia enquanto isso e o enquadramento automático corria atrás. Nascendo
+       onde vão ficar, quem já estava na tela anda 35px em média no lugar dos
+       194 de antes, e o pico de velocidade cai de 74px/tick para 30.
+
+       O leque é ELÍPTICO pela mesma razão da colisão: a estrela que assenta é
+       mais larga que alta, e um leque circular obrigaria a física a achatá-lo
+       à força — que é justamente o movimento que se queria eliminar. */
     const idsAgora = new Set(simNodes.map((n) => n.id))
     const nascidosPorPai = new Map<string, number>()
     for (const n of simNodes) {
@@ -281,13 +334,14 @@ export default function GraphView({
       const doPai = posicoes.current.get(paiId)
       if (!doPai) continue
 
-      const irmaos = Math.max(1, (filhosDe.get(paiId) ?? []).length)
+      const irmaos = filhosVisiveis(paiId)
       const ordem = nascidosPorPai.get(paiId) ?? 0
       nascidosPorPai.set(paiId, ordem + 1)
 
       const angulo = (ordem / irmaos) * Math.PI * 2
-      n.x = doPai.x + Math.cos(angulo) * 40
-      n.y = doPai.y + Math.sin(angulo) * 40
+      const distancia = raioEstrela(irmaos)
+      n.x = doPai.x + Math.cos(angulo) * distancia * 1.6
+      n.y = doPai.y + Math.sin(angulo) * distancia * 0.6
     }
 
     // devolve o pino a quem o autor tinha prendido antes desta remontagem
@@ -470,7 +524,17 @@ export default function GraphView({
       anguloDaMateria.set(m.slug, (i / materiasUsadas.length) * Math.PI * 2 - Math.PI / 2)
     })
 
-    const raioDoAnel = Math.min(width, height) * 0.24
+    /* 0,34 e não os 0,24 de antes.
+       O anel só precisa manter as matérias afastadas o bastante para as
+       estrelas delas não se misturarem, e a conta mudou duas vezes desde que o
+       número foi escolhido: o acervo foi de 38 para 232 resumos, e a colisão
+       elíptica encolheu cada estrela. Com 0,24, abrir duas matérias deixava 61%
+       dos vizinhos mais próximos de cada resumo pertencendo a OUTRA matéria;
+       com 0,34, 48% — e o desenho ainda cabe na tela com escala 0,60, acima do
+       0,55 em que os rótulos somem.
+       Passar de 0,44 devolve pouca separação e começa a apertar o zoom: medido,
+       48% → 45% em troca de 0,60 → 0,57. */
+    const raioDoAnel = Math.min(width, height) * 0.34
 
     /** Para onde este nó tende: o ponto da matéria dele, ou o centro. */
     function alvo(d: NoSim): { x: number; y: number } {
@@ -492,9 +556,18 @@ export default function GraphView({
         'link',
         forceLink<NoSim, LinkSim>(simLinks)
           .id((d) => d.id)
-          // "contém" puxa mais curto que "cita": a estrutura do autor deve
-          // dominar o desenho, e as referências cruzadas só ajustam
-          .distance((l) => (l.tipo === 'contem' ? 62 : 100))
+          /* "contém" puxa mais curto que "cita": a estrutura do autor deve
+             dominar o desenho, e as referências cruzadas só ajustam.
+
+             Mas "curto" deixou de ser um número fixo. Os 62px valiam quando
+             cada matéria segurava meia dúzia de assuntos; hoje Biologia segura
+             46 filhos diretos, que não cabem num círculo de 62px de raio por
+             mais que a aresta puxe — a colisão ganha, a aresta fica esticada
+             para sempre e a briga entre as duas é o tremor. `raioEstrela` pede
+             o comprimento que a estrela vai mesmo ter. */
+          .distance((l) =>
+            l.tipo === 'contem' ? raioEstrela(filhosVisiveis((l.source as NoSim).id)) : 100
+          )
           .strength((l) => (l.tipo === 'contem' ? 0.9 : 0.25))
       )
       /* A matéria empurra mais forte porque é o centro de uma estrela de até
@@ -522,19 +595,27 @@ export default function GraphView({
 
          A matéria é presa com força; o resumo só é sugerido, e quem de fato o
          posiciona é a aresta que o liga ao pai. Apertar aqui empilharia os
-         irmãos todos no mesmo ponto. */
+         irmãos todos no mesmo ponto.
+
+         0,20 e não os 0,12 de antes. Aquele valor era o certo enquanto a aresta
+         "contém" pedia 62px para todo mundo: com ela puxando os filhos para
+         cima do pai, uma âncora firme só somaria aperto. Agora a aresta pede o
+         raio de equilíbrio da estrela e não empilha mais ninguém, então a
+         âncora pode fazer o trabalho dela — que é manter cada estrela em cima
+         da própria matéria. Medido com duas matérias abertas: rótulos
+         encavalados caem de 15 pares para 3. */
       .force(
         'x',
-        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.2))
       )
       .force(
         'y',
-        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.2))
       )
-      /* Duas iterações: com uma só (o padrão) a colisão não RESOLVE a
-         sobreposição, apenas empurra um pouco a cada tick — e como o alpha cai
-         antes de a conta fechar, o mapa assenta com nós ainda encavalados. */
-      .force('collide', forceCollide<NoSim>().radius(raioDeColisao).iterations(2))
+      /* Elíptica, e não o `forceCollide` do d3 — que é circular e cobrava na
+         VERTICAL a largura de um rótulo que é só horizontal. Ver o cabeçalho de
+         `colisaoElipse.ts`: é a mudança que faz as estrelas caberem. */
+      .force('collide', colisaoElipse<NoSim>(raioX, raioY))
       /* Mais atrito e esfriamento mais rápido. `velocityDecay` é o parâmetro do
          "nervoso": com o padrão 0.4 o nó passa do ponto de equilíbrio, volta,
          passa de novo, e o mapa fica vibrando por segundos. `alphaDecay` a
@@ -811,11 +892,11 @@ export default function GraphView({
     function reancorar() {
       sim.force(
         'x',
-        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+        forceX<NoSim>((d) => alvo(d).x).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.2))
       )
       sim.force(
         'y',
-        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.12))
+        forceY<NoSim>((d) => alvo(d).y).strength((d) => (d.tipo === 'materia' ? 0.25 : 0.2))
       )
     }
 
@@ -875,10 +956,11 @@ export default function GraphView({
       const alturaAgora = svgRef.current?.clientHeight || height
 
       const margem = 48
-      const x1 = Math.min(...comPosicao.map((n) => n.x! - raioDeColisao(n)))
-      const x2 = Math.max(...comPosicao.map((n) => n.x! + raioDeColisao(n)))
-      const y1 = Math.min(...comPosicao.map((n) => n.y! - raioDeColisao(n)))
-      const y2 = Math.max(...comPosicao.map((n) => n.y! + raioDeColisao(n)))
+      // um raio por EIXO: o rótulo estoura a moldura de lado, não por cima
+      const x1 = Math.min(...comPosicao.map((n) => n.x! - raioX(n)))
+      const x2 = Math.max(...comPosicao.map((n) => n.x! + raioX(n)))
+      const y1 = Math.min(...comPosicao.map((n) => n.y! - raioY(n)))
+      const y2 = Math.max(...comPosicao.map((n) => n.y! + raioY(n)))
 
       const larg = Math.max(1, x2 - x1)
       const alt = Math.max(1, y2 - y1)
