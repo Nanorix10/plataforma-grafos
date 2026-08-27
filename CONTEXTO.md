@@ -851,9 +851,10 @@ essa mesma coluna, e a tela de pessoas segue valendo para os casos manuais.
 > depois de clicar no link recebido; desligada, entra na hora.
 
 **10b. A física do grafo é ancorada por matéria, e o `forceCenter` saiu.**
-O acervo tem 38 resumos, 6 matérias e **uma** citação `[[…]]` no total. Ao
-abrir, o mapa são seis estrelas que não se ligam por aresta nenhuma — e essa
-topologia expõe uma armadilha do d3 que só aparece com componentes desconexos:
+Quando isto foi escrito o acervo tinha 38 resumos e 6 matérias; hoje são 232 e
+10, e **uma** citação `[[…]]` no total — esse número não mudou. Ao abrir, o mapa
+são estrelas que não se ligam por aresta nenhuma, e essa topologia expõe uma
+armadilha do d3 que só aparece com componentes desconexos:
 
 **`forceCenter` não puxa nó nenhum.** Ele TRANSLADA o sistema a cada tick para
 manter o centroide parado. Com seis blocos se repelindo em direções opostas, a
@@ -864,21 +865,21 @@ moldura de 1000x700, com 34 dos 35 nós fora dela. Quem substitui são `forceX` 
 
 Cada matéria tem um lugar fixo num anel, pelo índice em `MATERIAS` (ordem
 canônica, não a ordem da consulta — senão publicar um resumo giraria o mapa).
-A matéria é presa com força 0.25 e o resumo com 0.12; apertar o resumo
-empilharia os irmãos, e quem de fato o posiciona é a aresta com o pai.
+A matéria é presa com força 0.25 e o resumo com 0.20 (era 0.12 — ver 10b-bis);
+quem de fato posiciona o resumo é a aresta com o pai.
 
 `forceManyBody` ganhou `distanceMax(420)`. Sem teto a repulsão tem alcance
 infinito, e é ela que empurrava um grupo contra o outro do outro lado da tela.
 
 **Os números saíram de medição, não de gosto.** Uma varredura de anel x força x
 teto de rótulo sobre a topologia real escolheu `anel 0.24`, `força 0.12`,
-`teto 40`: zero nós fora da moldura, zero círculos sobrepostos, um par de
-rótulos se tocando. As alternativas testadas iam a 16 nós fora.
+`teto 40`. Os dois primeiros foram refeitos em 26/08 sobre o acervo de hoje e
+viraram `0.34` e `0.20`; o teto de 40 ficou. Ver 10b-bis.
 
-**O rótulo entra na colisão, e é cortado em 26 caracteres.** A colisão do d3 é
-circular e o texto não faz parte do círculo: sem corte, "Movimento circular
-uniformemente variado" (215px a 11px) atravessa os vizinhos por mais que a
-física empurre. O título inteiro segue no balão e no `aria-label`.
+**O rótulo entra na colisão, e é cortado em 26 caracteres.** Sem corte,
+"Movimento circular uniformemente variado" (215px a 11px) atravessa os vizinhos
+por mais que a física empurre. O título inteiro segue no balão e no
+`aria-label`.
 
 **O que a física não resolve, o zoom resolve.** 35 nós com rótulo ocupam uns
 840x680 — não cabem nos 380px de um celular, e apertar as forças até caberem
@@ -903,6 +904,71 @@ E a remontagem abre fria (`alpha(0.35)` em vez de 1, a partir da segunda):
 expandir um ramo reacomoda os filhos novos, não o mapa inteiro. Os filhos
 nascem num leque de ângulo determinístico pelo índice, e não em `pai ± 15px`
 sorteados — irmãos nascendo no mesmo ponto era a bagunça que se via ao expandir.
+O RAIO desse leque deixou de ser 40px fixo; ver 10b-bis.
+
+**10b-bis. A colisão virou elíptica, e a aresta "contém" deixou de ter tamanho
+fixo.**
+A física da 10b foi calibrada para 38 resumos com hierarquia. O acervo cresceu
+para 232, e **223 deles têm `pai_id` nulo**: a árvore da decisão 9 quase não foi
+preenchida, então cada matéria virou uma estrela de filhos diretos — Biologia
+sozinha tem 46. Três premissas quebraram de uma vez.
+
+**A colisão do d3 é circular, e o nó do mapa não é.** Um resumo é um ponto de
+7px carregando embaixo uma linha de 11px que chega a 140px de largura. Um
+círculo que cubra esse retângulo precisa ter a meia-largura do TEXTO, e passa a
+cobrar na vertical 59px que nenhum pixel usa: área de exclusão de ~10.900px²
+para um nó que ocupa ~4.400. Com 46 filhos, a estrela precisava de ~500px de
+raio contra os 187px do anel — **era isso que fazia uma matéria aberta engolir
+as vizinhas**, e nenhuma afinação de força resolve, porque é geometria.
+
+Entrou `mapa/colisaoElipse.ts`: elipse é círculo num espaço com o `y` esticado
+por K = largura/altura média, então o quadtree e o empurrão do `forceCollide`
+valem inteiros, só com a componente vertical dividida por K na volta. O
+`d3-quadtree` passou a ser dependência declarada — ele **já vinha** instalado
+por baixo do `d3-force`, então declará-lo não acrescenta um byte e evita
+depender de uma dependência de terceiro por acidente (mesmo espírito da
+decisão 10).
+
+**A aresta "contém" pedia 62px para todo mundo.** Com 46 irmãos disputando um
+círculo de 62px de raio, a colisão ganha e a aresta fica esticada PARA SEMPRE —
+e a briga entre a que puxa e a que empurra era o tremor. Agora ela pede
+`raioEstrela(filhos)`, o raio de empacotamento em disco do tanto de filho que o
+pai tem **na tela** (respeitando busca e filtro: uma matéria de 46 resumos com 3
+resultados é uma estrela de 3). O estiramento médio caiu de 4,93 para 0,88.
+
+**E o filho nascia a 40px do pai.** Os 46 apareciam empilhados num ponto e se
+abriam até 300px enquanto o enquadramento automático corria atrás — era isso que
+se via como o mapa saltando. Agora nascem no raio de equilíbrio, num leque
+elíptico, porque a estrela que assenta é mais larga que alta.
+
+Medido na topologia real, com a sequência de expansão de verdade (fechado →
+abre Biologia → abre Química), e conferido de novo contra o módulo já escrito:
+
+| | antes | agora |
+|---|---|---|
+| quem já estava na tela anda (média) | 194px | **36px** |
+| pico de velocidade | 74px/tick | **31px/tick** |
+| ticks até assentar | 138 | **77** |
+| desenho com tudo aberto | 2052x1855 | **1429x1275** |
+| escala do enquadramento, tudo aberto | 0,40 | **0,60** |
+
+A última linha é a que se enxerga: o rótulo some abaixo de `k = 0.55`, então
+antes o mapa com tudo aberto era um punhado de bolinhas sem nome.
+
+**O que este desenho escolhe pagar, e declara.** Primeiro, rótulo pode encostar
+em rótulo: 1 par em 56 nós com uma matéria aberta, 16 em 242 com tudo aberto. O
+traço de contorno na cor do fundo segura a leitura, e a alternativa era não ter
+rótulo nenhum. Segundo, **as matérias ficam mais vizinhas umas das outras** —
+com duas abertas, 22% dos seis vizinhos mais próximos de cada resumo são de
+outra matéria, contra 6% antes. É o preço de caber na tela, e o anel foi de 0.24
+para 0.34 justamente para pagar parte dele (sem isso seriam 61%).
+
+**O que ficou sem solução, e não é física.** Separar bem 242 nós com 118px de
+exclusão cada exige uns 2000x2000px, que em 1440x780 é escala 0,36 — abaixo do
+limiar do rótulo. Anel derivado do tamanho das estrelas foi testado e é pior:
+resolve a separação e devolve o salto (quem já estava na tela passa a andar
+358px) e o zoom. A saída real é a árvore da decisão 9 deixar de estar vazia, ou
+a matéria muito cheia não abrir 46 filhos de uma vez.
 
 **10c. Evento entra em lote, colando uma lista.**
 A linha do tempo passou a existência inteira com UM evento no banco. Não
