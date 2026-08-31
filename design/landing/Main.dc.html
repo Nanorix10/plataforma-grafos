@@ -1,0 +1,429 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400..900&family=Inter:wght@400..800&display=swap">
+  <style>
+    body { margin: 0; background: #F3F1EC; color: #1A1814;
+           font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #5B4BC4; text-decoration: none; }
+    a:hover { color: #3F32A0; }
+    h1, h2 { font-family: Gabarito, Inter, sans-serif; letter-spacing: -0.03em; margin: 0; }
+    p { margin: 0; }
+    .rotulo { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6C6759; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+    .botao { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+             font-size: 15px; font-weight: 600; border-radius: 9px; padding: 10px 16px;
+             border: 1px solid transparent; cursor: pointer; background: transparent;
+             font-family: inherit; }
+    .primario { color: #5B4BC4; border-color: #5B4BC4; }
+    .primario:hover { background: rgba(91,75,196,.10); color: #3F32A0; border-color: #3F32A0; }
+    .neutro { color: #1A1814; border-color: #CFC9BC; }
+    .neutro:hover { background: #EBE7DF; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .mais { transform: rotate(45deg); }
+  </style>
+</helmet>
+
+<div>
+
+  <!-- ===== barra ===== -->
+  <nav style="position: sticky; top: 0; z-index: 50; background: rgba(252,250,246,.92); backdrop-filter: blur(8px)">
+    <div class="wrap" style="height: 68px; display: flex; align-items: center; gap: 24px">
+      <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; font-size: 18px; letter-spacing: -0.015em">
+        <svg viewBox="30 30 140 140" width="34" height="34" aria-hidden="true">
+          <circle cx="100" cy="100" r="66" fill="none" stroke="#5B4BC4" stroke-width="2.6" opacity="0.35" />
+          <g stroke="#5B4BC4" stroke-linecap="round">
+            <line x1="100" y1="100" x2="100" y2="45" stroke-width="4.5" />
+            <line x1="100" y1="100" x2="147.6" y2="72.5" stroke-width="3.6" stroke-dasharray="7 5" />
+            <line x1="100" y1="100" x2="147.6" y2="127.5" stroke-width="2.8" stroke-dasharray="1.4 5" />
+            <line x1="100" y1="100" x2="100" y2="155" stroke-width="4.5" />
+            <line x1="100" y1="100" x2="52.4" y2="127.5" stroke-width="3.6" stroke-dasharray="7 5" />
+            <line x1="100" y1="100" x2="52.4" y2="72.5" stroke-width="2.8" stroke-dasharray="1.4 5" />
+          </g>
+          <circle cx="100" cy="45" r="11" fill="#C2334D" />
+          <circle cx="147.6" cy="72.5" r="11" fill="#1F5F9E" />
+          <circle cx="147.6" cy="127.5" r="11" fill="#3F7848" />
+          <circle cx="100" cy="155" r="11" fill="#9E2E70" />
+          <circle cx="52.4" cy="127.5" r="11" fill="#A65224" />
+          <circle cx="52.4" cy="72.5" r="11" fill="#4A5C8C" />
+          <circle cx="100" cy="100" r="9" fill="#5B4BC4" />
+        </svg>
+        Plataforma Grafos
+      </span>
+      <div style="display: flex; gap: 32px; font-size: 15px; color: #5A564B; margin-left: auto">
+        <a href="#materias" style="color: #5A564B">Matérias</a>
+        <a href="#planos" style="color: #5A564B">Planos</a>
+      </div>
+      <button class="botao primario">Entrar</button>
+    </div>
+  </nav>
+
+  <!-- ===== dobra: a prova primeiro ===== -->
+  <header style="background: #F3F1EC; border-bottom: 1px solid #E7E3DA">
+    <div class="wrap" style="padding-top: 80px; padding-bottom: 80px">
+      <!-- O TÍTULO OCUPA A LARGURA INTEIRA, e isso não é gosto: a 72px, o
+           Hero.tsx do site já mediu que 640px "quebrava a afirmação em cinco
+           linhas curtas e ela deixava de ler como frase", e por isso subiu para
+           720. A primeira versão desta direção pôs o mesmo h1 numa coluna de
+           531px — mais estreita que o caso que já falhou lá. Agora ele tem os
+           720, e quem divide a linha com o painel das bancas é o parágrafo. -->
+      <div style="max-width: 720px; margin-bottom: 44px">
+        <div class="rotulo" style="margin-bottom: 20px; color: #3F32A0">
+          Preparação PASSE · PAS-UEM · PAS-UnB
+        </div>
+        <h1 style="font-size: 72px; line-height: 1.03; font-weight: 400; text-wrap: balance">
+          Os resumos de quem está em
+          <strong style="font-weight: 900; white-space: nowrap">1º lugar em medicina</strong>
+          no PASSE.
+        </h1>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 400px; gap: 64px; align-items: start">
+
+        <div>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; max-width: 52ch; margin-bottom: 36px">
+            Leandro escreveu este acervo enquanto prestava as mesmas provas que você.
+            Não é resultado de uma prova só — são três bancas diferentes, no mesmo ano.
+          </p>
+          <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap">
+            <button class="botao primario">Ver planos de acesso</button>
+            <a href="#materias" style="padding: 8px 0; font-size: 15px; color: #1A1814; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #6C6759">
+              Ver matérias disponíveis
+            </a>
+          </div>
+        </div>
+
+        <!-- as três bancas, clicáveis: o detalhe troca ao lado -->
+        <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 24px">
+          <div class="rotulo" style="margin-bottom: 16px">A prova, em três bancas</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px">
+            <sc-for list="{{provas}}" as="p" hint-placeholder-count="3">
+              <button
+                onClick="{{ p.pick }}"
+                style="{{ p.estilo }}"
+              >
+                <span style="font-size: 15px; font-weight: 600">{{ p.titulo }}</span>
+                <span style="font-size: 13px; color: #6C6759">{{ p.ano }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="border-top: 1px solid #E7E3DA; padding-top: 18px">
+            <p style="font-size: 13px; line-height: 1.7; color: #5A564B">{{ detalhe }}</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== faixa: a única superfície saturada ===== -->
+  <section style="background: #262A60; padding: 64px 0">
+    <div class="wrap">
+      <h2 style="font-size: 28px; font-weight: 500; color: #F3F5FE; max-width: 30ch; margin-bottom: 40px">
+        Três anos, três etapas, um acervo só.
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px">
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">24</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">matérias cobertas</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">3</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">processos seletivos</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">180+</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">resumos interligados</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">Campo Grande</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">MS, material próprio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== por dentro ===== -->
+  <section style="padding: 80px 0">
+    <div class="wrap">
+      <div style="max-width: 560px; margin-bottom: 44px">
+        <div class="rotulo" style="margin-bottom: 12px">Por dentro</div>
+        <h2 style="font-size: 28px; font-weight: 500; margin-bottom: 12px">Não é uma pilha de PDF. É um mapa.</h2>
+        <p style="font-size: 15px; line-height: 1.7; color: #5A564B">
+          Resumo solto obriga você a lembrar sozinho onde um assunto encosta no outro.
+          Aqui essa ligação já está escrita, e é ela que você navega.
+        </p>
+      </div>
+
+      <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 32px; display: grid; grid-template-columns: 1fr 300px; gap: 40px; align-items: center">
+        <svg viewBox="0 0 640 300" style="width: 100%; height: auto" aria-hidden="true">
+          <g stroke="#CFC9BC" fill="none">
+            <line x1="150" y1="150" x2="330" y2="70" stroke-width="1.5" />
+            <line x1="150" y1="150" x2="330" y2="150" stroke-width="1.5" />
+            <line x1="150" y1="150" x2="330" y2="230" stroke-width="1.5" />
+            <line x1="330" y1="70" x2="500" y2="40" stroke-width="1.5" />
+            <line x1="330" y1="70" x2="500" y2="110" stroke-width="1.5" />
+            <line x1="330" y1="230" x2="500" y2="200" stroke-width="1.5" />
+            <line x1="330" y1="230" x2="500" y2="260" stroke-width="1.5" />
+            <line x1="330" y1="150" x2="500" y2="110" stroke-width="1.5" stroke-dasharray="5 5" />
+            <line x1="330" y1="70" x2="330" y2="230" stroke-width="1.5" stroke-dasharray="5 5" />
+          </g>
+          <circle cx="150" cy="150" r="13" fill="#0B7A80" />
+          <circle cx="330" cy="70" r="9" fill="#0B7A80" />
+          <circle cx="330" cy="150" r="9" fill="#1F5F9E" />
+          <circle cx="330" cy="230" r="9" fill="#0B7A80" />
+          <circle cx="500" cy="40" r="6" fill="#FCFAF6" stroke="#0B7A80" stroke-width="2" />
+          <circle cx="500" cy="110" r="6" fill="#FCFAF6" stroke="#0B7A80" stroke-width="2" />
+          <circle cx="500" cy="200" r="6" fill="#FCFAF6" stroke="#0B7A80" stroke-width="2" />
+          <circle cx="500" cy="260" r="6" fill="#FCFAF6" stroke="#0B7A80" stroke-width="2" />
+          <g font-family="Inter, sans-serif" font-size="12" fill="#3E3B33">
+            <text x="150" y="182" text-anchor="middle">Física</text>
+            <text x="348" y="66">Dinâmica</text>
+            <text x="348" y="146">Vetores</text>
+            <text x="348" y="226">Cinemática</text>
+            <text x="516" y="44" font-size="11" fill="#5A564B">Leis de Newton</text>
+            <text x="516" y="114" font-size="11" fill="#5A564B">Atrito</text>
+            <text x="516" y="204" font-size="11" fill="#5A564B">MRU</text>
+            <text x="516" y="264" font-size="11" fill="#5A564B">Queda livre</text>
+          </g>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="#CFC9BC" stroke-width="1.5" /></svg>
+            <div>
+              <div style="font-size: 13px; font-weight: 600">contém</div>
+              <div style="font-size: 12px; color: #6C6759">Dinâmica está dentro de Física</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="#CFC9BC" stroke-width="1.5" stroke-dasharray="5 5" /></svg>
+            <div>
+              <div style="font-size: 13px; font-weight: 600">cita</div>
+              <div style="font-size: 12px; color: #6C6759">Dinâmica menciona Vetores</div>
+            </div>
+          </div>
+          <p style="font-size: 13px; line-height: 1.7; color: #5A564B; border-top: 1px solid #E7E3DA; padding-top: 16px">
+            As duas linhas são as mesmas do mapa dentro do site. Quem aprende a
+            ler uma aqui não reaprende lá dentro.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== matérias ===== -->
+  <section id="materias" style="padding: 0 0 80px">
+    <div class="wrap">
+      <div style="max-width: 560px; margin-bottom: 32px">
+        <div class="rotulo" style="margin-bottom: 12px">O acervo</div>
+        <h2 style="font-size: 28px; font-weight: 500">Doze matérias, escritas de novo do zero.</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{materias}}" as="m" hint-placeholder-count="12">
+          <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 16px 18px; display: flex; align-items: center; gap: 10px">
+            <span style="{{ m.ponto }}"></span>
+            <span style="{{ m.rotulo }}">{{ m.nome }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== planos ===== -->
+  <section id="planos" style="padding: 80px 0; background: #F6F3ED; border-top: 1px solid #E7E3DA; border-bottom: 1px solid #E7E3DA">
+    <div class="wrap">
+      <div style="max-width: 560px; margin-bottom: 40px">
+        <div class="rotulo" style="margin-bottom: 12px">Planos</div>
+        <h2 style="font-size: 28px; font-weight: 500; margin-bottom: 12px">Você paga pelo que vai prestar.</h2>
+        <p style="font-size: 15px; line-height: 1.7; color: #5A564B">
+          Todo plano inclui o conteúdo comum a mais de um vestibular.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-bottom: 32px">
+        <sc-for list="{{planos}}" as="pl" hint-placeholder-count="3">
+          <button onClick="{{ pl.pick }}" style="{{ pl.estilo }}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px">
+              <span style="font-size: 17px; font-weight: 600">{{ pl.nome }}</span>
+              <span style="{{ pl.seloEstilo }}">{{ pl.selo }}</span>
+            </div>
+            <p style="font-size: 13px; line-height: 1.6; color: #5A564B; margin-bottom: 18px">{{ pl.paraQuem }}</p>
+            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 18px">
+              <span style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #B3243C">[PREÇO]</span>
+              <span style="font-size: 13px; color: #6C6759">a definir</span>
+            </div>
+            <span style="{{ pl.acaoEstilo }}">{{ pl.acao }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 24px 28px">
+        <div class="rotulo" style="margin-bottom: 14px">Incluído em qualquer plano</div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 32px">
+          <sc-for list="{{inclui}}" as="i" hint-placeholder-count="6">
+            <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6; color: #3E3B33">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="flex-shrink: 0; margin-top: 2px" aria-hidden="true">
+                <path d="M4 10.5 8 14.5 16 6" stroke="#5B4BC4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>{{ i.texto }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== dúvidas ===== -->
+  <section style="padding: 80px 0">
+    <div style="max-width: 760px; margin: 0 auto; padding: 0 32px">
+      <div style="margin-bottom: 36px">
+        <div class="rotulo" style="margin-bottom: 12px">Dúvidas</div>
+        <h2 style="font-size: 28px; font-weight: 500">O que costumam perguntar antes de assinar.</h2>
+      </div>
+      <div style="border-top: 1px solid #E7E3DA">
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            Preciso baixar algum arquivo?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            Não. Tudo é lido no próprio site, pelo navegador do computador ou do celular.
+            Como não há arquivo para baixar, você sempre está lendo a versão mais recente do resumo.
+          </p>
+        </details>
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            Serve para a etapa que eu vou fazer este ano?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            O acervo é organizado por processo seletivo e por etapa, e acompanha o edital do ano.
+            Na página de cada matéria dá para ver em quais processos ela já está disponível.
+          </p>
+        </details>
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            O que é esse negócio de grafo?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            É o jeito como o material está montado: cada assunto sabe dentro de que ele está e
+            com quais outros ele se conecta. Na seção "Por dentro" desta página dá para tocar
+            num assunto e ver as ligações dele.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== rodapé ===== -->
+  <footer style="border-top: 1px solid #E7E3DA; padding: 32px 0">
+    <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 24px">
+      <span style="font-size: 15px; font-weight: 500; letter-spacing: -0.015em">Plataforma Grafos</span>
+      <span style="font-size: 13px; color: #6C6759">Campo Grande, MS · material próprio</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1200,"height":3700}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { prova: 0, plano: 1 };
+  }
+
+  renderVals() {
+    const provas = [
+      {
+        titulo: '1º lugar em medicina',
+        ano: '2025',
+        detalhe: 'PASSE da UFMS, entre todos os candidatos. O PASSE é seriado, então a colocação é a de agora — e é a prova para a qual este acervo nasceu.',
+      },
+      {
+        titulo: '920 na redação',
+        ano: '2025',
+        detalhe: 'ENEM, cursando o primeiro ano do ensino médio. É a banca de fora do estado, e a que mostra que o método não depende do edital da UFMS.',
+      },
+      {
+        titulo: 'Medalha de ouro',
+        ano: '2025',
+        detalhe: 'Ranking de notas do Poliedro no Colégio Harmonia. Banca privada, turma inteira, mesmo ano — a terceira régua independente.',
+      },
+    ];
+
+    const base = 'display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 9px; cursor: pointer; font-family: inherit; border: 1px solid ';
+
+    const planosBrutos = [
+      { nome: 'Acesso PASSE', paraQuem: 'Você presta só o PASSE, da UFMS.', selo: '' },
+      { nome: 'Acesso Completo', paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.', selo: 'Mais completo' },
+      { nome: 'Acesso PAS', paraQuem: 'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE.', selo: '' },
+    ];
+
+    const cartao = 'width: 100%; text-align: left; padding: 24px; border-radius: 12px; cursor: pointer; font-family: inherit; background: #FCFAF6; border: 1px solid ';
+
+    const nomes = [
+      ['Língua Portuguesa', '#C2334D'], ['Literatura', '#9C4B42'],
+      ['Matemática', '#1F5F9E'], ['Física', '#0B7A80'],
+      ['Química', '#9E2E70'], ['Biologia', '#3F7848'],
+      ['Geografia', '#A65224'], ['Filosofia', '#4A5C8C'],
+      ['Sociologia', '#A63A63'], ['História', '#7A3785'],
+      ['Arte', '#5646A8'], ['Redação', '#3D7A8C'],
+    ];
+
+    return {
+      provas: provas.map((p, i) => ({
+        titulo: p.titulo,
+        ano: p.ano,
+        estilo: base + (i === this.state.prova
+          ? '#5B4BC4; background: rgba(91,75,196,.10)'
+          : '#CFC9BC; background: #FAF7F1'),
+        pick: () => this.setState({ prova: i }),
+      })),
+      detalhe: provas[this.state.prova].detalhe,
+
+      materias: nomes.map(([nome, cor]) => ({
+        nome,
+        ponto: 'width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ' + cor,
+        rotulo: 'font-size: 15px; font-weight: 500; color: ' + cor,
+      })),
+
+      planos: planosBrutos.map((pl, i) => {
+        const ativo = i === this.state.plano;
+        return {
+          nome: pl.nome,
+          paraQuem: pl.paraQuem,
+          selo: pl.selo,
+          seloEstilo: pl.selo
+            ? 'font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #5B4BC4; border: 1px solid #5B4BC4; border-radius: 9px; padding: 3px 8px; white-space: nowrap'
+            : 'display: none',
+          estilo: cartao + (ativo ? '#5B4BC4; box-shadow: 0 0 0 1px #5B4BC4' : '#CFC9BC'),
+          acao: ativo ? 'Escolhido' : 'Escolher este',
+          acaoEstilo: 'display: inline-flex; align-items: center; justify-content: center; width: 100%; font-size: 15px; font-weight: 600; border-radius: 9px; padding: 10px 16px; border: 1px solid '
+            + (ativo ? '#5B4BC4; background: rgba(91,75,196,.10); color: #3F32A0' : '#CFC9BC; color: #1A1814'),
+          pick: () => this.setState({ plano: i }),
+        };
+      }),
+
+      inclui: [
+        'Todas as matérias do processo seletivo escolhido',
+        'O conteúdo comum a mais de um vestibular, seja qual for o plano',
+        'Resumos interligados, com o mapa de conexões',
+        'Linha do tempo dos eventos históricos',
+        'Leitura no próprio site, sem baixar nada',
+        'Atualizações do acervo enquanto o acesso estiver ativo',
+      ].map((texto) => ({ texto })),
+    };
+  }
+}
+</script>
+</body>
+</html>

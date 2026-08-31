@@ -1,0 +1,415 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400..900&amp;family=Inter:wght@400..800&amp;display=swap">
+  <style>
+    body { margin: 0; background: #F3F1EC; color: #1A1814;
+           font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #5B4BC4; text-decoration: none; }
+    a:hover { color: #3F32A0; }
+    h1, h2 { font-family: Gabarito, Inter, sans-serif; letter-spacing: -0.03em; margin: 0; }
+    p { margin: 0; }
+    .rotulo { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #6C6759; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+    .botao { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+             font-size: 15px; font-weight: 600; border-radius: 9px; padding: 10px 16px;
+             border: 1px solid transparent; cursor: pointer; background: transparent;
+             font-family: inherit; }
+    .primario { color: #5B4BC4; border-color: #5B4BC4; }
+    .primario:hover { background: rgba(91,75,196,.10); color: #3F32A0; border-color: #3F32A0; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .mais { transform: rotate(45deg); }
+    /* o quadriculado do /mapa: o mesmo chão da ferramenta, sem token novo */
+    .quadro { background-color: #F3F1EC;
+      background-image: linear-gradient(#E7E3DA 1px, transparent 1px),
+                        linear-gradient(90deg, #E7E3DA 1px, transparent 1px);
+      background-size: 28px 28px; }
+  </style>
+</helmet>
+
+<div>
+
+  <nav style="position: sticky; top: 0; z-index: 50; background: rgba(252,250,246,.92); backdrop-filter: blur(8px)">
+    <div class="wrap" style="height: 68px; display: flex; align-items: center; gap: 24px">
+      
+      <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; font-size: 18px; letter-spacing: -0.015em">
+        <svg viewBox="30 30 140 140" width="34" height="34" aria-hidden="true">
+          <circle cx="100" cy="100" r="66" fill="none" stroke="#5B4BC4" stroke-width="2.6" opacity="0.35"></circle>
+          <g stroke="#5B4BC4" stroke-linecap="round">
+            <line x1="100" y1="100" x2="100" y2="45" stroke-width="4.5"></line>
+            <line x1="100" y1="100" x2="147.6" y2="72.5" stroke-width="3.6" stroke-dasharray="7 5"></line>
+            <line x1="100" y1="100" x2="147.6" y2="127.5" stroke-width="2.8" stroke-dasharray="1.4 5"></line>
+            <line x1="100" y1="100" x2="100" y2="155" stroke-width="4.5"></line>
+            <line x1="100" y1="100" x2="52.4" y2="127.5" stroke-width="3.6" stroke-dasharray="7 5"></line>
+            <line x1="100" y1="100" x2="52.4" y2="72.5" stroke-width="2.8" stroke-dasharray="1.4 5"></line>
+          </g>
+          <circle cx="100" cy="45" r="11" fill="#C2334D"></circle>
+          <circle cx="147.6" cy="72.5" r="11" fill="#1F5F9E"></circle>
+          <circle cx="147.6" cy="127.5" r="11" fill="#3F7848"></circle>
+          <circle cx="100" cy="155" r="11" fill="#9E2E70"></circle>
+          <circle cx="52.4" cy="127.5" r="11" fill="#A65224"></circle>
+          <circle cx="52.4" cy="72.5" r="11" fill="#4A5C8C"></circle>
+          <circle cx="100" cy="100" r="9" fill="#5B4BC4"></circle>
+        </svg>
+        Plataforma Grafos
+      </span><div style="display: flex; gap: 32px; font-size: 15px; color: #5A564B; margin-left: auto">
+        <a href="#materias" style="color: #5A564B">Matérias</a>
+        <a href="#planos" style="color: #5A564B">Planos</a>
+      </div>
+      <button class="botao primario">Entrar</button>
+    </div>
+  </nav>
+
+  <!-- ===== dobra: o produto É a dobra ===== -->
+  <header class="quadro" style="border-bottom: 1px solid #E7E3DA">
+    
+  <div class="wrap" style="padding-top: 64px; padding-bottom: 72px">
+      <div style="max-width: 660px; margin-bottom: 40px">
+        <div class="rotulo" style="margin-bottom: 20px; color: #3F32A0; font-family: Inter; font-weight: 400">
+          Preparação PASSE · PAS-UEM · PAS-UnB
+        </div>
+        <h1 style="font-size: 72px; line-height: 1.03; font-weight: 400; margin-bottom: 24px; text-wrap: balance; width: 670px; height: 198px">Seus conhecimentos, <strong style="font-weight: 900; font-family: inherit">todos conectados</strong>.
+        </h1>
+        
+      </div>
+
+      <!-- o grafo tocável -->
+      <p style="font-size: 15px; line-height: 1.7; color: #5A564B; max-width: 52ch">
+          Toque num assunto abaixo. O que aparece é o material de verdade — cada
+          resumo sabe dentro de que ele está e quais outros ele cita.
+        </p><div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; overflow: hidden; display: grid; grid-template-columns: 1fr 320px">
+        <div style="padding: 8px">
+          <svg viewBox="0 0 700 380" style="width: 100%; height: auto; display: block">
+            <g stroke-linecap="round">
+              <sc-for list="{{arestas}}" as="a" hint-placeholder-count="8">
+                <line x1="{{ a.x1 }}" y1="{{ a.y1 }}" x2="{{ a.x2 }}" y2="{{ a.y2 }}" stroke="{{ a.cor }}" stroke-width="{{ a.largura }}" stroke-dasharray="{{ a.traco }}"></line>
+              </sc-for>
+            </g>
+            <sc-for list="{{nos}}" as="n" hint-placeholder-count="9">
+              <g onClick="{{ n.pick }}" style="cursor: pointer">
+                <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.raioAlvo }}" fill="transparent"></circle>
+                <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.raio }}" fill="{{ n.preenchimento }}" stroke="{{ n.cor }}" stroke-width="2.5"></circle>
+                <text x="{{ n.x }}" y="{{ n.rotuloY }}" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="{{ n.peso }}" fill="{{ n.corTexto }}">{{ n.nome }}</text>
+              </g>
+            </sc-for>
+          </svg>
+        </div>
+
+        <aside style="background: #F6F3ED; border-left: 1px solid #E7E3DA; padding: 24px">
+          <div class="rotulo" style="margin-bottom: 12px">{{ painel.materia }}</div>
+          <h2 style="font-size: 22px; font-weight: 500; margin-bottom: 10px; color: {{painel.cor}}">{{ painel.nome }}</h2>
+          <p style="font-size: 13px; line-height: 1.7; color: #5A564B; margin-bottom: 20px">{{ painel.texto }}</p>
+
+          <div style="border-top: 1px solid #E7E3DA; padding-top: 16px">
+            <div class="rotulo" style="margin-bottom: 10px">Está dentro de</div>
+            <div style="font-size: 13px; color: #3E3B33; margin-bottom: 18px">{{ painel.pai }}</div>
+            <div class="rotulo" style="margin-bottom: 10px">Cita</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{painel.cita}}" as="c" hint-placeholder-count="2">
+                <span style="font-size: 12px; color: #5B4BC4; border: 1px solid #CFC9BC; border-radius: 9px; padding: 4px 9px">{{ c.nome }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 36px">
+        <button class="botao primario">Ver planos de acesso</button>
+        <a href="#materias" style="padding: 8px 0; font-size: 15px; color: #1A1814; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #6C6759">
+          Ver matérias disponíveis
+        </a>
+      </div>
+    </div></header>
+
+  <!-- ===== a prova, agora abaixo da dobra ===== -->
+  <section style="padding: 80px 0">
+    <div class="wrap">
+      <div style="display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; align-items: start">
+        <div>
+          <div class="rotulo" style="margin-bottom: 12px">Quem escreveu</div>
+          <h2 style="font-size: 28px; font-weight: 500; margin-bottom: 16px">
+            O material é de Leandro, e ele prestou as mesmas provas que você.
+          </h2>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; max-width: 58ch">
+            Não é resultado de uma prova só — são bancas diferentes, no mesmo ano.
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 18px 20px">
+            <div style="font-size: 17px; font-weight: 600; margin-bottom: 3px">Está em 1º lugar em medicina</div>
+            <div style="font-size: 13px; color: #5A564B">PASSE da UFMS, entre todos os candidatos · 2025</div>
+          </div>
+          <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 18px 20px">
+            <div style="font-size: 17px; font-weight: 600; margin-bottom: 3px">920 na redação do ENEM</div>
+            <div style="font-size: 13px; color: #5A564B">cursando o primeiro ano do ensino médio · 2025</div>
+          </div>
+          <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 18px 20px">
+            <div style="font-size: 17px; font-weight: 600; margin-bottom: 3px">Medalha de ouro</div>
+            <div style="font-size: 13px; color: #5A564B">ranking de notas do Poliedro no Colégio Harmonia · 2025</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== faixa ===== -->
+  <section style="background: #262A60; padding: 64px 0">
+    <div class="wrap">
+      <h2 style="font-size: 28px; font-weight: 500; color: #F3F5FE; max-width: 30ch; margin-bottom: 40px">
+        Três anos, três etapas, um acervo só.
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px">
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">24</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">matérias cobertas</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">3</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">processos seletivos</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">180+</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">resumos interligados</div>
+        </div>
+        <div>
+          <div style="font-size: 40px; font-weight: 600; color: #F3F5FE; letter-spacing: -0.02em">Campo Grande</div>
+          <div style="font-size: 13px; color: #C7C8F0; margin-top: 4px">MS, material próprio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== matérias ===== -->
+  <section id="materias" style="padding: 80px 0">
+    <div class="wrap">
+      <div style="max-width: 560px; margin-bottom: 32px">
+        <div class="rotulo" style="margin-bottom: 12px">O acervo</div>
+        <h2 style="font-size: 28px; font-weight: 500">Doze matérias, escritas de novo do zero.</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{materias}}" as="m" hint-placeholder-count="12">
+          <div style="background: #FCFAF6; border-radius: 12px; box-shadow: 0 0 0 1px #CFC9BC; padding: 16px 18px; display: flex; align-items: center; gap: 10px">
+            <span style="{{ m.ponto }}"></span>
+            <span style="{{ m.rotulo }}">{{ m.nome }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== planos ===== -->
+  <section id="planos" style="padding: 80px 0; background: #F6F3ED; border-top: 1px solid #E7E3DA; border-bottom: 1px solid #E7E3DA">
+    <div class="wrap">
+      <div style="max-width: 560px; margin-bottom: 40px">
+        <div class="rotulo" style="margin-bottom: 12px">Planos</div>
+        <h2 style="font-size: 28px; font-weight: 500; margin-bottom: 12px">Você paga pelo que vai prestar.</h2>
+        <p style="font-size: 15px; line-height: 1.7; color: #5A564B">
+          Todo plano inclui o conteúdo comum a mais de um vestibular.
+        </p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px">
+        <sc-for list="{{planos}}" as="pl" hint-placeholder-count="3">
+          <button onClick="{{ pl.pick }}" style="{{ pl.estilo }}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px">
+              <span style="font-size: 17px; font-weight: 600">{{ pl.nome }}</span>
+              <span style="{{ pl.seloEstilo }}">{{ pl.selo }}</span>
+            </div>
+            <p style="font-size: 13px; line-height: 1.6; color: #5A564B; margin-bottom: 18px">{{ pl.paraQuem }}</p>
+            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 18px">
+              <span style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #B3243C">[PREÇO]</span>
+              <span style="font-size: 13px; color: #6C6759">a definir</span>
+            </div>
+            <span style="{{ pl.acaoEstilo }}">{{ pl.acao }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== dúvidas ===== -->
+  <section style="padding: 80px 0">
+    <div style="max-width: 760px; margin: 0 auto; padding: 0 32px">
+      <div style="margin-bottom: 36px">
+        <div class="rotulo" style="margin-bottom: 12px">Dúvidas</div>
+        <h2 style="font-size: 28px; font-weight: 500">O que costumam perguntar antes de assinar.</h2>
+      </div>
+      <div style="border-top: 1px solid #E7E3DA">
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            O que é esse negócio de grafo?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            É o jeito como o material está montado: cada assunto sabe dentro de que ele está e
+            com quais outros ele se conecta. No mapa lá em cima dá para tocar num assunto e
+            ver as ligações dele.
+          </p>
+        </details>
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            Preciso baixar algum arquivo?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            Não. Tudo é lido no próprio site, pelo navegador do computador ou do celular.
+            Como não há arquivo para baixar, você sempre está lendo a versão mais recente do resumo.
+          </p>
+        </details>
+        <details style="border-bottom: 1px solid #E7E3DA">
+          <summary style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 15px; font-weight: 500">
+            Serve para a etapa que eu vou fazer este ano?
+            <span class="mais" style="flex-shrink: 0; color: #5B4BC4; font-size: 20px; line-height: 1; transition: transform .15s ease">+</span>
+          </summary>
+          <p style="font-size: 15px; line-height: 1.7; color: #5A564B; padding-bottom: 20px; max-width: 65ch">
+            O acervo é organizado por processo seletivo e por etapa, e acompanha o edital do ano.
+            Na página de cada matéria dá para ver em quais processos ela já está disponível.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid #E7E3DA; padding: 32px 0">
+    <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 24px">
+      <span style="font-size: 15px; font-weight: 500; letter-spacing: -0.015em">Plataforma Grafos</span>
+      <span style="font-size: 13px; color: #6C6759">Campo Grande, MS · material próprio</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1200,"height":3500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { no: 'dinamica' };
+  }
+
+  renderVals() {
+    const COR_FIS = '#0B7A80';
+    const COR_MAT = '#1F5F9E';
+
+    // O desenho é FIXO e escrito à mão: layout aleatório mudaria a cada
+    // carregamento, e marca que muda de forma não é marca (identidade-visual, §6).
+    const nos = {
+      fisica:    { nome: 'Física',          x: 90,  y: 190, r: 15, cor: COR_FIS, materia: 'Física', pai: '—', cita: [],
+                   texto: 'A matéria inteira é um nó. Ela segura os assuntos, e cada assunto segura os tópicos dele.' },
+      dinamica:  { nome: 'Dinâmica',        x: 300, y: 100, r: 11, cor: COR_FIS, materia: 'Física', pai: 'Física', cita: ['Vetores'],
+                   texto: 'As Leis de Newton e o que decorre delas. Cita Vetores porque força é grandeza vetorial — e o resumo de Vetores está em Matemática.' },
+      cinematica:{ nome: 'Cinemática',      x: 300, y: 285, r: 11, cor: COR_FIS, materia: 'Física', pai: 'Física', cita: ['Vetores'],
+                   texto: 'Movimento sem perguntar a causa. É o que vem antes de Dinâmica na ordem do edital, e as duas se citam.' },
+      vetores:   { nome: 'Vetores',         x: 300, y: 192, r: 11, cor: COR_MAT, materia: 'Matemática', pai: 'Matemática', cita: [],
+                   texto: 'Está em Matemática, e é citado por dois assuntos de Física. É o tipo de ligação que uma pilha de PDF não tem como mostrar.' },
+      newton:    { nome: 'Leis de Newton',  x: 540, y: 55,  r: 8,  cor: COR_FIS, materia: 'Física', pai: 'Dinâmica', cita: [],
+                   texto: 'As três leis, uma seção cada. Cada título do resumo também é um nó — o mapa desce até dentro do texto.' },
+      atrito:    { nome: 'Atrito',          x: 540, y: 140, r: 8,  cor: COR_FIS, materia: 'Física', pai: 'Dinâmica', cita: ['Leis de Newton'],
+                   texto: 'Estático e cinético. Cita as Leis de Newton porque a normal sai da segunda lei.' },
+      mru:       { nome: 'MRU',             x: 540, y: 245, r: 8,  cor: COR_FIS, materia: 'Física', pai: 'Cinemática', cita: [],
+                   texto: 'Movimento retilíneo uniforme. O primeiro assunto da 1ª etapa, e a base do que vem depois.' },
+      queda:     { nome: 'Queda livre',     x: 540, y: 325, r: 8,  cor: COR_FIS, materia: 'Física', pai: 'Cinemática', cita: ['MRU'],
+                   texto: 'Aceleração constante para baixo. Cita MRU pela comparação entre os dois gráficos.' },
+    };
+
+    // [de, para, tipo] — cheia é "contém" (pai_id), tracejada é "cita" (conexoes)
+    const ligacoes = [
+      ['fisica', 'dinamica', 'contem'],
+      ['fisica', 'cinematica', 'contem'],
+      ['dinamica', 'newton', 'contem'],
+      ['dinamica', 'atrito', 'contem'],
+      ['cinematica', 'mru', 'contem'],
+      ['cinematica', 'queda', 'contem'],
+      ['dinamica', 'vetores', 'cita'],
+      ['cinematica', 'vetores', 'cita'],
+      ['atrito', 'newton', 'cita'],
+      ['queda', 'mru', 'cita'],
+    ];
+
+    const sel = this.state.no;
+    const vizinho = (k) => ligacoes.some(([a, b]) => (a === sel && b === k) || (b === sel && a === k));
+
+    const arestas = ligacoes.map(([a, b, tipo]) => {
+      const aceso = a === sel || b === sel;
+      return {
+        x1: nos[a].x, y1: nos[a].y, x2: nos[b].x, y2: nos[b].y,
+        cor: aceso ? '#5B4BC4' : '#CFC9BC',
+        largura: aceso ? 2 : 1.4,
+        traco: tipo === 'cita' ? '5 5' : '0',
+      };
+    });
+
+    const chaves = Object.keys(nos);
+    const atual = nos[sel];
+
+    return {
+      arestas,
+      nos: chaves.map((k) => {
+        const n = nos[k];
+        const aceso = k === sel;
+        const perto = aceso || vizinho(k);
+        return {
+          nome: n.nome, x: n.x, y: n.y, raio: n.r,
+          raioAlvo: 24,                       // alvo de toque, maior que o desenho
+          cor: aceso ? '#5B4BC4' : n.cor,
+          preenchimento: n.r >= 11 ? (aceso ? '#5B4BC4' : n.cor) : '#FCFAF6',
+          rotuloY: n.y + n.r + 17,
+          peso: aceso ? '700' : '400',
+          corTexto: perto ? '#1A1814' : '#6C6759',
+          pick: () => this.setState({ no: k }),
+        };
+      }),
+
+      painel: {
+        nome: atual.nome,
+        materia: atual.materia,
+        cor: atual.cor,
+        texto: atual.texto,
+        pai: atual.pai,
+        cita: atual.cita.length ? atual.cita.map((nome) => ({ nome })) : [{ nome: 'nada ainda' }],
+      },
+
+      materias: [
+        ['Língua Portuguesa', '#C2334D'], ['Literatura', '#9C4B42'],
+        ['Matemática', '#1F5F9E'], ['Física', '#0B7A80'],
+        ['Química', '#9E2E70'], ['Biologia', '#3F7848'],
+        ['Geografia', '#A65224'], ['Filosofia', '#4A5C8C'],
+        ['Sociologia', '#A63A63'], ['História', '#7A3785'],
+        ['Arte', '#5646A8'], ['Redação', '#3D7A8C'],
+      ].map(([nome, cor]) => ({
+        nome,
+        ponto: 'width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: ' + cor,
+        rotulo: 'font-size: 15px; font-weight: 500; color: ' + cor,
+      })),
+
+      planos: [
+        { nome: 'Acesso PASSE', paraQuem: 'Você presta só o PASSE, da UFMS.', selo: '' },
+        { nome: 'Acesso Completo', paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.', selo: 'Mais completo' },
+        { nome: 'Acesso PAS', paraQuem: 'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE.', selo: '' },
+      ].map((pl, i) => {
+        const ativo = i === (this.state.plano ?? 1);
+        return {
+          nome: pl.nome, paraQuem: pl.paraQuem, selo: pl.selo,
+          seloEstilo: pl.selo
+            ? 'font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #5B4BC4; border: 1px solid #5B4BC4; border-radius: 9px; padding: 3px 8px; white-space: nowrap'
+            : 'display: none',
+          estilo: 'width: 100%; text-align: left; padding: 24px; border-radius: 12px; cursor: pointer; font-family: inherit; background: #FCFAF6; border: 1px solid '
+            + (ativo ? '#5B4BC4; box-shadow: 0 0 0 1px #5B4BC4' : '#CFC9BC'),
+          acao: ativo ? 'Escolhido' : 'Escolher este',
+          acaoEstilo: 'display: inline-flex; align-items: center; justify-content: center; width: 100%; font-size: 15px; font-weight: 600; border-radius: 9px; padding: 10px 16px; border: 1px solid '
+            + (ativo ? '#5B4BC4; background: rgba(91,75,196,.10); color: #3F32A0' : '#CFC9BC; color: #1A1814'),
+          pick: () => this.setState({ plano: i }),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",    "title": "A · A prova primeiro",  "x": 0,    "y": 0,    "w": 1200, "h": 3700 },
+    { "file": "Mapa.dc.html",    "title": "B · O mapa primeiro",   "x": 1320, "y": 0,    "w": 1200, "h": 3500 },
+    { "file": "Edital.dc.html",  "title": "C · O edital primeiro", "x": 2640, "y": 0,    "w": 1200, "h": 3550 },
+    { "file": "Celular.dc.html", "title": "A a 390px",             "x": 0,    "y": 4180, "w": 390,  "h": 3000 }
+  ],
+  "annotations": [
+    {
+      "id": "como-ler",
+      "x": 0,
+      "y": -300,
+      "w": 620,
+      "text": "Três direções para a MESMA landing, no tema claro para a comparação ser entre estruturas e não entre temas.\n\nO eixo de cada uma é a primeira coisa que a página diz:\nA — quem escreveu (a prova)\nB — o que é (o mapa)\nC — serve pra mim? (o edital)\n\nCor, tipo, raio e ritmo saíram medidos de globals.css. Preço vai como [PREÇO] porque lib/planos.ts tem preco: null nos três. Não há depoimento porque Depoimentos devolve null sem depoimento cadastrado."
+    },
+    {
+      "id": "tradeoff-a",
+      "x": 0,
+      "y": 3760,
+      "w": 1200,
+      "text": "A — A PROVA PRIMEIRO. Move o autor da 4ª seção para a dobra: as três bancas ficam clicáveis ao lado do parágrafo. Aposta no ativo mais difícil de copiar. TRADEOFF: a página passa a vender uma pessoa, e o produto vira consequência — se um concorrente contratar alguém com resultado parecido, o argumento inteiro empata."
+    },
+    {
+      "id": "tradeoff-b",
+      "x": 1320,
+      "y": 3560,
+      "w": 1200,
+      "text": "B — O MAPA PRIMEIRO. A dobra É o produto: toque num nó e as arestas acendem, com o painel mostrando 'está dentro de' e 'cita'. TRADEOFF: exige entender uma abstração em três segundos, e o próprio FAQ do site já registra que não entendem — 'O que é esse negócio de grafo?' é uma das perguntas cadastradas. Chega mais longe com quem fica, e perde mais gente na porta."
+    },
+    {
+      "id": "tradeoff-c",
+      "x": 2640,
+      "y": 3610,
+      "w": 1200,
+      "text": "C — O EDITAL PRIMEIRO. Abre com a pergunta que o aluno realmente tem: escolha prova e série, e a página se reconfigura — quantas matérias já existem para aquela etapa, quais faltam, qual plano serve. TRADEOFF: cobra uma decisão antes de o visitante saber por que deveria se importar, e mostrar o que falta é honesto mas expõe a cobertura incompleta logo na dobra."
+    },
+    {
+      "id": "celular",
+      "x": 470,
+      "y": 4240,
+      "w": 380,
+      "text": "A a 390px, que é onde o desenho de 1200 quebra.\n\nO que mudou e por quê:\nh1 72 → 44px (o piso do clamp de --t-hero)\nsem white-space: nowrap no destaque — a frase inteira numa linha estouraria\nrecuo 32 → 24px (32 come 16% de uma tela de 390)\ngrades de 4 e 3 colunas → 2 e 1\n'Campo Grande' 40 → 22px, senão não cabe na coluna\nrótulo de matéria 15 → 13px ('Língua Portuguesa' quebrava em duas linhas)\nalvos das bancas com 14px de padding, para passar de 44px de altura"
+    },
+    {
+      "id": "alturas",
+      "x": 1320,
+      "y": 4180,
+      "w": 620,
+      "text": "ALTURAS REFEITAS na segunda passada. As primeiras foram estimadas por baixo e cortavam o rodapé — o celular era o pior, com ~2780px de conteúdo num quadro de 2260.\n\nAgora somadas seção por seção com folga: A 3700, B 3500, C 3550, celular 3000. Sobra de quadro pinta o fundo do artboard; corte é o único defeito real."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}
