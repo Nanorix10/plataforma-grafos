@@ -1319,21 +1319,38 @@ Quem junta as duas linhas é o `float` do `globals.css`. `display: run-in` está
 morto nos navegadores, e pôr os dois em `inline` custaria as margens — caixa
 inline não tem margem vertical, e o espaçamento do resumo inteiro sai de margem.
 
-**A regra que vai quebrar se alguém mexer:** a margem de cima do título corrido
-e a do elemento seguinte têm que ser IGUAIS, e por isso o valor está escrito
-duas vezes em vez de herdado. A conta: a "coruja" (`> * + *`) põe todo o
-espaçamento na margem de CIMA, então a margem de baixo do anterior é sempre 0;
-**float não colapsa margem com ninguém**, e bloco no fluxo normal colapsa. Com
-os dois valores iguais, os dois pousam na mesma linha; diferentes, o texto
-começa acima ou abaixo do título e o efeito se desfaz.
+**A regra que vai quebrar se alguém mexer:** o par NÃO pode ter margem de cima
+— nem o título, nem a explicação —, e o respiro vem de baixo do elemento
+anterior. A conta é uma assimetria: **float não colapsa margem com ninguém**
+(soma), e bloco no fluxo normal colapsa (fica a MAIOR das duas). Com margem de
+cima `m` nos dois, o título pousa em `mb + m` e a explicação em `max(mb, m)` —
+iguais só enquanto `mb` (a margem de baixo do que vem antes) for 0. Com os dois
+em 0, a conta vira `mb + 0` contra `max(mb, 0)`, que são iguais para qualquer
+`mb`.
+
+**A primeira versão dependia daquele `mb = 0`, e ele não vale.** A "coruja"
+(`> * + *`) de fato põe todo o espaçamento na margem de cima, mas figura,
+tabela, fórmula em bloco, `hr` e `img` trazem `margin: 1.2em 0` próprias — e a
+margem ainda chega de DENTRO do irmão anterior, colapsando para fora dele: no
+caso real era o `<img>` dentro de uma `<figure>` dentro de três `<ul>`
+aninhados. Zerar a margem do irmão não bastaria; por isso o conserto está do
+lado do par, e não do lado de quem vem antes.
+
+E o estrago não era só o título torto. Baixado 0.9em, o float de UMA linha passa
+a cobrir as DUAS primeiras linhas da explicação, e a segunda nunca volta à
+margem — que é o sintoma pelo qual isto foi visto (27/08), num resumo de Física
+com um gráfico logo antes do grafo corrido.
 
 E o `clear: both` vai no SEGUNDO vizinho, nunca no primeiro — o primeiro é
 justamente a explicação, que tem que subir. Limpar um só basta.
 
 Conferido medindo no Chrome, e não no olho: título e explicação com `top`
 idêntico (diferença 0px), primeira linha ao lado do título e as seguintes de
-volta à margem, bloco posterior abaixo. **Vale o aviso para quem for repetir o
-teste:** uma página solta sem o *preflight* do Tailwind dá resultado errado — as
+volta à margem, bloco posterior abaixo. Depois do conserto, a mesma medição
+rodou sobre doze formas do que pode vir antes — figura solta, figura no fundo de
+lista aninhada, tabela, `hr`, `img` solta, parágrafo, grafo comum, outro grafo
+corrido, título que quebra em duas linhas e o par abrindo o resumo —, e as doze
+dão diferença 0. **Vale o aviso para quem for repetir o teste:** uma página solta sem o *preflight* do Tailwind dá resultado errado — as
 margens que o navegador dá de graça a `p` e `h1..h6` (15px) desalinham o par e
 empurram a última linha. O primeiro teste caiu exatamente nessa e acusou um
 defeito que não existia.
@@ -1504,3 +1521,50 @@ sozinho um dia —, desligar de verdade é ação de painel, e ainda não foi fe
   cadastradas na Vercel nos três ambientes. Se as chaves do Supabase mudarem, é preciso
   atualizar nos dois lugares: `.env.local` e a Vercel.
 - O `vercel link` escreveu um `VERCEL_OIDC_TOKEN` no fim do `.env.local`. É normal.
+
+## 13. A landing tem gramática própria, e ela suspende quatro regras da identidade
+
+**Decidido pelo Leandro em 31/08**, a partir de uma referência que ele trouxe
+(`institutofuturos.com.br`). A landing deixou de seguir a linguagem visual do
+resto do site e passou a ter a sua, escrita em `globals.css` sob o escopo
+`.landing`. O que ela contraria, e que **continua valendo em todo o resto**:
+
+| regra | onde está escrita | o que a landing faz |
+|---|---|---|
+| a monoespaçada nunca em frase | identidade §3 | é IBM Plex Mono inteira, num peso só |
+| quase nada se move | identidade §7 | tem reveal por rolagem |
+| acento escasso, neutro morno | identidade §2 | a dobra é um campo saturado escuro |
+| os motivos vêm do conteúdo | identidade §6 | a textura de grafo do fundo é decorativa |
+
+**O escopo `.landing` não é detalhe de implementação — é o que impede a mudança
+de vazar.** `/planos` divide o layout de `(site)` e não foi redesenhada; sem o
+escopo, ela mudaria junto, em silêncio. E o `(app)` inteiro segue na Bricolage.
+
+**A dobra é escura nos DOIS temas**, e por isso ganhou tokens próprios
+(`--dobra-1`, `--dobra-2`, `--dobra-ink`, `--dobra-dim`, `--dobra-acento`). A
+armadilha que eles existem para fechar: no tema claro `--ink` é quase preto, e
+qualquer texto que herde dele desaparece sobre o azul-marinho. **Todo texto
+dentro de `.dobra` sai dos tokens `--dobra-*`.**
+
+Dois defeitos que a conferência pegou e que voltam se alguém reescrever isto:
+
+- **A seta da chamada desenha com `currentColor`.** Sem uma cor declarada no
+  `.chamada`, ela herda o azul-roxo que o navegador dá a todo `<a>`.
+- **`text-transform: lowercase` come nome próprio e sigla.** "leandro" e "enem"
+  não são estilo, são erro; quem escapa é a classe `.proprio`.
+
+**O que a troca custou, e está declarado:** o `GrafoInterativo` saiu da dobra e
+não é mais referenciado por ninguém (o `Hero.tsx` da direção B também não). Os
+dois continuam no repositório de propósito — se o redesenho se confirmar,
+apagá-los é a próxima limpeza. E **a barra e o rodapé NÃO foram redesenhados**,
+porque `/planos` os divide: a barra segue em Bricolage sobre uma página
+monoespaçada, e essa emenda está visível.
+
+**O `preload` da Gabarito foi desligado** (`(site)/layout.tsx`). Ele existia
+por uma razão só — ela pintava o `h1` da primeira dobra —, e a landing não a
+usa mais. Quem ainda a usa é `/planos`, que não é a primeira impressão de
+ninguém. Se a landing voltar a usar a display, o `preload` volta.
+
+**Os números da faixa continuam saindo de `lib/numeros.ts`**, e continuam sendo
+o escopo declarado da plataforma (24 / 3 / 180+), não contagem do banco. O
+aviso em maiúsculas daquele arquivo segue valendo: não derive nada dali.

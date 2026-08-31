@@ -341,3 +341,28 @@ Todo elemento novo tem que responder **sim** a pelo menos uma:
 E uma que não é negociável: **contraste é medido, não estimado.** Este projeto já
 teve comentário no CSS afirmando um contraste que a medição desmentiu. Todo par
 novo de cor e fundo vai medido nos dois temas antes de entrar.
+
+---
+
+## 9. A landing é exceção declarada, desde 31/08
+
+Este documento descreve a linguagem visual do **produto**. Desde 31/08 a
+**landing** (`/`) não a segue: ela tem gramática própria, monoespaçada, com
+reveal por rolagem e uma primeira dobra saturada e escura nos dois temas.
+
+Foi decisão do Leandro, a partir de uma referência que ele trouxe. O que a
+landing suspende — e que **continua valendo em todo o resto do site**:
+
+- **§3, a mono "nunca em frase".** Lá ela é a única família.
+- **§7, "quase nada se move".** Lá há animação de entrada por rolagem.
+- **§2, o acento escasso e o neutro morno.** A dobra é um campo saturado.
+- **§6, "os motivos vêm do conteúdo".** A textura de grafo do fundo é
+  decorativa.
+
+A gramática vive em `globals.css`, escopada em `.landing`, com o motivo escrito
+em cima dela — e a decisão **13** do `CONTEXTO.md` registra o que ela custou.
+Vale a regra de sempre: o CSS é a fonte da verdade, e este documento é que se
+corrige.
+
+`/planos` divide o layout de `(site)` com a landing e **não** foi redesenhada.
+É o motivo de o escopo existir.

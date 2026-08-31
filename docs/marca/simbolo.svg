@@ -1,38 +1,41 @@
-<svg viewBox="205 205 290 290" xmlns="http://www.w3.org/2000/svg">
-  <!-- Plataforma Grafos — marca (símbolo)
-       Composição hexagonal simétrica com linhas curvas (estilizadas):
-       raios do centro em curva suave, contorno hexagonal também arqueado. -->
+<svg viewBox="195 195 310 310" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plataforma Grafos — marca (símbolo), versão "mais marcante":
+       traços mais grossos, nós maiores, contorno mais presente,
+       âncora central com leve halo pra ganhar destaque. -->
 
-  <!-- contorno hexagonal curvo conectando as matérias entre si -->
-  <g fill="none" stroke="#5B4BC4" stroke-opacity="0.35" stroke-width="1.4" stroke-linecap="round">
-    <path d="M350,242 Q389.7,281.1 443.5,296"/>
-    <path d="M443.5,296 Q429.5,350 443.5,404"/>
-    <path d="M443.5,404 Q389.7,418.9 350,458"/>
-    <path d="M350,458 Q310.3,418.9 256.5,404"/>
-    <path d="M256.5,404 Q270.5,350 256.5,296"/>
-    <path d="M256.5,296 Q310.3,281.1 350,242"/>
+  <!-- halo sutil atrás do âncora central, pra puxar o olho pro meio -->
+  <circle cx="350" cy="350" r="38" fill="#5B4BC4" opacity="0.14"/>
+
+  <!-- contorno hexagonal reto — bem mais presente que antes -->
+  <g fill="none" stroke="#5B4BC4" stroke-opacity="0.65" stroke-width="2.6" stroke-linecap="round">
+    <path d="M350,236 L443.5,294"/>
+    <path d="M443.5,294 L443.5,406"/>
+    <path d="M443.5,406 L350,464"/>
+    <path d="M350,464 L256.5,406"/>
+    <path d="M256.5,406 L256.5,294"/>
+    <path d="M256.5,294 L350,236"/>
   </g>
 
-  <!-- raios retos do centro até cada matéria, alternando os três tipos de relação -->
+  <!-- raios do centro — mais grossos, mais contraste entre os 3 tipos -->
   <g stroke-linecap="round" fill="none">
-    <path d="M350,350 L350,242"     stroke="#5B4BC4" stroke-width="3"/>
-    <path d="M350,350 L443.5,296"   stroke="#5B4BC4" stroke-width="2.4" stroke-dasharray="8 6"/>
-    <path d="M350,350 L443.5,404"   stroke="#5B4BC4" stroke-width="1.8" stroke-dasharray="1.5 6"/>
-    <path d="M350,350 L350,458"     stroke="#5B4BC4" stroke-width="3"/>
-    <path d="M350,350 L256.5,404"   stroke="#5B4BC4" stroke-width="2.4" stroke-dasharray="8 6"/>
-    <path d="M350,350 L256.5,296"   stroke="#5B4BC4" stroke-width="1.8" stroke-dasharray="1.5 6"/>
+    <path d="M350,350 L350,236"     stroke="#5B4BC4" stroke-width="5"/>
+    <path d="M350,350 L443.5,294"   stroke="#5B4BC4" stroke-width="4" stroke-dasharray="11 7"/>
+    <path d="M350,350 L443.5,406"   stroke="#5B4BC4" stroke-width="2.6" stroke-dasharray="1.5 7"/>
+    <path d="M350,350 L350,464"     stroke="#5B4BC4" stroke-width="5"/>
+    <path d="M350,350 L256.5,406"   stroke="#5B4BC4" stroke-width="4" stroke-dasharray="11 7"/>
+    <path d="M350,350 L256.5,294"   stroke="#5B4BC4" stroke-width="2.6" stroke-dasharray="1.5 7"/>
   </g>
 
-  <!-- nós das matérias — tamanho uniforme, alinhamento hexagonal preciso -->
-  <g>
-    <circle cx="350.0" cy="242.0" r="21" fill="#C2334D"/>
-    <circle cx="443.5" cy="296.0" r="21" fill="#1F5F9E"/>
-    <circle cx="443.5" cy="404.0" r="21" fill="#3F7848"/>
-    <circle cx="350.0" cy="458.0" r="21" fill="#9E2E70"/>
-    <circle cx="256.5" cy="404.0" r="21" fill="#A65224"/>
-    <circle cx="256.5" cy="296.0" r="21" fill="#4A5C8C"/>
+  <!-- nós das matérias — maiores, com contorno branco pra "estalar" contra o fundo -->
+  <g stroke="#FFFFFF" stroke-width="3">
+    <circle cx="350.0" cy="236.0" r="25" fill="#C2334D"/>
+    <circle cx="443.5" cy="294.0" r="25" fill="#1F5F9E"/>
+    <circle cx="443.5" cy="406.0" r="25" fill="#3F7848"/>
+    <circle cx="350.0" cy="464.0" r="25" fill="#9E2E70"/>
+    <circle cx="256.5" cy="406.0" r="25" fill="#A65224"/>
+    <circle cx="256.5" cy="294.0" r="25" fill="#4A5C8C"/>
   </g>
 
-  <!-- nó-âncora central -->
-  <circle cx="350" cy="350" r="26" fill="#5B4BC4"/>
+  <!-- nó-âncora central — maior, com contorno branco também -->
+  <circle cx="350" cy="350" r="24" fill="#5B4BC4" stroke="#FFFFFF" stroke-width="3"/>
 </svg>

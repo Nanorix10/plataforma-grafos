@@ -151,6 +151,22 @@
   --faixa-ink: #F3F5FE;
   --faixa-dim: #C7C8F0;
 
+  /* --- o campo da primeira dobra da landing ---
+     A dobra é uma superfície ESCURA nos dois temas, e isso é decisão, não
+     descuido: é a mesma lógica da faixa no tema claro (mancha escura sobre
+     papel), e é o que mantém o lockup em lilás claro legível sem precisar de
+     duas versões do desenho. Os dois radiais trocam de tom com o tema; a
+     tinta é fixa, porque o fundo dela é fixo.
+
+     Consequência que precisa ficar escrita: TODO texto dentro de `.dobra`
+     tem de sair destes três tokens, e não de `--ink`. No tema claro `--ink` é
+     quase preto, e sobre o azul-marinho ele desaparece. */
+  --dobra-1: light-dark(#343a7e, #4a51b8);
+  --dobra-2: light-dark(rgba(91, 75, 196, 0.3), rgba(145, 132, 217, 0.34));
+  --dobra-ink: #f3f5fe;
+  --dobra-dim: #c7c8f0;
+  --dobra-acento: #c9c3fa;
+
   --erro: light-dark(#B3243C, #C9767E);
 
   /* Apelido de transição. `--stamp` era o vermelho-carimbo e ainda é citado
@@ -629,33 +645,59 @@ h3 {
    caixa inline não tem margem vertical, e o espaçamento do resumo inteiro sai
    de margem (a "coruja" `> * + *` lá em cima).
 
-   **As duas margens abaixo têm que ser IGUAIS, e é isso que alinha as duas
-   linhas.** A conta: `> * + *` põe todo o espaçamento na margem de CIMA, então
-   a margem de baixo do elemento anterior é sempre 0. Float não colapsa margem
-   com ninguém, então o título flutuado começa em (fim do anterior + a própria
-   margem de cima); o parágrafo, que ficou no fluxo normal, começa em (fim do
-   anterior + a margem de cima DELE). Iguais, os dois pousam na mesma linha.
-   Diferentes, o texto começa acima ou abaixo do título e o efeito se desfaz —
-   por isso o valor está escrito duas vezes de propósito, e não herdado.
+   **O par NÃO tem margem de cima, e é isso que alinha as duas linhas.** A
+   versão anterior dava 0.9em aos dois e contava com eles pousarem juntos.
+   Não pousam sempre, e o motivo é assimétrico: a margem do parágrafo COLAPSA
+   com a margem de baixo do que vier antes (fica a MAIOR das duas), e a do
+   float não colapsa com nada (SOMA). Enquanto tudo o que vem antes tem margem
+   de baixo 0 — que é o que a coruja `> * + *` faz — max(mb, 0.9) e mb + 0.9
+   dão o mesmo. Com qualquer margem de baixo antes, o título despenca
+   `min(mb, 0.9em)`.
+
+   Zerando a de cima nos dois, a conta vira mb + 0 contra max(mb, 0), que são
+   iguais para QUALQUER mb — e o espaçamento passa a vir de baixo do elemento
+   anterior, na regra logo abaixo. Não dá para consertar zerando só a margem do
+   irmão anterior: ela também chega de dentro dele. No caso real era o `<img>`
+   com `margin-bottom: 1.2em` colapsando para fora da `<figure>`, e antes disso
+   para fora de três `<ul>` aninhados.
+
+   O estrago não era só o título torto: baixado quase uma linha, o float de UMA
+   linha passa a cobrir as DUAS primeiras do parágrafo, e a segunda linha nunca
+   volta à margem — que é o sintoma pelo qual isto foi visto, num resumo de
+   Física com um gráfico logo antes do grafo corrido.
 
    Vale o espaçamento de parágrafo (0.9em) e não o de título (1.8em): corrido,
    o grafo É um parágrafo que começa em negrito, e a hierarquia continua sendo
    dita pelo nível — no mapa e para o leitor de tela. */
 .conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] {
   float: left;
-  margin-top: 0.9em;
+  margin-top: 0;
   margin-right: 0.4em;
   max-width: 100%;
 }
 .conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] + * {
-  margin-top: 0.9em;
+  margin-top: 0;
 }
 
-/* Abrindo o resumo, não há o que espaçar acima — mas os dois continuam tendo
-   que casar, senão a primeira linha do resumo nasce torta. */
-.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim']:first-child,
-.conteudo-resumo :where(h2, h3, h4)[data-corrido='sim']:first-child + * {
-  margin-top: 0;
+/* O respiro do par vem daqui, de baixo do elemento anterior — é o único lugar
+   onde ele não desalinha as duas linhas. Abrindo o resumo não há elemento
+   anterior, e não há o que espaçar: o `:first-child` que existia aqui virou
+   supérfluo, porque agora o par já nasce sem margem de cima.
+
+   Os seletores vão repetidos, e não num `:where(h2, h3, h4)`, de propósito: o
+   `:where` zera a especificidade e o `:has` herda a do argumento mais
+   específico. Escrito assim a regra vale (0,2,1) e ganha de `.figura`,
+   `.tableWrapper` e `[data-type='block-math']`, que empatariam em (0,2,0) e
+   se decidiriam por ordem no arquivo. Note que o alinhamento não depende disso:
+   se alguma dessas regras ganhasse, os dois continuariam pousando juntos, só
+   com outro respiro. */
+.conteudo-resumo
+  *:has(
+    + h2[data-corrido='sim'],
+    + h3[data-corrido='sim'],
+    + h4[data-corrido='sim']
+  ) {
+  margin-bottom: 0.9em;
 }
 
 /* Limpa o float no SEGUNDO vizinho, não no primeiro — o primeiro é justamente
@@ -1430,4 +1472,143 @@ h3 {
 }
 .cai-em li.tem-link a:hover span {
   color: inherit;
+}
+
+/* ================================================================
+   A GRAMÁTICA DA LANDING
+   ================================================================
+   A landing passou a ter uma gramática tipográfica própria, e ela é
+   ESCOPADA em `.landing` de propósito: `/planos` divide o layout de
+   `(site)` e não foi redesenhada. Sem o escopo, ela mudaria junto,
+   em silêncio.
+
+   O que a gramática faz, e por que ela contraria o que está escrito
+   em `docs/identidade-visual.md`: a landing agora é MONOESPAÇADA
+   inteira, com declarações em caixa baixa e rótulos em caixa alta
+   entreletrada. Aquele documento diz que a mono serve só a código e
+   fórmula, "nunca em frase". Essa regra continua valendo dentro do
+   `(app)` — no corpo do resumo, na barra lateral, no editor. Aqui
+   ela foi suspensa por decisão do Leandro (31/08), que escolheu a
+   linguagem visual da referência que ele trouxe.
+
+   Quem for mexer: o ADR 0001 diz que este arquivo é a fonte da
+   verdade e o documento é que se corrige. Foi o que se fez.
+   ================================================================ */
+
+.landing {
+  font-family: var(--fonte-mono);
+  letter-spacing: 0.01em;
+}
+
+/* Ganha de `.titulo-display h1/h2` por especificidade (0,2,0 contra
+   0,1,1). Sem isso a Gabarito continuaria pintando os títulos daqui,
+   porque o layout de `(site)` a aplica no elemento de fora. */
+.landing .declaracao {
+  font-family: var(--fonte-mono);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  text-wrap: balance;
+  color: var(--ink);
+}
+.landing .declaracao em {
+  font-style: normal;
+  color: var(--acento);
+}
+
+/* Nome próprio e sigla escapam do lowercase. "leandro" e "enem" não
+   são estilo, são erro — e o `text-transform` não sabe a diferença. */
+.landing .proprio {
+  text-transform: none;
+}
+
+/* O rótulo da referência: caixa alta com 0,2em de entreletra. É a
+   única entrada legal da mono aqui que NÃO contraria a regra antiga,
+   porque rótulo é dado, não frase. */
+.landing .rotulo {
+  font-size: var(--t-mini);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- a dobra ----
+   Campo escuro nos dois temas. Ver os tokens `--dobra-*` lá em cima. */
+.landing .dobra {
+  background:
+    radial-gradient(120% 90% at 82% 30%, var(--dobra-1) 0%, var(--faixa) 32%, transparent 70%),
+    radial-gradient(80% 70% at 8% 88%, var(--dobra-2) 0%, transparent 62%), #17161f;
+}
+.landing .dobra .declaracao,
+.landing .dobra .chamada {
+  color: var(--dobra-ink);
+}
+.landing .dobra .declaracao em {
+  color: var(--dobra-acento);
+}
+.landing .dobra .rotulo,
+.landing .dobra .corpo-dobra {
+  color: var(--dobra-dim);
+}
+
+/* ---- a chamada com seta ----
+   A cor PRECISA ser declarada: a seta desenha com `currentColor`, e
+   sem isto ela herda o azul-roxo que o navegador dá a todo `<a>`. */
+.landing .chamada {
+  color: var(--ink);
+}
+.landing .seta {
+  border: 1px solid var(--line-forte);
+  transition:
+    border-color 200ms,
+    background 200ms,
+    transform 200ms;
+}
+.landing .chamada:hover .seta {
+  border-color: var(--acento);
+  background: var(--acento-fraco);
+  transform: translateX(5px);
+}
+.landing .dobra .seta {
+  border-color: rgba(243, 245, 254, 0.45);
+}
+.landing .dobra .chamada:hover .seta {
+  border-color: var(--dobra-acento);
+  background: rgba(201, 195, 250, 0.14);
+}
+
+/* ---- reveal por rolagem ----
+   A identidade dizia "nenhuma animação de entrada por rolagem", e
+   isto a contraria. Foi escolha do Leandro junto da referência. O
+   `prefers-reduced-motion` continua sendo respeitado, e o conteúdo
+   nasce visível para quem tem JavaScript desligado — a classe só é
+   adicionada pelo observador. */
+.landing .reveal {
+  opacity: 0;
+  transform: translateY(34px);
+  transition:
+    opacity 900ms cubic-bezier(0.16, 0.7, 0.3, 1),
+    transform 900ms cubic-bezier(0.16, 0.7, 0.3, 1);
+}
+.landing .reveal.visivel {
+  opacity: 1;
+  transform: none;
+}
+.landing .reveal[data-atraso='1'] {
+  transition-delay: 110ms;
+}
+.landing .reveal[data-atraso='2'] {
+  transition-delay: 220ms;
+}
+.landing .reveal[data-atraso='3'] {
+  transition-delay: 330ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

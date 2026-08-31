@@ -4,106 +4,82 @@ import { ASSUNTOS, PROCESSOS_DA_MATERIA } from '@/lib/assuntos'
 /**
  * A vitrine do acervo.
  *
- * Antes cada célula trazia um ponto de 8px e repetia o nome da matéria —
- * informação que o aluno já tem antes de chegar ao site. A seção nomeava
- * disciplinas sem provar que havia conteúdo atrás delas.
+ * **O que esta seção precisa provar não mudou no redesenho de 31/08:** que há
+ * conteúdo atrás dos nomes. Listar doze disciplinas é categoria; listar "Leis
+ * de Newton, Trabalho e energia, Gravitação" é verificável, e é a diferença
+ * entre dizer que existe Física e mostrar Física. Por isso cada linha continua
+ * trazendo os assuntos de `lib/assuntos.ts`.
  *
- * Duas mudanças, e as duas resolvem o mesmo problema por caminhos diferentes:
+ * O que mudou é a forma: os cartões com faixa de cor viraram linhas com
+ * filete, que é a gramática da página. A cor deixou de ser área e voltou a ser
+ * o nome — o que aliás alinha esta seção com o resto do site, onde a regra
+ * (decisão 4c) é que a cor da matéria pinta o TÍTULO.
  *
- * - **Cada matéria mostra o que tem dentro.** Três assuntos são a diferença
- *   entre "temos Física" e "temos Leis de Newton, Trabalho e energia,
- *   Gravitação". O segundo é verificável; o primeiro é categoria.
- * - **A cor vira área.** Uma faixa de 4px no topo do cartão, em vez do ponto.
- *   As 12 cores passam em contraste medido, então dá para usá-las com peso.
+ * **A cor nunca é a única pista**, e aqui ela nem precisa ser: o nome da
+ * matéria está escrito ao lado, que é o que a regra do `lib/materias.ts` pede.
  *
- * **A última célula não é enfeite.** Com oito cartões cheios, a grade fecha
- * como se aquelas fossem todas as matérias que existem — e não são. Ela nomeia
- * as que ficaram de fora, porque "e outras" deixaria o aluno adivinhando se a
- * dele está entre elas, que é exatamente a dúvida que faz alguém fechar a aba.
+ * A última linha nomeia as matérias que ficaram fora da lista de assuntos. Sem
+ * ela a seção fecha como se aquelas fossem todas as que existem — e "e outras"
+ * deixaria o aluno adivinhando se a dele está entre elas, que é exatamente a
+ * dúvida que faz alguém fechar a aba.
  */
 
 const SLUGS = Object.keys(MATERIAS) as (keyof typeof MATERIAS)[]
-const NA_GRADE = SLUGS.slice(0, 8)
-const RESTANTES = SLUGS.slice(8)
+const COM_ASSUNTOS = SLUGS.filter((slug) => (ASSUNTOS[slug]?.length ?? 0) > 0)
+const SEM_ASSUNTOS = SLUGS.filter((slug) => (ASSUNTOS[slug]?.length ?? 0) === 0)
 
 export default function Materias() {
   return (
-    <section
-      id="materias"
-      className="py-[var(--ritmo-secao)] max-w-[1120px] mx-auto px-8"
-    >
-      <div className="max-w-[560px] mb-11">
-        <div className="rotulo-secao mb-3">Acervo</div>
-        <h2 className="text-[length:var(--t-titulo)] font-medium mb-3">
-          Uma pasta por matéria, dentro de cada processo seletivo.
+    <section id="materias" className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+      <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
+        <p className="rotulo reveal">o que tem dentro</p>
+        <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">
+          uma pasta por matéria, e <em>cada uma tem a cor dela</em> no site inteiro.
         </h2>
-        <p className="text-sm text-[var(--ink-dim)]">
-          Filtre por disciplina e pelo vestibular que você está estudando.
+        <p className="reveal text-[var(--ink-dim)] max-w-[62ch] leading-relaxed" data-atraso="2">
+          título, cartão e nó do mapa saem sempre na cor da própria matéria — e o nome vem junto do
+          ponto colorido em todo lugar, porque cor nunca é a única pista.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {NA_GRADE.map((slug) => (
-          <div
-            key={slug}
-            className="bg-[var(--raised)] rounded-[var(--raio)] overflow-hidden shadow-[var(--sombra)] flex flex-col"
-          >
-            {/* A cor ocupa a largura inteira do cartão. Era um ponto de 8px. */}
-            <div className="h-1 shrink-0" style={{ background: MATERIAS[slug].cor }} />
-            <div className="p-4 flex flex-col gap-2.5 flex-1">
-              <div>
-                <h3 className="font-medium text-[length:var(--t-base)]">
-                  {MATERIAS[slug].nome}
-                </h3>
-                <span className="text-[length:var(--t-mini)] text-[var(--ink-faint)]">
-                  {PROCESSOS_DA_MATERIA[slug]}
-                </span>
-              </div>
-              <ul className="mt-auto space-y-1">
-                {(ASSUNTOS[slug] ?? []).map((a) => (
-                  <li
-                    key={a}
-                    className="text-[length:var(--t-peq)] text-[var(--ink-dim)] flex items-baseline gap-1.5"
-                  >
-                    <span aria-hidden="true" style={{ color: MATERIAS[slug].cor }}>
-                      ·
-                    </span>
-                    {a}
-                  </li>
-                ))}
-                {/* As reticências dizem que a lista da MATÉRIA também continua:
-                    são três assuntos de muitos, não os três que existem. */}
-                <li className="text-[length:var(--t-peq)] text-[var(--ink-faint)] pl-[13px]">
-                  e outros
-                </li>
-              </ul>
-            </div>
-          </div>
-        ))}
-
-        {/* A célula que fecha a grade sem fechar o assunto. Desenho diferente
-            dos cartões de propósito — contornada e sem faixa de cor —, para
-            ninguém a confundir com uma matéria chamada "e mais". */}
-        <div className="rounded-[var(--raio)] border border-dashed border-[var(--line-forte)] p-4 flex flex-col justify-center gap-2">
-          <div className="text-[length:var(--t-base)] font-medium text-[var(--ink-dim)]">
-            E também
-          </div>
-          <ul className="flex flex-wrap gap-x-2 gap-y-1">
-            {RESTANTES.map((slug) => (
-              <li
-                key={slug}
-                className="text-[length:var(--t-peq)]"
-                style={{ color: MATERIAS[slug].cor }}
+      <div className="grid border-t border-[var(--line)]">
+        {COM_ASSUNTOS.map((slug) => {
+          const materia = MATERIAS[slug]
+          return (
+            <article
+              key={slug}
+              className="reveal grid gap-2 py-6 border-b border-[var(--line)] md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] md:gap-10 md:items-baseline"
+            >
+              <h3
+                className="flex items-center gap-3 text-[1.375rem] font-normal lowercase leading-snug"
+                style={{ color: materia.cor }}
               >
-                {MATERIAS[slug].nome}
-              </li>
-            ))}
-          </ul>
-          <p className="text-[length:var(--t-mini)] text-[var(--ink-faint)] mt-1">
-            O acervo cresce a cada etapa.
-          </p>
-        </div>
+                <span
+                  className="w-[9px] h-[9px] rounded-full shrink-0"
+                  style={{ background: materia.cor }}
+                  aria-hidden="true"
+                />
+                {materia.nome}
+              </h3>
+              <div className="grid gap-1">
+                <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed">
+                  {ASSUNTOS[slug].join(' · ')}
+                </p>
+                {PROCESSOS_DA_MATERIA[slug] && (
+                  <p className="rotulo">{PROCESSOS_DA_MATERIA[slug]}</p>
+                )}
+              </div>
+            </article>
+          )
+        })}
       </div>
+
+      {SEM_ASSUNTOS.length > 0 && (
+        <p className="reveal mt-8 text-[var(--ink-faint)] text-[0.9rem] leading-relaxed max-w-[62ch]">
+          também no acervo:{' '}
+          {SEM_ASSUNTOS.map((slug) => MATERIAS[slug].nome).join(', ')}.
+        </p>
+      )}
     </section>
   )
 }

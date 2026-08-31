@@ -35,6 +35,24 @@ const gabarito = Gabarito({
   subsets: ['latin'],
   variable: '--fonte-display',
   display: 'swap',
+  /**
+   * **O `preload` foi DESLIGADO em 31/08, e o motivo é o redesenho.**
+   *
+   * Ele estava ligado por uma razão só: a Gabarito pintava o `h1` da primeira
+   * dobra da landing, e sem preload o visitante veria o título trocar de
+   * desenho depois da primeira pintura. A landing não a usa mais — a gramática
+   * dela é monoespaçada inteira (ver `(site)/page.tsx`) —, então o preload
+   * passou a puxar com prioridade alta uma fonte que a página de entrada não
+   * pinta. É exatamente o desperdício que o `preload: false` da decisão 7 veio
+   * cortar nas outras três famílias.
+   *
+   * Quem ainda a usa é `/planos`, pelo `.titulo-display` deste layout. Lá ela
+   * é baixada quando o elemento pede a família, e a troca acontece numa página
+   * que não é a primeira impressão de ninguém.
+   *
+   * **Se a landing voltar a usar a display, este `false` volta a ser `true`.**
+   */
+  preload: false,
 })
 
 /**

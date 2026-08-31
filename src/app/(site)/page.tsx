@@ -1,58 +1,85 @@
-import Hero from '@/components/landing/Hero'
+import Dobra from '@/components/landing/Dobra'
+import Portas from '@/components/landing/Portas'
 import Faixa from '@/components/landing/Faixa'
 import Autor from '@/components/landing/Autor'
 import Materias from '@/components/landing/Materias'
+import Velocidades from '@/components/landing/Velocidades'
 import Depoimentos from '@/components/landing/Depoimentos'
 import Planos from '@/components/landing/Planos'
 import Faq from '@/components/landing/Faq'
+import Fechamento from '@/components/landing/Fechamento'
+import RevelarNaRolagem from '@/components/landing/RevelarNaRolagem'
 
 /**
- * A landing — **direção B: o mapa primeiro**, escolhida pelo Leandro entre as
- * três desenhadas em 26/08 (`design/landing/`, artboard `Mapa.dc.html`).
+ * A landing — **redesenho de 31/08**, na linguagem visual que o Leandro
+ * escolheu a partir da Instituto Futuros.
  *
- * A ordem das seções É o argumento de venda, e ler esta função tem que mostrar
- * isso de uma vez. Antes ela dizia: o que é (Hero) → o tamanho (Faixa) → o que
- * tem dentro (ComoFunciona) → quem escreveu (Autor) → o acervo (Materias) →
- * quem já usou (Depoimentos) → quanto custa (Planos) → o que trava (Faq).
+ * ============================================================
+ * O QUE ESTA PÁGINA CONTRARIA, E POR DECISÃO DE QUEM
+ * ============================================================
+ * Quatro regras de `docs/identidade-visual.md` foram suspensas AQUI, e só
+ * aqui. Elas continuam valendo no `(app)` inteiro e em `/planos`:
  *
- * Agora diz: **o produto funcionando (Hero, com o grafo tocável) → quem
- * escreveu (Autor) → o tamanho (Faixa) → o acervo (Materias) → quem já usou
- * (Depoimentos) → quanto custa (Planos) → o que trava (Faq)**.
+ * 1. **A monoespaçada "nunca em frase" (§3).** A landing é IBM Plex Mono
+ *    inteira, num peso só.
+ * 2. **"Quase nada se move" (§7).** Há reveal por rolagem, em
+ *    `RevelarNaRolagem`.
+ * 3. **O acento escasso e o neutro morno da primeira tela (§2).** A dobra é um
+ *    campo saturado escuro nos dois temas.
+ * 4. **"Os motivos vêm do conteúdo" (§6).** A textura de grafo do fundo é
+ *    decorativa, e o grafo tocável saiu.
  *
- * Duas mudanças, e as duas são a mesma decisão:
+ * O ADR `docs/adr/0001-identidade-visual.md` diz que o `globals.css` é a fonte
+ * da verdade e que o documento é que se corrige quando os dois divergem. Foi o
+ * que se fez: a gramática está escrita no CSS, escopada em `.landing`, com o
+ * motivo em cima dela.
  *
- * 1. **O grafo subiu para a dobra** e o `ComoFunciona` deixou de existir — ele
- *    era a moldura que apresentava o grafo três seções abaixo, e uma seção que
- *    apresenta o que já está na dobra é redundância. O texto dele ("Não é uma
- *    pilha de PDF. É um mapa.") não foi transportado: a dobra agora demonstra
- *    o que aquela frase afirmava, e repetir a afirmação depois da demonstração
- *    é desconfiar dela.
- * 2. **O autor subiu de quarto para segundo.** Com a dobra respondendo "o que
- *    é isso", a pergunta seguinte é "por que acreditar em você" — e a resposta
- *    tem que vir antes do tamanho do acervo, não depois.
+ * ============================================================
+ * A ORDEM É O ARGUMENTO
+ * ============================================================
+ * o que é (Dobra) → por onde entrar (Portas) → o percurso de três anos
+ * (Faixa) → quem escreveu (Autor) → o acervo (Materias) → onde se lê
+ * (Velocidades) → quem já usou (Depoimentos) → quanto custa (Planos) → o que
+ * trava (Faq) → a conta (Fechamento).
  *
- * O tradeoff está documentado no `Hero.tsx` e na anotação do canvas: B chega
- * mais longe com quem fica e perde mais gente na porta.
+ * **`Portas` vem antes de tudo por causa da dobra.** A dobra fala de mapa, que
+ * é uma das quatro entradas do produto e a mais difícil de entender em três
+ * segundos — a evidência é do próprio site, onde a pergunta sobre o que é um
+ * grafo está cadastrada no FAQ. A seção seguinte existe para dizer, antes de
+ * qualquer outra coisa, que ninguém é obrigado a entrar por ali.
  *
- * `Depoimentos` e `Faq` se recompõem sozinhos: o primeiro devolve `null` sem
- * depoimento real cadastrado, o segundo mostra só as perguntas que já têm
- * resposta. A página encurta em vez de exibir bloco vazio. `Depoimentos` não
- * aparece no artboard de B justamente porque hoje devolve `null` — ele segue
- * aqui para voltar sozinho no dia em que houver depoimento de verdade.
+ * **`Depoimentos` continua na lista e continua devolvendo `null`**, porque a
+ * lista de depoimentos está vazia. Ele fica aqui para voltar sozinho no dia em
+ * que houver depoimento de verdade — e a página encurta em vez de exibir bloco
+ * vazio. Preencher com nome fictício numa landing que vende reputação não é
+ * placeholder, é a destruição do argumento.
+ *
+ * ============================================================
+ * O QUE FICOU PARA TRÁS
+ * ============================================================
+ * `GrafoInterativo.tsx` não é mais referenciado por ninguém. Ele era a dobra
+ * da direção B, funciona, e está documentado — por isso não foi apagado junto.
+ * Se o redesenho se confirmar, apagá-lo é a próxima limpeza.
  *
  * Barra e rodapé não estão aqui: são moldura do site aberto e vivem em
- * `(site)/layout.tsx`.
+ * `(site)/layout.tsx`. **Eles NÃO foram redesenhados**, porque `/planos` os
+ * divide — a barra segue em Bricolage sobre uma página monoespaçada, e isso é
+ * uma emenda visível que ficou em aberto.
  */
 export default function LandingPage() {
   return (
-    <>
-      <Hero />
-      <Autor />
+    <div className="landing">
+      <RevelarNaRolagem />
+      <Dobra />
+      <Portas />
       <Faixa />
+      <Autor />
       <Materias />
+      <Velocidades />
       <Depoimentos />
       <Planos />
       <Faq />
-    </>
+      <Fechamento />
+    </div>
   )
 }

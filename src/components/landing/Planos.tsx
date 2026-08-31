@@ -1,119 +1,127 @@
 import Link from 'next/link'
 import {
+  AVISO_SEM_PRECO,
+  INCLUI_SEMPRE,
   PLANOS_A_VENDA,
   PRECOS_ANUNCIADOS,
-  AVISO_SEM_PRECO,
   precoLegivel,
 } from '@/lib/planos'
 
 /**
- * A vitrine de planos. Tudo o que ela mostra sai de `lib/planos.ts` — nome,
- * processos, preço e selo. Nada é escrito à mão aqui.
+ * A vitrine de planos.
  *
- * Três coisas que a seção NÃO faz, e que são decisão:
+ * **A afirmação que a seção existe para fazer:** o plano escolhe quais PROVAS
+ * abrem, nunca quais funções. É o princípio 3 do `PRODUCT.md`, e esconder isso
+ * venderia mais no primeiro mês e geraria pedido de reembolso no segundo. Por
+ * isso o `INCLUI_SEMPRE` vem logo abaixo dos três cartões, e não num rodapé
+ * que ninguém lê.
  *
- * - **Não mostra preço inventado.** Enquanto `preco` for `null`, o cartão não
- *   exibe linha de preço nenhuma e a seção assume o estado por inteiro (ver
- *   abaixo). Um `R$ 00` no lugar parece decidido e barato ao mesmo tempo, que
- *   é o pior jeito de mentir numa vitrine.
- * - **Não diz "Assinar".** Quem clica em Assinar espera pagar; o que existe
- *   hoje é um cadastro, e a liberação é manual depois do Pix (decisão 1b).
- *   O botão volta a dizer "Assinar" no dia em que o webhook do Mercado Pago
- *   fizer isso ser verdade — e a mudança acontece aqui, num lugar só.
- * - **Não afirma popularidade.** O selo do cartão em destaque vem do
- *   `selo` do plano e fala de cobertura, não de escolha de aluno. Ver o
- *   campo em `lib/planos.ts` para o porquê.
+ * **Nada de preço é escrito aqui.** `precoLegivel` devolve "A definir"
+ * enquanto `preco` for `null`, e o `AVISO_SEM_PRECO` explica o que isso
+ * significa para quem está decidindo — que criar conta agora é de graça e não
+ * gera cobrança. Os dois somem sozinhos quando o preço entrar em
+ * `lib/planos.ts`; nenhuma tela precisa lembrar de os tirar.
  *
- * ---
- *
- * **O aviso de preço substitui as três não-respostas, e isso é o ponto.**
- * Antes os três cartões diziam "A definir" cada um, e o visitante saía da
- * seção sem saber quanto custa, sem saber o que o botão faz e sem saber que a
- * conta nasce sem acesso. A resposta existia — é a primeira do FAQ —, mas
- * fechada num acordeão DEPOIS do momento em que ela decide a compra.
- *
- * Repetir a mesma não-resposta três vezes não informa três vezes mais: informa
- * que a página não está pronta. Dita uma vez, no lugar certo, ela vira o
- * estado declarado de um produto que ainda não abriu — que é a verdade.
+ * O selo do cartão em destaque também sai do arquivo, e diz "Mais completo" e
+ * não "Mais escolhido" — não há um aluno pagante sequer, e popularidade sem
+ * dado atrás é exatamente o tipo de afirmação que esta página não faz.
  */
 export default function Planos() {
   return (
-    <section
-      id="planos"
-      className="pb-[var(--ritmo-secao)] max-w-[1120px] mx-auto px-8"
-    >
-      <div className="max-w-[520px] mb-8">
-        <div className="rotulo-secao mb-3">Planos</div>
-        <h2 className="text-[length:var(--t-titulo)] font-medium mb-3">
-          Escolha o acesso pelo processo seletivo que você está fazendo.
+    <section id="planos" className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+      <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
+        <p className="rotulo reveal">acesso</p>
+        <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">
+          o plano escolhe <em>quais provas</em> abrem. nunca quais funções.
         </h2>
-        {/* A comparação completa é página própria. Os cartões ficam aqui
-            porque preço é o que mais decide e esconder isso da página
-            inicial custaria mais do que a rolagem extra. */}
-        <Link
-          href="/planos"
-          className="text-sm text-[var(--acento)] underline underline-offset-[3px] hover:text-[var(--acento-claro)]"
-        >
-          Ver a comparação completa
-        </Link>
+        <p className="reveal text-[var(--ink-dim)] max-w-[62ch] leading-relaxed" data-atraso="2">
+          ninguém compra o mais caro para destravar recurso — compra porque presta mais de uma
+          prova. os três entregam exatamente as mesmas funções.
+        </p>
+      </div>
+
+      <div className="reveal grid gap-px bg-[var(--line)] border border-[var(--line)] lg:grid-cols-3">
+        {PLANOS_A_VENDA.map((plano) => (
+          <article
+            key={plano.slug}
+            className={`grid gap-5 content-start p-[clamp(1.75rem,3.5vw,2.5rem)] transition-colors duration-200 ${
+              plano.selo
+                ? 'bg-[var(--paper)] shadow-[inset_0_0_0_1px_var(--acento)]'
+                : 'bg-[var(--page)] hover:bg-[var(--paper)]'
+            }`}
+          >
+            <span
+              className={`rotulo justify-self-start border px-2 py-1 text-[var(--acento)] border-[var(--acento)] ${
+                plano.selo ? '' : 'invisible'
+              }`}
+            >
+              {plano.selo ?? '—'}
+            </span>
+
+            <h3 className="declaracao text-[clamp(1.5rem,2.6vw,2.125rem)]">{plano.nome}</h3>
+
+            <p className="text-[var(--ink-dim)] text-[0.92rem] leading-relaxed min-h-[4.5em]">
+              {plano.paraQuem}
+            </p>
+
+            <ul className="grid gap-2">
+              {plano.processosLegiveis.split(' · ').map((nome) => (
+                <li key={nome} className="flex gap-2.5 text-[0.9rem] text-[var(--ink-dim)]">
+                  <span className="text-[var(--acento)] shrink-0" aria-hidden="true">
+                    —
+                  </span>
+                  {nome}
+                </li>
+              ))}
+            </ul>
+
+            <p className="rotulo border-t border-[var(--line)] pt-4">
+              {precoLegivel(plano.preco)}
+            </p>
+          </article>
+        ))}
       </div>
 
       {!PRECOS_ANUNCIADOS && (
-        /* Contornado e sem preenchimento, como o resto do sistema: é a
-           filosofia do `identidade-visual.md`, e aqui ela também impede que o
-           aviso vire um quarto cartão na fileira logo abaixo. Borda de 1px em
-           volta inteira, não uma tarja lateral grossa. */
-        <div className="mb-9 max-w-[640px] rounded-[var(--raio)] border border-[var(--line-forte)] p-5">
-          <p className="text-[length:var(--t-base)] font-medium mb-1.5">
+        <div className="reveal mt-10 grid gap-2 max-w-[62ch]">
+          <b className="font-normal text-[1.375rem] lowercase leading-snug text-[var(--ink)]">
             {AVISO_SEM_PRECO.titulo}
-          </p>
-          <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed">
+          </b>
+          <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed">
             {AVISO_SEM_PRECO.texto}
           </p>
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {PLANOS_A_VENDA.map((p) => (
-          <div
-            key={p.slug}
-            className={`bg-[var(--raised)] rounded-[var(--raio)] p-7 flex flex-col gap-[1.125rem] ${
-              p.selo ? 'shadow-[var(--sombra-alta)]' : 'shadow-[var(--sombra)]'
-            }`}
-          >
-            {p.selo && (
-              <span className="self-start rotulo-secao border border-[var(--acento)] text-[var(--acento)] rounded-[var(--raio-peq)] px-2 py-0.5">
-                {p.selo}
+      <div className="mt-[clamp(3rem,6vw,4.5rem)]">
+        <p className="rotulo reveal">em todos os planos, sem exceção</p>
+        <ul className="reveal grid gap-3 mt-7 md:grid-cols-2 md:gap-x-12">
+          {INCLUI_SEMPRE.map((item) => (
+            <li key={item} className="flex gap-3 text-[0.92rem] text-[var(--ink-dim)]">
+              <span className="text-[var(--ok)] shrink-0" aria-hidden="true">
+                +
               </span>
-            )}
-            <div>
-              <div className="font-medium text-[length:var(--t-medio)]">{p.nome}</div>
-              <div className="text-[length:var(--t-mini)] text-[var(--ink-faint)] mt-0.5">
-                {p.processosLegiveis}
-              </div>
-            </div>
-            {/* Sem preço anunciado o cartão simplesmente não tem linha de
-                preço: quem responde por todos é o aviso acima. Repeti-lo aqui
-                devolveria as três não-respostas que ele veio substituir. */}
-            {p.preco !== null && (
-              <div className="text-[length:var(--t-titulo)] font-medium">
-                {precoLegivel(p.preco)}
-                <span className="text-[length:var(--t-peq)] text-[var(--ink-faint)] font-normal">
-                  /mês
-                </span>
-              </div>
-            )}
-            <Link
-              href="/login"
-              className={`botao mt-auto w-full ${
-                p.selo ? 'botao-primario' : 'botao-neutro'
-              }`}
-            >
-              Criar conta
-            </Link>
-          </div>
-        ))}
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
+
+      <Link href="/planos" className="chamada reveal inline-flex items-center gap-6 mt-14 no-underline">
+        <span className="rotulo">ver a cobertura prova por prova</span>
+        <span className="seta w-[58px] h-[58px] rounded-full grid place-items-center shrink-0">
+          <svg viewBox="0 0 26 10" className="w-[26px] h-[10px] block" aria-hidden="true">
+            <path
+              d="M0,5 L24,5 M19,1 L24,5 L19,9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </Link>
     </section>
   )
 }

@@ -1,55 +1,42 @@
 import { FAQ_PUBLICO } from '@/lib/faq'
 
 /**
- * As perguntas que decidem a compra, logo depois do preço — que é onde a
- * objeção nasce.
+ * As dúvidas que travam a compra.
  *
- * **Usa `<details>`/`<summary>`, e isso não é só economia de JavaScript.** É o
- * mesmo gesto que o produto já usa na questão resolvida (decisão 9b): a
- * resposta fica escondida até a pessoa querer. Quem chega pela landing aprende
- * aqui o gesto que vai usar lá dentro, e a página não precisa de estado nem de
- * `'use client'` para isso.
+ * **A seção se recompõe sozinha.** `FAQ_PUBLICO` já é `FAQ` filtrado pelas
+ * perguntas que TÊM resposta — resposta pela metade sobre reembolso é pior que
+ * pergunta ausente, porque o comprador lê como evasiva justamente no ponto em
+ * que está decidindo confiar. Se todas as respostas saírem, a seção some
+ * inteira em vez de aparecer vazia.
  *
- * Abre e fecha sem JavaScript nenhum — então funciona antes da hidratação, ao
- * contrário de um acordeão feito à mão. Numa página onde a interatividade
- * demora até 1,8s para chegar, isso é a diferença entre responder ao primeiro
- * toque e não responder.
- *
- * Só as perguntas com resposta de verdade chegam aqui (`FAQ_PUBLICO`). As que
- * dependem de política ainda não escrita ficam em `lib/faq.ts`, fora da tela.
+ * `<details>` e `<summary>` nativos, sem estado em React: abrir e fechar não
+ * precisa de JavaScript, e o teclado e o leitor de tela já sabem o que fazer
+ * com eles. O `+` e o `–` são `::after` no CSS da própria página.
  */
 export default function Faq() {
-  if (!FAQ_PUBLICO.length) return null
+  if (FAQ_PUBLICO.length === 0) return null
 
   return (
-    <section
-      id="duvidas"
-      className="pb-[var(--ritmo-secao)] max-w-[760px] mx-auto px-8"
-    >
-      <div className="mb-9">
-        <div className="rotulo-secao mb-3">Dúvidas</div>
-        <h2 className="text-[length:var(--t-titulo)] font-medium">
-          O que costumam perguntar antes de assinar.
+    <section className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+      <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
+        <p className="rotulo reveal">antes de assinar</p>
+        <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">
+          o que costuma travar.
         </h2>
       </div>
 
-      <div className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
-        {FAQ_PUBLICO.map((d) => (
-          <details key={d.pergunta} className="group">
-            {/* `list-none` + `[&::-webkit-details-marker]:hidden` tiram o
-                triângulo padrão nos dois motores; o sinal fica sendo o `+` à
-                direita, que gira ao abrir. */}
-            <summary className="flex items-center justify-between gap-4 cursor-pointer py-4 text-[length:var(--t-base)] font-medium list-none [&::-webkit-details-marker]:hidden rounded-[var(--raio-peq)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]">
-              {d.pergunta}
+      <div className="reveal border-t border-[var(--line)]">
+        {FAQ_PUBLICO.map((duvida) => (
+          <details key={duvida.pergunta} className="border-b border-[var(--line)] group">
+            <summary className="flex items-baseline justify-between gap-8 py-6 cursor-pointer list-none text-[1.375rem] lowercase text-[var(--ink)] transition-colors duration-200 hover:text-[var(--acento)] [&::-webkit-details-marker]:hidden">
+              {duvida.pergunta}
               <span
+                className="text-[var(--acento)] text-[1.375rem] leading-none shrink-0 after:content-['+'] group-open:after:content-['–']"
                 aria-hidden="true"
-                className="shrink-0 text-[var(--acento)] text-lg leading-none transition-transform duration-150 group-open:rotate-45"
-              >
-                +
-              </span>
+              />
             </summary>
-            <p className="text-sm text-[var(--ink-dim)] leading-relaxed pb-5 max-w-[65ch]">
-              {d.resposta}
+            <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed max-w-[70ch] mb-6">
+              {duvida.resposta}
             </p>
           </details>
         ))}

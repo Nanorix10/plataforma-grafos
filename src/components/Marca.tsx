@@ -32,18 +32,32 @@
  * 3. **As cores das matérias ficaram cravadas**, porque é o que elas são: cor
  *    de matéria, não token de interface. Ver a nota no `NOS_DA_MARCA`.
  *
- * **O que mudou de um desenho para o outro**, porque o diff sozinho não conta:
- * o arquivo novo vive num quadro de 290 (o anterior, de 200), então as medidas
- * daqui são as dele divididas por 108/55 — a razão entre os dois raios do
- * hexágono, que é exata. Os seis nós e as seis cores são os MESMOS, na mesma
- * ordem, e as três espécies de aresta continuam nas mesmas seis direções. Duas
- * coisas são novas:
+ * **O desenho em vigor é o de 31/08**, e ele desfaz metade do de 30/08. O
+ * arquivo vive num quadro de 310, e a conversão para o quadro de 200 daqui é
+ * um fator único: **0,47259**, escolhido para o desenho ocupar exatamente a
+ * mesma extensão que o anterior (topo em 34,31), de modo que nada em volta —
+ * `viewBox`, tamanhos, alinhamento — precisou se mexer.
  *
- * - **O anel externo virou curvo**, arqueado para DENTRO. Eram seis segmentos
- *   retos; agora cada lado é uma quadrática cujo ponto de controle puxa ~3,6
- *   unidades na direção do centro.
- * - **Os traços afinaram e o nó do centro encolheu** (raio 15 → 13,24). O anel
- *   foi de 2 para 0,71 e os raios de 4/3,2/2,4 para 1,53/1,22/0,92.
+ * Os seis nós, as seis cores, a ordem e as três espécies de aresta nas mesmas
+ * seis direções continuam idênticos. O que mudou:
+ *
+ * - **O anel voltou a ser reto.** O arco de 30/08 durou um dia; são seis
+ *   segmentos de novo.
+ * - **Tudo engrossou, e os nós cresceram.** O anel foi de 0,71 para 1,229, os
+ *   raios de 1,53/1,22/0,92 para 2,363/1,89/1,229, e o nó de matéria de 10,69
+ *   para 11,81. O nó do centro encolheu um pouco (13,24 → 11,34), o que junto
+ *   com nós maiores muda o equilíbrio: o hexágono pesa mais que o miolo.
+ *
+ * **A consequência boa é o inverso da de 30/08.** Lá o arquivo afinou e a
+ * marca na tela não mudou, porque o `traco()` já elevava tudo ao piso em
+ * pixels. Aqui o arquivo ENGROSSOU o bastante para, nos tamanhos de cabeçalho,
+ * o próprio desenho começar a ganhar do piso — é a primeira vez que mexer no
+ * arquivo se enxerga na barra lateral.
+ *
+ * **Duas coisas do arquivo não entram**, pela régua do favicon: o halo atrás
+ * do nó central e o contorno branco dos nós. A 26–34px o halo vira uma mancha
+ * sem forma e o contorno de 3 unidades (0,6px) come a bolinha em vez de
+ * destacá-la. Eles existem para o uso grande — lockup e ícone de iOS.
  *
  * Consequência que vale saber ANTES de estranhar: nos tamanhos de cabeçalho
  * (26–34px) o `traco()` abaixo já elevava todos esses traços ao mesmo piso em
@@ -99,19 +113,19 @@
  * apagada no tema escuro, é este comentário que explica onde mexer.
  */
 const NOS_DA_MARCA: [number, number, string][] = [
-  [100.0, 45.0, '#C2334D'], // Língua Portuguesa
-  [147.6, 72.5, '#1F5F9E'], // Matemática
-  [147.6, 127.5, '#3F7848'], // Biologia
-  [100.0, 155.0, '#9E2E70'], // Química
-  [52.4, 127.5, '#A65224'], // Geografia
-  [52.4, 72.5, '#4A5C8C'], // Filosofia
+  [100.0, 46.12, '#C2334D'], // Língua Portuguesa
+  [144.19, 73.53, '#1F5F9E'], // Matemática
+  [144.19, 126.47, '#3F7848'], // Biologia
+  [100.0, 153.88, '#9E2E70'], // Química
+  [55.81, 126.47, '#A65224'], // Geografia
+  [55.81, 73.53, '#4A5C8C'], // Filosofia
 ]
 
-/** Raio do nó de matéria, no quadro de 200 (21 no arquivo, ÷ 108/55). */
-const RAIO_NO = 10.69
+/** Raio do nó de matéria, no quadro de 200 (25 no arquivo, × 0,47259). */
+const RAIO_NO = 11.81
 
-/** Raio do nó-âncora do centro (26 no arquivo). Era 15 no desenho anterior. */
-const RAIO_CENTRO = 13.24
+/** Raio do nó-âncora do centro (24 no arquivo). Era 13,24 no desenho anterior. */
+const RAIO_CENTRO = 11.34
 
 /**
  * O anel externo, um lado por entrada.
@@ -127,12 +141,12 @@ const RAIO_CENTRO = 13.24
  * geometria própria além da curvatura.
  */
 const ANEL = [
-  'M100,45 Q120.22,64.91 147.6,72.5',
-  'M147.6,72.5 Q140.49,100 147.6,127.5',
-  'M147.6,127.5 Q120.22,135.09 100,155',
-  'M100,155 Q79.78,135.09 52.4,127.5',
-  'M52.4,127.5 Q59.51,100 52.4,72.5',
-  'M52.4,72.5 Q79.78,64.91 100,45',
+  'M100,46.12 L144.19,73.53',
+  'M144.19,73.53 L144.19,126.47',
+  'M144.19,126.47 L100,153.88',
+  'M100,153.88 L55.81,126.47',
+  'M55.81,126.47 L55.81,73.53',
+  'M55.81,73.53 L100,46.12',
 ]
 
 /**
@@ -148,16 +162,16 @@ const ANEL = [
  * mais pesada e a pontilhada a mais leve.
  */
 const RAIOS: [number, number, number, 'solido' | 'tracejado' | 'pontilhado'][] = [
-  [100, 45, 1.53, 'solido'],
-  [147.6, 72.5, 1.22, 'tracejado'],
-  [147.6, 127.5, 0.92, 'pontilhado'],
-  [100, 155, 1.53, 'solido'],
-  [52.4, 127.5, 1.22, 'tracejado'],
-  [52.4, 72.5, 0.92, 'pontilhado'],
+  [100, 46.12, 2.363, 'solido'],
+  [144.19, 73.53, 1.89, 'tracejado'],
+  [144.19, 126.47, 1.229, 'pontilhado'],
+  [100, 153.88, 2.363, 'solido'],
+  [55.81, 126.47, 1.89, 'tracejado'],
+  [55.81, 73.53, 1.229, 'pontilhado'],
 ]
 
-/** Espessura do anel no arquivo de origem (1,4), no quadro de 200. */
-const TRACO_ANEL = 0.71
+/** Espessura do anel no arquivo de origem (2,6), no quadro de 200. */
+const TRACO_ANEL = 1.229
 
 /**
  * Espessura de traço corrigida para o tamanho em que o símbolo vai ser
@@ -224,8 +238,8 @@ const ALVO_PX = {
  * "1.5 6" no pontilhado) convertidos para o quadro de 200.
  */
 const RISCO_ORIGINAL = {
-  tracejado: [4.07, 3.06],
-  pontilhado: [0.76, 3.06],
+  tracejado: [5.2, 3.31],
+  pontilhado: [0.71, 3.31],
 } as const
 
 /**

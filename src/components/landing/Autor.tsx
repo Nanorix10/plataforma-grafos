@@ -1,97 +1,79 @@
-import Image from 'next/image'
 import { AUTOR } from '@/lib/autor'
 
 /**
  * Quem escreveu o material.
  *
- * A landing afirma que o material é de quem passou pela prova, e essa frase
- * precisa de alguém atrás dela. Sem esta seção, a headline é uma frase; com
- * ela, é uma atribuição.
+ * **Nada aqui é escrito à mão.** Nome, conquistas e pontos saem de
+ * `lib/autor.ts`, que é a fonte única — e onde está registrado por que o tempo
+ * verbal do primeiro lugar é o presente ("está em 1º lugar" e não "tirou"): o
+ * PASSE é seriado, liderar hoje não é ter vencido, e a frase no passado
+ * afirmaria um resultado final que ainda não existe.
  *
- * **A composição é assimétrica de propósito.** Foto de um lado, texto do outro,
- * e os três pontos numa lista corrida em vez de três cartões — cartão de ícone
- * com título e parágrafo, repetido, é o desenho que toda landing gerada tem.
- * Aqui a lista é lista.
+ * **A foto saiu no redesenho de 31/08.** Ela era metade da seção e vendia o
+ * ritual de estudar; numa página que passou a ser tipográfica inteira, uma
+ * fotografia de mesa de madeira era o único objeto figurativo da rolagem e
+ * ficava órfã. O campo `AUTOR.foto` continua existindo e continua preenchido —
+ * se a seção voltar a querer imagem, o dado está lá.
  *
- * **Tudo o que pode faltar, falta sem quebrar.** Sem foto, o texto ocupa a
- * largura de leitura. Sem conquista cadastrada, a seção mostra o método e não
- * faz afirmação de desempenho. Ver `lib/autor.ts`.
+ * **O `.proprio` no nome não é detalhe.** A gramática da landing aplica
+ * `text-transform: lowercase` a toda declaração, e sem ele o nome do autor
+ * sairia "leandro" — que não é estilo, é erro. Mesma coisa com a sigla do
+ * ENEM, logo abaixo.
  */
 export default function Autor() {
-  const { nome, conquistas, pontos, foto } = AUTOR
-
   return (
-    <section
-      id="autor"
-      className="py-[var(--ritmo-secao)] max-w-[1120px] mx-auto px-8"
-    >
-      <div
-        className={
-          foto
-            ? 'grid lg:grid-cols-[0.85fr_1fr] gap-12 items-start'
-            : 'max-w-[68ch]'
-        }
-      >
-        {foto && (
-          /* `width`/`height` declarados: sem eles o navegador não reserva o
-             espaço e a página pula quando a imagem chega, que é exatamente o
-             "caótico" que se quer evitar. `sizes` para o celular não baixar a
-             versão de desktop. */
-          <Image
-            src={foto.src}
-            alt={foto.alt}
-            width={foto.largura}
-            height={foto.altura}
-            sizes="(max-width: 1024px) 100vw, 40vw"
-            className="w-full h-auto rounded-[var(--raio)]"
-          />
-        )}
+    <section id="autor" className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+      <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
+        <p className="rotulo reveal">quem escreve</p>
+        <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">
+          prazer, eu sou o <em className="proprio">{AUTOR.nome}</em>.
+        </h2>
+      </div>
 
-        <div>
-          <div className="rotulo-secao mb-3">Quem escreveu</div>
-          <h2 className="text-[length:var(--t-titulo)] font-medium mb-4">
-            O material é de {nome}, e ele prestou as mesmas provas que você.
-          </h2>
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-20 lg:items-start">
+        <div className="reveal">
+          <p className="text-[var(--ink-dim)] max-w-[62ch] leading-relaxed mb-12">
+            eu presto as mesmas provas que você. escrevi cada resumo deste acervo do zero, do meu
+            lado da carteira — não é professor supondo onde o aluno trava, é quem travou escolhendo
+            por onde começar.
+          </p>
 
-          {conquistas.length > 1 && (
-            /* As três são de bancas diferentes, e dizer isso vale mais que a
-               lista: PASSE, ENEM e Poliedro não são a mesma prova, o que afasta
-               a leitura de "acertou uma vez". */
-            <p className="text-sm text-[var(--ink-dim)] mb-6 max-w-[58ch] leading-relaxed">
-              Não é resultado de uma prova só — são bancas diferentes, no mesmo ano.
-            </p>
-          )}
-
-          {conquistas.length > 0 && (
-            /* Só aparece com dado real. Uma afirmação de desempenho sem número
-               e sem ano ao lado enfraquece em vez de vender. */
-            <ul className="mb-6 space-y-2">
-              {conquistas.map((c) => (
-                <li key={`${c.titulo}-${c.ano}`} className="flex items-baseline gap-2.5">
-                  <span className="numeros text-[length:var(--t-medio)] font-medium text-[var(--acento)]">
-                    {c.ano}
-                  </span>
-                  <span className="text-[length:var(--t-base)]">
-                    <strong className="font-medium">{c.titulo}</strong>
-                    <span className="text-[var(--ink-faint)]"> · {c.onde}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <dl className="space-y-5">
-            {pontos.map((p) => (
-              <div key={p.titulo}>
-                <dt className="font-medium text-[length:var(--t-base)] mb-1">
-                  {p.titulo}
-                </dt>
-                <dd className="text-sm text-[var(--ink-dim)] leading-relaxed max-w-[60ch]">
-                  {p.texto}
-                </dd>
-              </div>
+          <ul className="border-t border-[var(--line)]">
+            {AUTOR.conquistas.map((c) => (
+              <li
+                key={c.titulo}
+                className="grid gap-1.5 py-6 border-b border-[var(--line)]"
+              >
+                <span className="rotulo text-[var(--acento)] tabular-nums">{c.ano}</span>
+                <b className="font-normal text-[1.375rem] leading-snug lowercase text-[var(--ink)]">
+                  {/* A sigla escapa do lowercase pela mesma razão do nome. */}
+                  {c.titulo.split('ENEM').length > 1 ? (
+                    <>
+                      {c.titulo.split('ENEM')[0]}
+                      <span className="proprio">ENEM</span>
+                      {c.titulo.split('ENEM')[1]}
+                    </>
+                  ) : (
+                    c.titulo
+                  )}
+                </b>
+                <span className="text-[var(--ink-faint)] text-[0.9rem] leading-relaxed">
+                  {c.onde}
+                </span>
+              </li>
             ))}
-          </dl>
+          </ul>
+        </div>
+
+        <div className="reveal grid gap-9" data-atraso="1">
+          {AUTOR.pontos.map((p) => (
+            <div key={p.titulo} className="grid gap-2">
+              <b className="font-normal text-[1.375rem] leading-snug lowercase text-[var(--ink)]">
+                {p.titulo}
+              </b>
+              <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed">{p.texto}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
