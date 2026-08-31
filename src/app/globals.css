@@ -1580,36 +1580,46 @@ h3 {
 
 /* ---- reveal por rolagem ----
    A identidade dizia "nenhuma animação de entrada por rolagem", e
-   isto a contraria. Foi escolha do Leandro junto da referência. O
-   `prefers-reduced-motion` continua sendo respeitado, e o conteúdo
-   nasce visível para quem tem JavaScript desligado — a classe só é
-   adicionada pelo observador. */
+   isto a contraria. Foi escolha do Leandro junto da referência.
+
+   QUEM ANIMA NÃO É MAIS ESTE ARQUIVO. Desde a troca do motor, o que
+   entra e como entra é decidido em `landing/Movimento.tsx`, com GSAP:
+   a duração e a amplitude passaram a variar com o peso do elemento
+   (um rótulo não pode entrar igual a um `h1`), e a cascata virou
+   `stagger` de verdade em vez dos três baldes de atraso que existiam
+   aqui. Se voltar `transition` para estas propriedades, ela briga com
+   o que o GSAP escreve embutido a cada quadro — o sintoma é o reveal
+   arrastado e borrado.
+
+   O QUE SOBROU AQUI É O ESTADO ESCONDIDO, e ele tem uma razão só:
+   entre o HTML do servidor e a hidratação existe um quadro em que o
+   JavaScript ainda não rodou. Sem esconder pelo CSS, esse quadro
+   mostra a página inteira montada e o reveal vira um piscar.
+
+   O PREÇO DISSO É O `<noscript>` DE `(site)/page.tsx`. Sem
+   JavaScript a classe nunca é removida e a landing fica em branco —
+   defeito que existiu de verdade entre 31/08 e a troca do motor, com
+   o cabeçalho do componente antigo afirmando o contrário. Quem mexer
+   aqui mexe nos dois lugares.
+
+   `data-atraso` NÃO tem mais efeito de CSS: ele passou a ser lido
+   pelo `Movimento` como a ORDEM da cascata. Continua na marcação, e
+   continua significando o que significava. */
 .landing .reveal {
   opacity: 0;
-  transform: translateY(34px);
-  transition:
-    opacity 900ms cubic-bezier(0.16, 0.7, 0.3, 1),
-    transform 900ms cubic-bezier(0.16, 0.7, 0.3, 1);
-}
-.landing .reveal.visivel {
-  opacity: 1;
-  transform: none;
-}
-.landing .reveal[data-atraso='1'] {
-  transition-delay: 110ms;
-}
-.landing .reveal[data-atraso='2'] {
-  transition-delay: 220ms;
-}
-.landing .reveal[data-atraso='3'] {
-  transition-delay: 330ms;
+  transform: translateY(24px);
 }
 
+/* Vale mesmo sem JavaScript, e é o primeiro dos dois lugares onde
+   `prefers-reduced-motion` é conferido — o outro é o
+   `gsap.matchMedia()` do `Movimento`, que impede o tween de existir.
+   Sem o segundo, o GSAP escreveria `opacity: 0` embutido por cima
+   desta regra e a página sumiria justo para quem pediu menos
+   movimento. */
 @media (prefers-reduced-motion: reduce) {
   .landing .reveal {
     opacity: 1;
     transform: none;
-    transition: none;
   }
 }
 

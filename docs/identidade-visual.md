@@ -354,7 +354,12 @@ Foi decisão do Leandro, a partir de uma referência que ele trouxe. O que a
 landing suspende — e que **continua valendo em todo o resto do site**:
 
 - **§3, a mono "nunca em frase".** Lá ela é a única família.
-- **§7, "quase nada se move".** Lá há animação de entrada por rolagem.
+- **§7, "quase nada se move".** Lá há animação de entrada por rolagem, com
+  cascata, e uma parallaxe de fundo presa à rolagem. Desde 31/08 o movimento
+  de lá é DIRIGIDO: duração e amplitude variam com o peso do elemento (um
+  rótulo não entra igual a um `h1`), e a curva é a do registro Premium, não a
+  ease-out seca de antes. Quem manda é `landing/Movimento.tsx`; a decisão
+  **13b** do `CONTEXTO.md` traz a régua e o que ela custou.
 - **§2, o acento escasso e o neutro morno.** A dobra é um campo saturado.
 - **§6, "os motivos vêm do conteúdo".** A textura de grafo do fundo é
   decorativa.
