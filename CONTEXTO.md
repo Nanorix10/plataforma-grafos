@@ -1457,20 +1457,47 @@ ainda não foi colocada. Agora dá — é só abrir o resumo no editor e colar.
 
 ## Publicação
 
-O site está no ar em **https://plataforma-grafos.vercel.app**
-(Vercel, time `ae-5672`, projeto `plataforma-grafos`).
+O site está no ar em **https://plataformagrafos.com.br** — domínio próprio, e é
+ele o endereço do negócio. O `www` redireciona para o apex com 307, e
+`plataforma-grafos.vercel.app` continua respondendo como **alias secundário** da
+Vercel (time `ae-5672`, projeto `plataforma-grafos`).
+
+> **O domínio não estava escrito em lugar nenhum até 31/08.** Esta seção dizia
+> que o site vivia no endereço da Vercel, e foi assim que ele entrou na wiki e
+> em tudo o mais. Quem for anunciar o site — landing, e-mail do Supabase,
+> divulgação — usa o domínio. Vale conferir a **Site URL do Supabase** por causa
+> disto: ela decide para onde vai o link de confirmação de cadastro, e apontá-la
+> para o endereço errado já derrubou o cadastro de todo aluno novo uma vez
+> (`docs/emails-do-supabase.md`).
 
 O nome **Plataforma Grafos** vale em toda a infraestrutura, e isso foi acertado de
 uma vez: repositório, projeto da Vercel, projeto do Supabase, `package.json` e a
-pasta no disco. O nome antigo (`plataforma-mestre-ronny`) não sobrou em lugar
-nenhum — inclusive o endereço `plataforma-mestre-ronny.vercel.app`, que a Vercel
-mantinha ligado desde a renomeação do projeto e foi desligado. Link velho dá 404,
-e é de propósito: dois endereços servindo o mesmo site é o tipo de coisa que
-alguém descobre no dia em que um dos dois para de funcionar sozinho.
+pasta no disco.
+
+**O endereço antigo é a parte que este documento contava errado.** Ele dizia que
+`plataforma-mestre-ronny.vercel.app` "foi desligado" e que o 404 era de
+propósito. Não foi: em **27/08** o endereço respondia **HTTP 200**, constando
+como alias do deploy de produção. Em **31/08** ele voltou a dar 404 — mas por
+acidente, não por decisão. Ele seguia colado ao deploy de 27/08, e quando a
+produção trocou de deploy ele não veio junto. **Ninguém o removeu**, então um
+deploy futuro pode reatrelá-lo. Se dois endereços servindo o mesmo site é
+problema — e a razão continua valendo, porque um dos dois para de funcionar
+sozinho um dia —, desligar de verdade é ação de painel, e ainda não foi feita.
 
 - Código em **https://github.com/Nanorix10/plataforma-grafos** (público, branch `main`),
   conectado à Vercel: **todo `git push` na `main` publica sozinho**. Não é preciso
   rodar `vercel deploy` na mão.
+  - **Mas MESCLAR não é publicar, e isso mordeu em 31/08.** O merge do PR #40
+    entrou na `main` no GitHub e a Vercel **não criou deploy de produção
+    nenhum** — o alias ficou no commit de 27/08, e o único deploy do trabalho
+    era o *preview* da branch. Vinte e cinco minutos depois, num projeto cujos
+    deploys ficam prontos em ~30s. Um commit vazio na `main` destravou, e
+    construiu em 24s: o gatilho funciona, o evento do merge é que se perdeu.
+  - **Como conferir que publicou de verdade:** o sinal enganoso é
+    `X-Vercel-Cache: HIT` com `Age` alto, que parece "build em curso" e é a
+    produção velha servindo normalmente porque ninguém a trocou. Só vale o HTML
+    de produção com alguma marca do que mudou, e o alias resolvendo para o
+    deploy novo.
 - O repositório é público, mas nenhuma chave vai junto: o `.gitignore` bloqueia
   `.env*`. As chaves vivem só no `.env.local` (local) e no painel da Vercel.
 - As variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` já estão
