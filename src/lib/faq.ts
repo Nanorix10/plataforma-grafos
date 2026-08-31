@@ -42,7 +42,12 @@ export const FAQ: Duvida[] = [
   {
     pergunta: 'O que é esse negócio de grafo?',
     resposta:
-      'É o jeito como o material está montado: cada assunto sabe dentro de que ele está e com quais outros ele se conecta. Na seção "Por dentro" desta página dá para tocar num assunto e ver as ligações dele.',
+      /* O ponteiro é para o TOPO da página desde que a landing virou a direção
+         B (o grafo subiu para a dobra e a seção "Por dentro" deixou de
+         existir). Esta resposta apontava para ela pelo nome, e teria ficado
+         mandando o visitante procurar uma seção que não existe mais — o tipo
+         de quebra que ninguém vê, porque texto de FAQ não dá erro de build. */
+      'É o jeito como o material está montado: cada assunto sabe dentro de que ele está e com quais outros ele se conecta. Logo no topo desta página dá para tocar num assunto e ver as ligações dele.',
   },
   {
     pergunta: 'Quanto tempo dura o meu acesso?',

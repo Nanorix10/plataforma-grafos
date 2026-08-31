@@ -78,7 +78,19 @@ const ARESTAS: Aresta[] = [
   { de: 'vetores', para: 'trigono', tipo: 'cita' },
 ]
 
-/** O que a legenda diz quando um nó está escolhido. Montada, não escrita à mão. */
+/**
+ * O que o painel diz quando um nó está escolhido. Montado, não escrito à mão.
+ *
+ * **Devolve os campos separados E a frase corrida**, e os dois são usados em
+ * lugares diferentes: o painel desenha os campos em linhas rotuladas ("Está
+ * dentro de", "Cita"), e o `aria-label` de cada nó usa a frase, porque leitor
+ * de tela lê uma sentença melhor do que uma tabela de duas células.
+ *
+ * A separação é a exigência da direção B: com o grafo na dobra, o painel é o
+ * que prova que existe estrutura por baixo — e "está dentro de Física" ao lado
+ * de um rótulo não é a mesma informação que a mesma frase perdida no meio de
+ * um parágrafo. Os dois eixos da decisão 9 aparecem nomeados, não narrados.
+ */
 function explicar(id: string) {
   const no = NOS.find((n) => n.id === id)!
   const contem = ARESTAS.filter((a) => a.de === id && a.tipo === 'contem')
@@ -93,7 +105,18 @@ function explicar(id: string) {
     const outros = cita.map((a) => nome(a.de === id ? a.para : a.de))
     partes.push(`se conecta com ${outros.join(', ')}`)
   }
-  return { titulo: no.rotulo, texto: partes.join('; ') + '.' }
+
+  return {
+    titulo: no.rotulo,
+    /** Nome da matéria por extenso — o painel abre por ela, como no acervo. */
+    materia: no.materia ? MATERIAS[no.materia].nome : null,
+    cor: no.materia ? MATERIAS[no.materia].cor : 'var(--ink-faint)',
+    /** Nó de matéria não está dentro de ninguém; nó de resumo quase sempre está. */
+    pai: dentroDe ? nome(dentroDe.de) : null,
+    contem: contem.map((a) => nome(a.para)),
+    cita: cita.map((a) => nome(a.de === id ? a.para : a.de)),
+    texto: partes.join('; ') + '.',
+  }
 }
 
 /** Vizinhos diretos do nó escolhido, por qualquer uma das duas linhas. */
@@ -202,7 +225,8 @@ export default function GrafoInterativo() {
   }
 
   return (
-    <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
+    <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
+      <div>
       <div className="quadro relative rounded-[var(--raio)] p-4 shadow-[var(--sombra)]">
           {/* Só aparece depois que alguém mexeu — um botão que não tem o que
               desfazer é ruído permanente numa seção que deve ficar quieta. */}
@@ -323,65 +347,119 @@ export default function GrafoInterativo() {
         </svg>
       </div>
 
-      <div>
-        {/* Esta coluna NÃO leva rótulo de seção, e a ausência é decisão.
-            A seção que a contém já tem o dela ("Por dentro") a poucos pixels
-            daqui, e dois rótulos minúsculos em maiúsculas na mesma tela, para
-            uma ideia só, é andaime — não hierarquia. O rótulo repetido a cada
-            bloco é um dos sinais mais confiáveis de página gerada. */}
-        <h3 className="text-[length:var(--t-grande)] font-medium mb-3">
-          Cada assunto sabe onde mora e com quem conversa.
-        </h3>
-        <p className="text-sm text-[var(--ink-dim)] mb-5 leading-relaxed">
-          Um grafo é isto: assuntos ligados por relações. Toque em qualquer um
-          para ver as dele. É assim que o material está montado por dentro —
-          e é daí que vem o nome da plataforma.
-        </p>
+      {/* A legenda desceu para debaixo do desenho quando o grafo subiu para a
+          dobra (direção B). Antes ela dividia a coluna da direita com a
+          explicação; ali agora mora o painel, que é o que carrega a prova de
+          estrutura. Aqui ela fica onde é consultada — encostada nas linhas que
+          nomeia, e não do outro lado da tela.
 
-        <dl className="text-sm space-y-2.5 mb-6">
-          <div className="flex items-center gap-3">
-            <svg width="34" height="8" aria-hidden="true" className="shrink-0">
-              <line x1="0" y1="4" x2="34" y2="4" stroke="var(--acento)" strokeWidth="1.75" />
-            </svg>
-            <dt className="font-medium">Contém</dt>
-            <dd className="text-[var(--ink-faint)]">Dinâmica está dentro de Física.</dd>
-          </div>
-          <div className="flex items-center gap-3">
-            <svg width="34" height="8" aria-hidden="true" className="shrink-0">
-              <line
-                x1="0"
-                y1="4"
-                x2="34"
-                y2="4"
-                stroke="var(--acento)"
-                strokeWidth="1.75"
-                strokeDasharray="5 4"
-              />
-            </svg>
-            <dt className="font-medium">Cita</dt>
-            <dd className="text-[var(--ink-faint)]">A 2ª Lei precisa de Vetores.</dd>
-          </div>
-        </dl>
-
-        {/* `aria-live`: quem navega por teclado ou leitor de tela recebe a
-            explicação sem precisar procurá-la na tela. `min-h` para a caixa não
-            saltar de altura a cada troca, que é o que faria a página tremer. */}
-        <div
-          role="status"
-          aria-live="polite"
-          className="bg-[var(--raised)] rounded-[var(--raio-peq)] p-4 min-h-[92px]"
-        >
-          {legenda && (
-            <>
-              <div className="font-medium text-[length:var(--t-base)] mb-1">
-                {legenda.titulo}
-              </div>
-              <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed">
-                {legenda.texto}
-              </p>
-            </>
-          )}
+          Os exemplos continuam sendo os do desenho ao lado, e não frases
+          genéricas: quem lê "Dinâmica está dentro de Física" acha as duas
+          palavras no grafo a poucos centímetros. */}
+      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-[length:var(--t-peq)]">
+        <div className="flex items-center gap-2.5">
+          <svg width="30" height="8" aria-hidden="true" className="shrink-0">
+            <line x1="0" y1="4" x2="30" y2="4" stroke="var(--acento)" strokeWidth="1.75" />
+          </svg>
+          <dt className="font-medium">Contém</dt>
+          <dd className="text-[var(--ink-faint)]">Dinâmica está dentro de Física.</dd>
         </div>
+        <div className="flex items-center gap-2.5">
+          <svg width="30" height="8" aria-hidden="true" className="shrink-0">
+            <line
+              x1="0"
+              y1="4"
+              x2="30"
+              y2="4"
+              stroke="var(--acento)"
+              strokeWidth="1.75"
+              strokeDasharray="5 4"
+            />
+          </svg>
+          <dt className="font-medium">Cita</dt>
+          <dd className="text-[var(--ink-faint)]">A 2ª Lei precisa de Vetores.</dd>
+        </div>
+      </dl>
+      </div>
+
+      {/* O PAINEL — o que a direção B põe na dobra.
+
+          Ele existe para provar, em três segundos, que há ESTRUTURA por baixo
+          do material e não uma pilha de arquivos. Por isso os campos são
+          rotulados em vez de narrados: "Está dentro de" e "Cita" são os dois
+          eixos da decisão 9, com os nomes que eles têm no produto, e o aluno
+          que ler isto aqui já sabe ler o `/mapa` no primeiro dia.
+
+          **Não há texto descritivo por nó, e a ausência é decisão.** O
+          artboard previa um `{painel.texto}` — uma linha de prosa sobre o
+          assunto escolhido. Não entrou porque não existe: escrever "a Dinâmica
+          estuda as causas do movimento" seria eu inventando material do autor
+          na vitrine dele, e o princípio 1 do `PRODUCT.md` não abre exceção para
+          copy de demonstração. As relações JÁ são a explicação — é o que a
+          seção veio demonstrar. */}
+      <div
+        role="status"
+        aria-live="polite"
+        /* `min-h` para a caixa não saltar de altura a cada troca: com o painel
+           na dobra, um salto aqui empurra a página inteira na primeira
+           interação do visitante. O valor cobre o nó mais cheio (Leis de
+           Newton: pai, dois contidos, uma citação). */
+        className="bg-[var(--paper)] border border-[var(--line)] rounded-[var(--raio)] p-6 min-h-[268px]"
+      >
+        {legenda && (
+          <>
+            <div
+              className="rotulo-secao mb-2"
+              /* A cor da matéria, como em todo título do site (decisão 4c).
+                 Aqui ela também é a ponte visual com o nó aceso no desenho ao
+                 lado: a mesma cor nos dois lugares diz que são a mesma coisa,
+                 sem precisar de uma linha ligando. */
+              style={{ color: legenda.cor }}
+            >
+              {legenda.materia ?? 'Assunto'}
+            </div>
+            {/* `div`, e NÃO um cabeçalho, de propósito. Este nome troca a cada
+                clique — pô-lo como `h2` colocaria um título mutante no sumário
+                do documento, entre a dobra e a seção do autor, e quem navega
+                por cabeçalhos cairia num "Leis de Newton" que não é seção de
+                nada. O `aria-live` da caixa já anuncia a troca, que é o que
+                essa pessoa precisa. */}
+            <div className="text-[length:var(--t-grande)] font-medium mb-5">
+              {legenda.titulo}
+            </div>
+
+            <dl className="text-sm space-y-4">
+              {/* Cada linha some quando não se aplica, em vez de aparecer
+                  vazia ou com travessão: um nó de matéria não está dentro de
+                  nada, e "Está dentro de —" faria o visitante procurar o que
+                  está faltando. */}
+              {legenda.pai && (
+                <div>
+                  <dt className="text-[length:var(--t-mini)] uppercase tracking-wide text-[var(--ink-faint)] mb-1">
+                    Está dentro de
+                  </dt>
+                  <dd className="font-medium">{legenda.pai}</dd>
+                </div>
+              )}
+              {legenda.contem.length > 0 && (
+                <div>
+                  <dt className="text-[length:var(--t-mini)] uppercase tracking-wide text-[var(--ink-faint)] mb-1">
+                    Contém
+                  </dt>
+                  <dd className="font-medium">{legenda.contem.join(', ')}</dd>
+                </div>
+              )}
+              {legenda.cita.length > 0 && (
+                <div>
+                  <dt className="text-[length:var(--t-mini)] uppercase tracking-wide text-[var(--ink-faint)] mb-1">
+                    Cita
+                  </dt>
+                  <dd className="font-medium">{legenda.cita.join(', ')}</dd>
+                </div>
+              )}
+            </dl>
+          </>
+        )}
       </div>
     </div>
   )
