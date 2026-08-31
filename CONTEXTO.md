@@ -1568,3 +1568,75 @@ ninguém. Se a landing voltar a usar a display, o `preload` volta.
 **Os números da faixa continuam saindo de `lib/numeros.ts`**, e continuam sendo
 o escopo declarado da plataforma (24 / 3 / 180+), não contagem do banco. O
 aviso em maiúsculas daquele arquivo segue valendo: não derive nada dali.
+
+## 13b. O movimento da landing tem direção, e ela custa 43 KB
+
+**Aplicado em 31/08**, depois da decisão 13. A landing já tinha reveal por
+rolagem; o que ela não tinha era **direção de movimento** — uma escolha sobre o
+que se move, quanto, e em quanto tempo.
+
+**O defeito era ter UMA régua só.** `RevelarNaRolagem.tsx` animava tudo em
+900ms e 34px: o `h1` da primeira dobra e o pontinho de 7px da linha de etapas
+entravam exatamente igual. 900ms é a faixa da *revelação dramática*, a que abre
+uma página; item de lista pede 200–350ms. Quando tudo é dramático, nada é.
+
+O motor virou GSAP + ScrollTrigger, em `landing/Movimento.tsx` (o arquivo
+antigo foi apagado — o nome anunciava uma das três coisas que ele passou a
+fazer). O que mudou, e por quê:
+
+| | antes | agora |
+|---|---|---|
+| duração | 900ms para tudo | 350 / 550 / 900ms por peso do elemento |
+| amplitude | 34px para tudo | 14 / 22 / 34px por peso |
+| cascata | 3 baldes de `transition-delay` | `stagger` de 70ms, sem teto de três |
+| curva | `cubic-bezier(.16,.7,.3,1)` | `power2.out` |
+| camada de fundo | textura parada | parallaxe presa à rolagem (`scrub`) |
+
+**O peso sai da própria gramática** (`.declaracao` é pesado, `.rotulo` é leve,
+o resto é médio), e não de um `data-peso` novo: as classes já dizem isso, e
+duas fontes divergiriam no primeiro ajuste.
+
+**A curva mudou porque a antiga contradizia a tipografia.** A página é
+monoespaçada, caixa baixa, campo escuro — registro "Premium", que pede curva
+suave dos dois lados. `cubic-bezier(0.16, 0.7, 0.3, 1)` arranca rápido e freia
+seco, que é o registro "energético". Letra dizia uma coisa e o movimento dizia
+outra.
+
+**A dobra é a única revelação dramática da página**, e é uma linha do tempo, não
+um gatilho de rolagem — ela já está na tela quando a página abre. Cascata de
+120ms por elemento, cinco elementos, 480ms no total.
+
+**O custo está medido, não estimado: 43 KB comprimidos** (112 KB crus), um
+chunk só, e ele é da landing — o `(app)` não importa nada disto. É uma dívida
+declarada num projeto que tirou o pacote `d3` para não arrastar 30 submódulos
+(decisão 10) e que só baixa o KaTeX nas rotas do editor (decisão 8). Se o peso
+da primeira dobra passar a incomodar, é o primeiro lugar para olhar.
+
+**Duas armadilhas fechadas junto, e as duas voltam se alguém reescrever isto:**
+
+- **A landing nascia EM BRANCO sem JavaScript.** `.landing .reveal { opacity: 0 }`
+  não tinha condição nenhuma, e a classe que revelava só chegava pelo
+  observador — as 43 marcações ficavam invisíveis para sempre. O cabeçalho do
+  componente antigo afirmava exatamente o contrário ("quem chega sem JS vê tudo
+  opaco, mas VÊ"), o que é o pior tipo de defeito: documentado como resolvido.
+  Quem fecha agora é um `<noscript>` em `(site)/page.tsx`. Esconder pelo CSS
+  continua certo — é o que evita o piscar entre o HTML do servidor e a
+  hidratação; o que faltava era a saída para quem não hidrata.
+- **`once: true` no `ScrollTrigger.batch` estraga a revelação.** Rolando a
+  página inteira depressa, 46 dos 57 alvos ficavam presos em `opacity: 0`,
+  seções inteiras que já tinham saído da tela. O `batch` entrega o lote um
+  quadro depois; `once` mata o gatilho antes disso quando a rolagem atravessa
+  começo e fim no mesmo quadro — e o salto de âncora do `href="#portas"` da
+  própria dobra faz exatamente isso. Matar o gatilho de DENTRO do `onEnter`
+  resolve. Conferido: 40 de 40 alvos que cruzam o gatilho terminam opacos e sem
+  transform residual.
+
+**`data-atraso` não tem mais efeito de CSS.** Os 17 do projeto passaram a ser
+lidos pelo `Movimento` como a ORDEM da cascata, e continuam significando o que
+significavam — o `stagger` é que cuida do tempo agora.
+
+**`prefers-reduced-motion` é conferido em dois lugares de propósito:** o
+`globals.css` revela tudo na hora (vale sem JavaScript) e o `gsap.matchMedia()`
+impede que qualquer tween chegue a existir. Sem o segundo, o GSAP escreveria
+`opacity: 0` embutido por cima da regra e a página sumiria justo para quem
+pediu menos movimento.

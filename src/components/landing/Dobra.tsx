@@ -97,7 +97,7 @@ function LockupGrande() {
 function TexturaDeGrafo() {
   return (
     <svg
-      className="absolute inset-0 w-full h-full opacity-50 pointer-events-none"
+      className="textura-grafo absolute inset-0 w-full h-full opacity-50 pointer-events-none"
       viewBox="0 0 1440 900"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"

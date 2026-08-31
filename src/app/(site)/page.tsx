@@ -8,7 +8,7 @@ import Depoimentos from '@/components/landing/Depoimentos'
 import Planos from '@/components/landing/Planos'
 import Faq from '@/components/landing/Faq'
 import Fechamento from '@/components/landing/Fechamento'
-import RevelarNaRolagem from '@/components/landing/RevelarNaRolagem'
+import Movimento from '@/components/landing/Movimento'
 
 /**
  * A landing — **redesenho de 31/08**, na linguagem visual que o Leandro
@@ -22,12 +22,21 @@ import RevelarNaRolagem from '@/components/landing/RevelarNaRolagem'
  *
  * 1. **A monoespaçada "nunca em frase" (§3).** A landing é IBM Plex Mono
  *    inteira, num peso só.
- * 2. **"Quase nada se move" (§7).** Há reveal por rolagem, em
- *    `RevelarNaRolagem`.
+ * 2. **"Quase nada se move" (§7).** Há reveal por rolagem, cascata e uma
+ *    parallaxe de fundo presa à rolagem, em `Movimento`.
  * 3. **O acento escasso e o neutro morno da primeira tela (§2).** A dobra é um
  *    campo saturado escuro nos dois temas.
  * 4. **"Os motivos vêm do conteúdo" (§6).** A textura de grafo do fundo é
  *    decorativa, e o grafo tocável saiu.
+ *
+ * O QUE O `<noscript>` ABAIXO CONSERTA
+ * ============================================================
+ * `.landing .reveal` esconde por CSS, sem condição — é assim que a página não
+ * pisca entre o HTML do servidor e a hidratação. O preço é que, sem
+ * JavaScript, a classe que revela nunca chega e a landing fica EM BRANCO. Era
+ * um defeito real desde 31/08: o cabeçalho do reveal antigo afirmava que o
+ * conteúdo nascia visível, e o CSS dizia o contrário. O `<noscript>` devolve a
+ * opacidade sem custar um byte para quem tem JavaScript.
  *
  * O ADR `docs/adr/0001-identidade-visual.md` diz que o `globals.css` é a fonte
  * da verdade e que o documento é que se corrige quando os dois divergem. Foi o
@@ -68,8 +77,10 @@ import RevelarNaRolagem from '@/components/landing/RevelarNaRolagem'
  */
 export default function LandingPage() {
   return (
-    <div className="landing">
-      <RevelarNaRolagem />
+    <Movimento>
+      <noscript>
+        <style>{'.landing .reveal{opacity:1!important;transform:none!important}'}</style>
+      </noscript>
       <Dobra />
       <Portas />
       <Faixa />
@@ -80,6 +91,6 @@ export default function LandingPage() {
       <Planos />
       <Faq />
       <Fechamento />
-    </div>
+    </Movimento>
   )
 }
