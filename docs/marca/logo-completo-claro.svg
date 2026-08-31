@@ -1,33 +1,41 @@
 <svg viewBox="0 0 620 160" xmlns="http://www.w3.org/2000/svg">
-  <!-- Logo completo (badge + wordmark) — modo claro -->
+  <!-- Logo completo (badge + wordmark) — modo claro.
+
+       O badge acompanha `simbolo.svg`, que é o desenho em vigor desde 30/08:
+       anel externo curvo (arqueado para dentro), traços mais finos e nó do
+       centro menor. As medidas são as do arquivo de 290 divididas por 108/55,
+       para caber neste quadro de 200. Nós e cores não mudaram.
+
+       Este arquivo e `src/components/Marca.tsx` andam juntos: mexer num sem o
+       outro faz a fonte discordar do site. -->
 
   <!-- ── badge (sem fundo circular) ── -->
   <g transform="translate(20,20) scale(0.6)">
-    <g fill="none" stroke="#5B4BC4" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round">
-      <path d="M100,45 L147.6,72.5"/>
-      <path d="M147.6,72.5 L147.6,127.5"/>
-      <path d="M147.6,127.5 L100,155"/>
-      <path d="M100,155 L52.4,127.5"/>
-      <path d="M52.4,127.5 L52.4,72.5"/>
-      <path d="M52.4,72.5 L100,45"/>
+    <g fill="none" stroke="#5B4BC4" stroke-opacity="0.35" stroke-width="0.71" stroke-linecap="round">
+      <path d="M100,45 Q120.22,64.91 147.6,72.5"/>
+      <path d="M147.6,72.5 Q140.49,100 147.6,127.5"/>
+      <path d="M147.6,127.5 Q120.22,135.09 100,155"/>
+      <path d="M100,155 Q79.78,135.09 52.4,127.5"/>
+      <path d="M52.4,127.5 Q59.51,100 52.4,72.5"/>
+      <path d="M52.4,72.5 Q79.78,64.91 100,45"/>
     </g>
     <g stroke="#5B4BC4" stroke-linecap="round" fill="none">
-      <path d="M100,100 L100,45"      stroke-width="4"/>
-      <path d="M100,100 L147.6,72.5"  stroke-width="3.2" stroke-dasharray="6 5"/>
-      <path d="M100,100 L147.6,127.5" stroke-width="2.4" stroke-dasharray="1.2 5"/>
-      <path d="M100,100 L100,155"     stroke-width="4"/>
-      <path d="M100,100 L52.4,127.5"  stroke-width="3.2" stroke-dasharray="6 5"/>
-      <path d="M100,100 L52.4,72.5"   stroke-width="2.4" stroke-dasharray="1.2 5"/>
+      <path d="M100,100 L100,45"      stroke-width="1.53"/>
+      <path d="M100,100 L147.6,72.5"  stroke-width="1.22" stroke-dasharray="4.07 3.06"/>
+      <path d="M100,100 L147.6,127.5" stroke-width="0.92" stroke-dasharray="0.76 3.06"/>
+      <path d="M100,100 L100,155"     stroke-width="1.53"/>
+      <path d="M100,100 L52.4,127.5"  stroke-width="1.22" stroke-dasharray="4.07 3.06"/>
+      <path d="M100,100 L52.4,72.5"   stroke-width="0.92" stroke-dasharray="0.76 3.06"/>
     </g>
     <g>
-      <circle cx="100.0" cy="45.0" r="11" fill="#C2334D"/>
-      <circle cx="147.6" cy="72.5" r="11" fill="#1F5F9E"/>
-      <circle cx="147.6" cy="127.5" r="11" fill="#3F7848"/>
-      <circle cx="100.0" cy="155.0" r="11" fill="#9E2E70"/>
-      <circle cx="52.4" cy="127.5" r="11" fill="#A65224"/>
-      <circle cx="52.4" cy="72.5" r="11" fill="#4A5C8C"/>
+      <circle cx="100.0" cy="45.0" r="10.69" fill="#C2334D"/>
+      <circle cx="147.6" cy="72.5" r="10.69" fill="#1F5F9E"/>
+      <circle cx="147.6" cy="127.5" r="10.69" fill="#3F7848"/>
+      <circle cx="100.0" cy="155.0" r="10.69" fill="#9E2E70"/>
+      <circle cx="52.4" cy="127.5" r="10.69" fill="#A65224"/>
+      <circle cx="52.4" cy="72.5" r="10.69" fill="#4A5C8C"/>
     </g>
-    <circle cx="100" cy="100" r="15" fill="#5B4BC4"/>
+    <circle cx="100" cy="100" r="13.24" fill="#5B4BC4"/>
   </g>
 
   <!-- ── wordmark ── -->

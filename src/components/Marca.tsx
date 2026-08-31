@@ -6,18 +6,21 @@
  * a marca significava caçar os cinco e acertar o tamanho de cada um.
  *
  * ============================================================
- * A LOGO, DESDE 26/08
+ * A LOGO, DESDE 26/08 — E O DESENHO NOVO, DE 30/08
  * ============================================================
  * O `Simbolo` esperou por um desenho do autor desde agosto, com o encaixe
  * documentado e `return null` no meio — porque logo genérica de encher espaço
- * é pior do que nenhuma, já que pareceria decidida. O desenho chegou.
+ * é pior do que nenhuma, já que pareceria decidida. O desenho chegou, e em
+ * 30/08 foi substituído por uma segunda versão dele.
  *
- * **Os originais estão versionados em `docs/marca/`**, no par claro/escuro que
- * o autor exportou. Eles são a fonte; o que está aqui embaixo é a adaptação, e
- * ela mudou três coisas — cada uma por uma regra que já valia no projeto:
+ * **Os originais estão versionados em `docs/marca/`.** O símbolo em vigor é o
+ * `simbolo.svg`; os dois `logo-completo-*.svg` são o lockup (badge + nome), e
+ * o badge deles acompanha o `simbolo.svg`. Eles são a fonte; o que está aqui
+ * embaixo é a adaptação, e ela muda três coisas — cada uma por uma regra que
+ * já valia no projeto:
  *
- * 1. **Só o badge entrou.** Os arquivos são o lockup inteiro, com o nome como
- *    `<text>`. O nome já é escrito aqui embaixo em HTML de verdade, então viria
+ * 1. **Só o badge entrou.** Os arquivos de lockup trazem o nome como `<text>`.
+ *    O nome já é escrito aqui embaixo em HTML de verdade, então viria
  *    duplicado — e o `<text>` pede a fonte **Gabarito**, que só é declarada no
  *    grupo `(site)`: dentro do `(app)`, que é onde a marca passa o dia na barra
  *    lateral, ela cairia numa fonte qualquer, sem avisar.
@@ -29,8 +32,34 @@
  * 3. **As cores das matérias ficaram cravadas**, porque é o que elas são: cor
  *    de matéria, não token de interface. Ver a nota no `NOS_DA_MARCA`.
  *
- * Se um dia a logo mudar, o caminho é: trocar os arquivos de `docs/marca/` e
- * refazer a adaptação aqui — não editar um sem o outro.
+ * **O que mudou de um desenho para o outro**, porque o diff sozinho não conta:
+ * o arquivo novo vive num quadro de 290 (o anterior, de 200), então as medidas
+ * daqui são as dele divididas por 108/55 — a razão entre os dois raios do
+ * hexágono, que é exata. Os seis nós e as seis cores são os MESMOS, na mesma
+ * ordem, e as três espécies de aresta continuam nas mesmas seis direções. Duas
+ * coisas são novas:
+ *
+ * - **O anel externo virou curvo**, arqueado para DENTRO. Eram seis segmentos
+ *   retos; agora cada lado é uma quadrática cujo ponto de controle puxa ~3,6
+ *   unidades na direção do centro.
+ * - **Os traços afinaram e o nó do centro encolheu** (raio 15 → 13,24). O anel
+ *   foi de 2 para 0,71 e os raios de 4/3,2/2,4 para 1,53/1,22/0,92.
+ *
+ * Consequência que vale saber ANTES de estranhar: nos tamanhos de cabeçalho
+ * (26–34px) o `traco()` abaixo já elevava todos esses traços ao mesmo piso em
+ * pixels, então **a espessura NA TELA não mudou nada** — afinar o arquivo não
+ * afina a marca na barra lateral, e é para isso que o `traco()` existe. O que
+ * se vê mudar são as duas coisas de geometria: o anel arqueado e o nó do centro
+ * menor.
+ *
+ * O arco sobrevive ao cabeçalho, e isso foi conferido rasterizando a 28px e
+ * ampliando 10×, não estimando: a flecha é de 3,56 unidades contra um traço
+ * compensado de 5, ou seja, ~70% da própria espessura. Não some debaixo da
+ * linha — lê como curva suave em vez de curva marcada, que é o que se espera
+ * de uma redução.
+ *
+ * Se um dia a logo mudar de novo, o caminho é: trocar os arquivos de
+ * `docs/marca/` e refazer a adaptação aqui — não editar um sem o outro.
  *
  * ============================================================
  * E O ÍCONE DA ABA (favicon)
@@ -46,6 +75,11 @@
  * é o que reconhece: o hexágono, as seis cores e o acento no meio. O arquivo
  * explica cada corte.
  *
+ * **O desenho de 30/08 não mexeu nele, e é consistente:** o que ele mudou foi
+ * justamente o anel (que a redução já não tem) e a espessura dos traços (que a
+ * redução já reescrevia por conta própria). As seis cores e as seis posições,
+ * que são o que ela guarda, seguem idênticas.
+ *
  * As regras do favicon são outras: 16 a 32px de lado, forma cheia, uma cor
  * cravada e nada de `currentColor` — na aba não existe texto do qual herdar.
  * Por isso o acento lá é o meio-caminho `#766ACE`, e não o token.
@@ -54,7 +88,8 @@
  * Os seis nós do hexágono, na ordem do desenho do autor e nas cores das
  * matérias. Ficam cravados de propósito: são as cores DAS MATÉRIAS, não tokens
  * de interface, e o autor as manteve idênticas nos dois temas — o arquivo
- * claro e o escuro trazem estes mesmos seis valores.
+ * claro e o escuro trazem estes mesmos seis valores, e o desenho novo os
+ * repete sem tocar em nenhum.
  *
  * Vale a nota de quem for mexer: estes hexes são as variantes CLARAS do
  * `lib/materias.ts`, e lá cada matéria é um par `light-dark()` cuja metade
@@ -72,6 +107,34 @@ const NOS_DA_MARCA: [number, number, string][] = [
   [52.4, 72.5, '#4A5C8C'], // Filosofia
 ]
 
+/** Raio do nó de matéria, no quadro de 200 (21 no arquivo, ÷ 108/55). */
+const RAIO_NO = 10.69
+
+/** Raio do nó-âncora do centro (26 no arquivo). Era 15 no desenho anterior. */
+const RAIO_CENTRO = 13.24
+
+/**
+ * O anel externo, um lado por entrada.
+ *
+ * **Cada lado é uma quadrática arqueada para dentro**, e é a novidade do
+ * desenho de 30/08 — antes eram seis segmentos retos. Os pontos de controle
+ * saem do arquivo do autor divididos por 108/55; a flecha de cada arco é de
+ * 3,56 unidades, o que a 28px vale 0,71px contra um traço compensado de 1px.
+ * O arco lê, e ele é a diferença que se enxerga entre este desenho e o de
+ * 26/08 (ver o cabeçalho).
+ *
+ * Os vértices são os mesmos seis nós do `NOS_DA_MARCA`: o anel não tem
+ * geometria própria além da curvatura.
+ */
+const ANEL = [
+  'M100,45 Q120.22,64.91 147.6,72.5',
+  'M147.6,72.5 Q140.49,100 147.6,127.5',
+  'M147.6,127.5 Q120.22,135.09 100,155',
+  'M100,155 Q79.78,135.09 52.4,127.5',
+  'M52.4,127.5 Q59.51,100 52.4,72.5',
+  'M52.4,72.5 Q79.78,64.91 100,45',
+]
+
 /**
  * Os seis raios que saem do centro, em três espessuras e três traçados.
  *
@@ -79,35 +142,47 @@ const NOS_DA_MARCA: [number, number, string][] = [
  * `pai_id` (contém), tracejada é `conexoes` (cita), pontilhada é o relacionado.
  * A marca desenha o modelo de dados — é a mesma tese do `marca/Grafo.tsx`, de
  * que a identidade cresce do que o produto é em vez de ser somada por cima.
+ *
+ * As espessuras são as do arquivo novo (3 / 2,4 / 1,8) convertidas para o
+ * quadro de 200. A ORDEM de peso é o que importa e não mudou: a sólida segue a
+ * mais pesada e a pontilhada a mais leve.
  */
 const RAIOS: [number, number, number, 'solido' | 'tracejado' | 'pontilhado'][] = [
-  [100, 45, 4, 'solido'],
-  [147.6, 72.5, 3.2, 'tracejado'],
-  [147.6, 127.5, 2.4, 'pontilhado'],
-  [100, 155, 4, 'solido'],
-  [52.4, 127.5, 3.2, 'tracejado'],
-  [52.4, 72.5, 2.4, 'pontilhado'],
+  [100, 45, 1.53, 'solido'],
+  [147.6, 72.5, 1.22, 'tracejado'],
+  [147.6, 127.5, 0.92, 'pontilhado'],
+  [100, 155, 1.53, 'solido'],
+  [52.4, 127.5, 1.22, 'tracejado'],
+  [52.4, 72.5, 0.92, 'pontilhado'],
 ]
+
+/** Espessura do anel no arquivo de origem (1,4), no quadro de 200. */
+const TRACO_ANEL = 0.71
 
 /**
  * Espessura de traço corrigida para o tamanho em que o símbolo vai ser
  * desenhado. **É o que faz a marca sobreviver ao cabeçalho.**
  *
  * O desenho vive num quadro de 140 unidades, então a 28px cada unidade vale
- * 0,2px: o anel de 2 unidades sai com 0,4px e o ponto do raio pontilhado com
- * 0,24px. Sub-pixel vira véu, não traço — e as três espécies de aresta, que são
+ * 0,2px: o anel de 0,71 unidade sai com 0,14px e o ponto do raio pontilhado com
+ * 0,09px. Sub-pixel vira véu, não traço — e as três espécies de aresta, que são
  * a ideia inteira da marca, somem. Aumentar o símbolo não resolve isso sozinho:
- * para o anel chegar a 1px o símbolo precisaria de **70px**, que não é tamanho
+ * para o anel chegar a 1px o símbolo precisaria de **197px**, que não é tamanho
  * de cabeçalho.
  *
  * Então o traço engrossa quando o quadro encolhe. Não é invenção: é o que o
  * material de marca do próprio autor prescreve ao dizer que o arquivo de 16–32px
- * "tem traço reforçado e não empasta". A GEOMETRIA não muda — nós, posições e
- * proporções entre as três espessuras seguem as do arquivo original.
+ * "tem traço reforçado e não empasta". A GEOMETRIA não muda — nós, posições,
+ * curvatura do anel e proporções entre as três espessuras seguem as do arquivo
+ * original.
  *
- * `alvoPx` é a espessura mínima desejada em pixels. Acima de ~70px a conta se
- * desliga sozinha (o `max` devolve o valor original) e o desenho volta a ser
- * exatamente o exportado.
+ * `alvoPx` é a espessura mínima desejada em pixels. Quando o símbolo cresce, a
+ * conta se desliga sozinha (o `max` devolve o valor original) e o desenho volta
+ * a ser exatamente o exportado: por volta de 100px para os raios e de 197px
+ * para o anel. **O desenho de 30/08 empurrou esses limiares para cima**, porque
+ * afinou os traços de origem — antes eram ~70px. É esperado, e é o motivo de a
+ * marca não ter afinado na barra lateral junto com o arquivo: abaixo desses
+ * limiares quem manda é o piso em pixels, não o arquivo.
  */
 function traco(lado: number, unidadesOriginais: number, alvoPx: number) {
   const unidadesPorPixel = 140 / lado
@@ -128,6 +203,10 @@ function traco(lado: number, unidadesOriginais: number, alvoPx: number) {
  * do desenho) e sem raios nenhum (limpo, mas vira um anel de pontos e perde o
  * eixo, que é a ideia). Estes mantêm as três espessuras E os três traçados
  * distinguíveis, sem nenhum dominar.
+ *
+ * **Eles sobreviveram à troca de desenho de propósito:** descrevem o RESULTADO
+ * em pixels, não o arquivo. Trocar o arquivo muda de onde a conta parte, não
+ * onde ela precisa chegar.
  */
 const ALVO_PX = {
   anel: 1.0,
@@ -139,16 +218,20 @@ const ALVO_PX = {
   riscoPontilhado: [0.45, 1.8],
 } as const
 
-/** O padrão do arquivo original, em unidades do quadro — o piso do traçado. */
+/**
+ * O padrão do arquivo original, em unidades do quadro — o piso do traçado.
+ * São os `stroke-dasharray` do `docs/marca/simbolo.svg` ("8 6" no tracejado e
+ * "1.5 6" no pontilhado) convertidos para o quadro de 200.
+ */
 const RISCO_ORIGINAL = {
-  tracejado: [6, 5],
-  pontilhado: [1.2, 5],
+  tracejado: [4.07, 3.06],
+  pontilhado: [0.76, 3.06],
 } as const
 
 /**
- * O badge da marca, desenhado pelo autor em `docs/marca/`.
+ * O badge da marca, desenhado pelo autor em `docs/marca/simbolo.svg`.
  *
- * **Só o badge, e não o lockup inteiro.** Os arquivos de origem trazem também a
+ * **Só o badge, e não o lockup inteiro.** Os arquivos de lockup trazem também a
  * palavra "Plataforma Grafos" como `<text>`, e ela não pode vir junto por duas
  * razões independentes: o `Marca` abaixo já escreve o nome como texto HTML de
  * verdade (viria duplicado), e o `<text>` do arquivo pede a **Gabarito**, que
@@ -156,7 +239,7 @@ const RISCO_ORIGINAL = {
  * numa fonte qualquer, em silêncio. Montar o lockup com símbolo +
  * texto HTML é a saída que o próprio material de marca do autor recomenda.
  *
- * **Um componente, não dois arquivos.** Os SVGs de origem vêm em par
+ * **Um componente, não dois arquivos.** Os SVGs de lockup vêm em par
  * claro/escuro, e a única coisa que muda entre eles é o acento — `#5B4BC4` no
  * claro, `#8F86D9` no escuro. Isso é exatamente o que `--acento` já resolve
  * sozinho pelo `light-dark()` da decisão 4b, então aqui vai o token e o par de
@@ -169,11 +252,12 @@ function Simbolo({ lado }: { lado: number }) {
      passam a ser medidos em pixels do resultado. */
   const upp = 140 / lado
   /* O `max` contra o padrão do arquivo é o que faz isto ser CORREÇÃO e não
-     substituição: abaixo de ~70px o alvo em pixels ganha e o traçado sobrevive;
-     acima, o original ganha e o desenho volta a ser o exportado. Sem ele, um
-     símbolo grande (o `apple-icon`, de 132px) recebia riscos calibrados para
-     28px — dezenas de traços miúdos que se fundiam de volta numa linha sólida,
-     exatamente o defeito que a correção existe para evitar. */
+     substituição: nos tamanhos pequenos o alvo em pixels ganha e o traçado
+     sobrevive; nos grandes, o original ganha e o desenho volta a ser o
+     exportado. Sem ele, um símbolo grande (o `apple-icon`, de 132px) recebia
+     riscos calibrados para 28px — dezenas de traços miúdos que se fundiam de
+     volta numa linha sólida, exatamente o defeito que a correção existe para
+     evitar. */
   const traçado = (
     alvo: readonly [number, number],
     original: readonly [number, number]
@@ -202,15 +286,12 @@ function Simbolo({ lado }: { lado: number }) {
         fill="none"
         stroke="var(--acento)"
         strokeOpacity="var(--marca-anel)"
-        strokeWidth={traco(lado, 2, ALVO_PX.anel)}
+        strokeWidth={traco(lado, TRACO_ANEL, ALVO_PX.anel)}
         strokeLinecap="round"
       >
-        <path d="M100,45 L147.6,72.5" />
-        <path d="M147.6,72.5 L147.6,127.5" />
-        <path d="M147.6,127.5 L100,155" />
-        <path d="M100,155 L52.4,127.5" />
-        <path d="M52.4,127.5 L52.4,72.5" />
-        <path d="M52.4,72.5 L100,45" />
+        {ANEL.map((d) => (
+          <path key={d} d={d} />
+        ))}
       </g>
 
       <g stroke="var(--acento)" strokeLinecap="round" fill="none">
@@ -218,10 +299,10 @@ function Simbolo({ lado }: { lado: number }) {
           <path
             key={`${x}-${y}`}
             d={`M100,100 L${x},${y}`}
-            /* A hierarquia do arquivo (4 / 3,2 / 2,4) vira 1,1 / 0,9 / 0,75px:
-               a sólida continua a mais pesada e a pontilhada a mais leve, que
-               é o que distingue as três espécies quando o traçado já não se
-               distingue sozinho. */
+            /* A hierarquia do arquivo (1,53 / 1,22 / 0,92) vira 1,1 / 0,9 /
+               0,75px: a sólida continua a mais pesada e a pontilhada a mais
+               leve, que é o que distingue as três espécies quando o traçado já
+               não se distingue sozinho. */
             strokeWidth={traco(lado, largura, ALVO_PX[especie])}
             strokeDasharray={
               especie === 'tracejado' ? tracejado : especie === 'pontilhado' ? pontilhado : undefined
@@ -232,11 +313,11 @@ function Simbolo({ lado }: { lado: number }) {
 
       <g>
         {NOS_DA_MARCA.map(([x, y, cor]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="11" fill={cor} />
+          <circle key={`${x}-${y}`} cx={x} cy={y} r={RAIO_NO} fill={cor} />
         ))}
       </g>
 
-      <circle cx="100" cy="100" r="15" fill="var(--acento)" />
+      <circle cx="100" cy="100" r={RAIO_CENTRO} fill="var(--acento)" />
     </svg>
   )
 }

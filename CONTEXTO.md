@@ -783,17 +783,57 @@ O nome acessível troca junto com o estado, e não há `aria-pressed`: com os do
 o leitor de tela anuncia o estado duas vezes e em ordens diferentes conforme o
 programa.
 
-**9h. A marca vive em `components/Marca.tsx`, e a logo tem um encaixe pronto.**
+**9h. A marca vive em `components/Marca.tsx`, e o símbolo é a logo OFICIAL do
+negócio.**
 O nome estava escrito à mão em cinco lugares — landing (topo e rodapé), login e
 as duas versões da barra lateral. Agora é um componente com quatro tamanhos.
 
-Dentro dele há `Simbolo`, que hoje devolve `null` de propósito: **a logo é do
-autor e ele mesmo vai desenhá-la em SVG**. Uma logo genérica de encher espaço
-seria pior do que nenhuma, porque pareceria decidida. O arquivo carrega as
-instruções do que o SVG precisa ter (`viewBox` sem tamanho fixo,
-`fill="currentColor"` para acompanhar os dois temas, nada de `<text>`) e a
-observação de que o favicon é outro caminho — `src/app/icon.svg`, que o Next
-reconhece sozinho e que NÃO deve usar `currentColor`.
+**O `Simbolo` devolveu `null` até 26/08**, com o encaixe documentado e a regra
+escrita de que logo genérica de encher espaço é pior do que nenhuma, porque
+pareceria decidida. Isso acabou: a logo do autor entrou em 26/08 e foi
+substituída pelo desenho definitivo em **30/08**. **É a marca oficial** — não há
+mais nada esperando desenho, e quem for mexer está mexendo na identidade do
+negócio, não num espaço reservado.
+
+**A fonte da verdade é `docs/marca/`**, versionada junto com o código:
+`simbolo.svg` é o símbolo em vigor, e os dois `logo-completo-*.svg` são o lockup
+(símbolo + nome) no par claro/escuro. **Trocar um sem o outro é o erro a
+evitar** — o cabeçalho do `Marca.tsx` traz a conversão que liga os dois, e ela
+não é olhômetro: o arquivo vive num quadro de 290 e o componente num de 200, e
+a razão é exatamente 108/55, os raios do hexágono.
+
+**O desenho afirma o produto, e é por isso que ele não é trocável por gosto.**
+Os seis nós são MATÉRIAS, nas cores de `lib/materias.ts`; os três traçados dos
+raios são as três relações do acervo — sólido é `pai_id` (contém), tracejado é
+`conexoes` (cita), pontilhado é o relacionado. São os mesmos eixos das decisões
+9 e 9i. Se as matérias mudarem de cor, a marca muda junto, de propósito.
+
+Três coisas da adaptação que não dá para adivinhar:
+
+- **Só o badge entra no site.** Os arquivos de lockup trazem o nome como
+  `<text>`, e ele viria duplicado (o componente já escreve o nome em HTML) e na
+  fonte errada: o `<text>` pede a **Gabarito**, declarada só no grupo `(site)`
+  (decisão 7) — dentro do `(app)` cairia numa fonte qualquer, em silêncio.
+- **O par claro/escuro é um componente só.** A única diferença entre os dois
+  arquivos é o acento e a opacidade do anel, que é exatamente o que
+  `light-dark()` resolve (decisão 4b): viraram `--acento` e `--marca-anel`.
+- **O traço NÃO vem do arquivo.** Num quadro de 140 unidades desenhado a 28px,
+  cada unidade vale 0,2px, e o anel de 0,71 sairia com 0,14px — véu, não traço,
+  e as três espécies de aresta somem justamente no tamanho em que a marca mais
+  aparece. O `traco()` eleva cada espessura a um piso em PIXELS, medido
+  rasterizando e ampliando. Consequência que engana: afinar o arquivo **não
+  afina a marca** abaixo de ~100px. O desenho de 30/08 afinou os traços e o que
+  se vê mudar na barra lateral é só a geometria — o anel curvo e o nó do centro
+  menor.
+
+**O favicon é outro caminho e outra régua** — `src/app/icon.svg`, que o Next
+reconhece pelo nome. Ele desenha a REDUÇÃO da marca, não a marca: a 16px o anel
+sairia com 0,23px e o ponto do pontilhado com 0,14px, e três padrões de traço
+nesse tamanho leem como sujeira. Anel fora, raios sólidos, acento cravado no
+meio-caminho dos dois temas (`#766ACE`), porque na aba não existe texto do qual
+herdar cor — nada de `currentColor` ali. Pela mesma razão ele **não mudou** em
+30/08: o desenho novo mexeu no anel, que a redução descarta, e nas espessuras,
+que ela já reescrevia. O `apple-icon.png` é raster e foi regerado.
 
 As cinco sobras do template do Next (`public/file.svg`, `globe`, `next`,
 `vercel`, `window`) saíram: nenhuma era referenciada, e o site as servia
