@@ -27,13 +27,19 @@ export default function ListaGrande({ itens }: { itens: readonly ItemDaLista[] }
       {itens.map((item) => (
         <article
           key={item.titulo}
-          className="reveal group grid gap-3 py-[clamp(1.75rem,3.5vw,2.75rem)] border-b border-[var(--line)] transition-[background,padding] duration-200 hover:bg-[var(--acento-fraco)] hover:pl-4 lg:grid-cols-[8.5rem_minmax(0,1fr)_minmax(0,26rem)] lg:gap-10 lg:items-baseline"
+          className="reveal group grid gap-3 py-[clamp(1.75rem,3.5vw,2.75rem)] border-b border-[var(--line)] transition-[background,padding] duration-200 hover:bg-[var(--acento-fraco)] hover:pl-4 md:grid-cols-[8.5rem_minmax(0,1fr)] md:gap-x-10 md:items-baseline lg:grid-cols-[8.5rem_minmax(0,1fr)_minmax(0,24rem)]"
         >
-          <p className="rotulo">{item.rotulo}</p>
-          <h3 className="declaracao text-[clamp(2rem,4.4vw,2.875rem)] transition-colors duration-200 group-hover:text-[var(--acento)]">
+          <p className="rotulo md:col-start-1 md:row-start-1">{item.rotulo}</p>
+          <h3 className="declaracao text-[clamp(2rem,4.4vw,2.875rem)] transition-colors duration-200 group-hover:text-[var(--acento)] md:col-start-2 md:row-start-1">
             {item.titulo}
           </h3>
-          <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed">{item.texto}</p>
+          {/* No passo do meio (768–1024) a explicação desce para baixo do
+              título, na MESMA coluna — três colunas ali dariam ~75px ao
+              título, que é menos que a palavra "revisar". Só a partir de
+              1024 ela vira a terceira coluna. */}
+          <p className="text-[var(--ink-dim)] text-[0.95rem] leading-relaxed md:col-start-2 md:row-start-2 lg:col-start-3 lg:row-start-1">
+            {item.texto}
+          </p>
         </article>
       ))}
     </div>

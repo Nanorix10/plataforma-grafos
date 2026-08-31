@@ -53,7 +53,7 @@ const ETAPAS = [
 export default function Faixa() {
   return (
     <section className="bg-[var(--faixa)] text-[var(--faixa-ink)] py-[var(--ritmo-secao)]">
-      <div className="max-w-[1240px] mx-auto px-6 sm:px-10">
+      <div className="envelope">
         <p className="rotulo reveal text-[var(--faixa-dim)]">o percurso</p>
         <h2
           className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)] text-[var(--faixa-ink)] max-w-[24ch] mt-6"

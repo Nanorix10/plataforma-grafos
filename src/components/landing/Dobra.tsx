@@ -36,7 +36,14 @@
 function LockupGrande() {
   return (
     <svg
-      viewBox="195 195 310 310"
+      /* O arquivo vem num quadro de 310 com folga em volta: o nó mais à
+         esquerda começa em 231,5, ou seja, 36,5 unidades de vazio — 11,8% da
+         largura. A caixa do SVG alinhava com o texto abaixo e o DESENHO não,
+         que é o que o olho lê como torto. Este recorte é o conteúdo real
+         (±139 do centro, contando o raio dos nós), ainda quadrado para o
+         símbolo não nascer achatado. Efeito colateral bem-vindo: o desenho
+         cresce 1,115× dentro da mesma largura em CSS. */
+      viewBox="211 211 278 278"
       role="img"
       aria-label="Plataforma Grafos"
       className="w-[74px] sm:w-[92px] lg:w-[116px] h-auto shrink-0"
@@ -175,7 +182,7 @@ export default function Dobra() {
       <TexturaDeGrafo />
       <div className="absolute inset-0 pointer-events-none" style={{ background: VEU }} />
 
-      <div className="relative z-[2] w-full max-w-[1240px] mx-auto px-6 sm:px-10 py-[clamp(4rem,12vh,8rem)]">
+      <div className="relative z-[2] w-full envelope py-[clamp(4rem,12vh,8rem)]">
         <div className="reveal flex items-center gap-4 lg:gap-7 mb-[clamp(2.5rem,5vw,3.5rem)]">
           <LockupGrande />
           <span className="border-l border-[rgba(199,200,240,0.34)] pl-4 lg:pl-7">

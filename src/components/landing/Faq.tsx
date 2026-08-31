@@ -17,7 +17,7 @@ export default function Faq() {
   if (FAQ_PUBLICO.length === 0) return null
 
   return (
-    <section className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+    <section className="py-[var(--ritmo-secao)] envelope">
       <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
         <p className="rotulo reveal">antes de assinar</p>
         <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">

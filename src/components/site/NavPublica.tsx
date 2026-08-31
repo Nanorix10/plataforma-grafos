@@ -21,7 +21,7 @@ import { BotaoTema } from '@/components/BotaoTema'
 export default function NavPublica() {
   return (
     <nav className="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur">
-      <div className="max-w-[1120px] mx-auto px-8 h-[68px] flex items-center justify-between gap-6">
+      <div className="envelope h-[68px] flex items-center justify-between gap-6">
         <Link
           href="/"
           className="rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"

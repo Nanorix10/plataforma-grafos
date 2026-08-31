@@ -1612,3 +1612,36 @@ h3 {
     transition: none;
   }
 }
+
+/* ================================================================
+   O ENVELOPE — uma largura só para o site aberto
+   ================================================================
+   Antes disto havia duas: a barra e o rodapé em 1120px com 32px de
+   folga, e as seções da landing em 1240px com 24–40px. A conta do
+   desencontro: a 1280px de tela o conteúdo da landing começava em
+   52px e o logo da barra em 104px — **52px de diferença**, que é o
+   suficiente para a página parecer torta sem que se saiba dizer por
+   quê. Alinhamento é a coisa que o olho pega primeiro e a última que
+   se pensa em conferir.
+
+   Agora é um valor só, e ele é FLUIDO em vez de fixo: a folga cresce
+   com a tela até 3,5rem, e o teto de 1440px só entra em telas largas.
+   O texto não fica mais largo por causa disso — cada bloco de leitura
+   segue com o próprio `max-w` em `ch`, que é quem manda no
+   comprimento de linha. Quem ganha espaço é a GRADE: as colunas da
+   lista de tipo grande e os três cartões de plano, que era onde a
+   página parecia curta.
+
+   `width` com `min()` em vez de `max-width` + padding: assim a folga
+   lateral é a mesma conta em qualquer largura, e não some quando a
+   tela encolhe abaixo do teto.
+   ================================================================ */
+:root {
+  --margem-lateral: clamp(1.25rem, 4vw, 3.5rem);
+  --largura-site: 1440px;
+}
+
+.envelope {
+  width: min(100% - 2 * var(--margem-lateral), var(--largura-site));
+  margin-inline: auto;
+}

@@ -22,7 +22,7 @@ export default function Depoimentos() {
   return (
     <section
       id="depoimentos"
-      className="py-[var(--ritmo-secao)] max-w-[1120px] mx-auto px-8"
+      className="py-[var(--ritmo-secao)] envelope"
     >
       <div className="max-w-[520px] mb-11">
         <div className="rotulo-secao mb-3">Quem já usou</div>

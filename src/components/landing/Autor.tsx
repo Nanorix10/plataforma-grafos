@@ -22,7 +22,7 @@ import { AUTOR } from '@/lib/autor'
  */
 export default function Autor() {
   return (
-    <section id="autor" className="py-[var(--ritmo-secao)] max-w-[1240px] mx-auto px-6 sm:px-10">
+    <section id="autor" className="py-[var(--ritmo-secao)] envelope">
       <div className="grid gap-6 mb-[clamp(3rem,6vw,4.5rem)]">
         <p className="rotulo reveal">quem escreve</p>
         <h2 className="declaracao reveal text-[clamp(2rem,4.4vw,2.875rem)]" data-atraso="1">
