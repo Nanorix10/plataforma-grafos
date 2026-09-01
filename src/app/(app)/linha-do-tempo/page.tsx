@@ -20,11 +20,11 @@ export default async function LinhaDoTempoPage({
     // mesma altura do mapa: é uma tela de trabalho, não um documento que rola
     <div className="h-[calc(100vh-3rem)] lg:h-screen flex flex-col">
       <header className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-12 border-b border-[var(--line)]">
-        <h1 className="text-[15px] font-medium">Linha do tempo</h1>
-        <span className="text-[11.5px] text-[var(--ink-faint)] tabular-nums">
+        <h1 className="text-[length:var(--t-base)] font-medium">Linha do tempo</h1>
+        <span className="text-[length:var(--t-mini)] text-[var(--ink-faint)] tabular-nums">
           {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
         </span>
-        <span className="hidden md:inline text-[11.5px] text-[var(--ink-faint)] ml-2">
+        <span className="hidden md:inline text-[length:var(--t-mini)] text-[var(--ink-faint)] ml-2">
           arraste ou setas para andar · roda do mouse, duplo clique ou +/− para
           aproximar · Home mostra tudo
         </span>

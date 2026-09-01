@@ -539,6 +539,8 @@ Data única é ponto sobre a linha; período é barra, e a largura dela É a
 duração. Período que atravessa a tela inteira tem o rótulo encostado na borda,
 senão o aluno estaria dentro da Idade Média sem conseguir ler o nome dela.
 
+**Como o rótulo é desenhado mudou em 31/08 — ver 9d-bis.**
+
 **Um evento pode ser de VÁRIAS matérias** (`materia_slugs`, array). O
 Renascimento é História, Arte, Literatura e Filosofia; com uma matéria só, o
 autor teria de escolher uma e mentir, ou cadastrar quatro cópias — e aí
@@ -554,10 +556,13 @@ trigger `trg_checar_materias_do_evento`.
 
 Consequência visual: o marcador de evento multimatéria sai **listrado** com
 paradas duras (degradê inventaria cores que não são de matéria nenhuma, e num
-ponto de 9px viraria mancha). E o rótulo de evento multimatéria vai em cor
-NEUTRA, não na primeira da lista — pintá-lo de roxo faria o Renascimento
-parecer só de História, que é exatamente a mentira que o array veio desfazer.
-Quais são elas, quem diz é o painel de detalhe.
+ponto de 9px viraria mancha). ~~E o rótulo de evento multimatéria vai em cor
+NEUTRA, não na primeira da lista~~ — **superado em 31/08 pela 9d-bis: hoje
+TODO rótulo é neutro, e a cor da matéria vive no marcador e na haste.** O
+argumento continua de pé e ficou mais forte: pintar o Renascimento de roxo
+diria "só de História", e pintar só os de uma matéria fazia a cor do título
+dizer QUANTAS matérias em vez de QUAL. Quais são elas, quem diz é o painel de
+detalhe.
 
 **`lib/tempo.ts` × `lib/eventos.ts` é a mesma divisão de `arvore.ts` ×
 `resumos.ts`**, e pela mesma razão: o eixo e a tela de cadastro são componentes
@@ -579,6 +584,79 @@ Três detalhes do eixo que parecem exagero e não são:
 O filtro de matéria **não** vive na URL, ao contrário do `visao` do mapa: lá a
 URL troca a tela inteira e vale ser favoritada, aqui cada clique num chip
 dispararia uma volta ao servidor para recarregar todos os eventos.
+
+**9d-bis. O empilhamento não é informação: quem decide o rótulo é a duração, e
+quem decide quantos cabem é o zoom.** (31/08/2026)
+
+A tela abre em `janelaCheia`, e ali cabiam cinco milênios. Com 85 eventos isso
+dava **30 faixas de cada lado e 2.852px de palco numa caixa de 430** — uma
+pilha de rótulos sobrepostos que só se lia rolando, e rolando se perdia o eixo.
+O empilhamento estava respondendo a uma pergunta de falta de espaço, e a
+resposta certa para falta de espaço neste eixo é o **zoom**, que já existe e é
+a coisa que esta tela sabe fazer.
+
+**Teto de faixas.** Quantas faixas cabem de cada lado sai da ALTURA DA CAIXA,
+não da quantidade de eventos. Quem não acha faixa dentro do teto fica **só como
+marcador no eixo**. Medido: 30 faixas por lado viram 4, e o palco passa a ter a
+altura da caixa.
+
+**A fila é por duração.** Antes quem escolhia faixa primeiro era a ordem
+cronológica, e isso é sorte: um ponto de um ano tomava a faixa de uma era de
+trezentos só por vir antes, e afastar o eixo podia apagar o nome do
+Renascimento mantendo o de uma data solta dentro dele. Agora quem dura mais
+escolhe primeiro — longe aparecem as eras, os fatos pontuais surgem conforme se
+aproxima. A ordem é a mesma em qualquer zoom (duração em anos e em pixels
+crescem juntas), então não pisca: o zoom muda QUANTOS cabem, não quem vem
+primeiro. Vão que sobra não se desperdiça — um ponto ainda pega faixa onde
+nenhuma era passa.
+
+As faixas passaram a guardar **intervalos**, e não só o fim do último rótulo:
+com entrada fora de ordem cronológica, comparar com "o fim" daria faixa ocupada
+como se estivesse livre. O LADO continua saindo do índice cronológico, então a
+alternância e a estabilidade ao arrastar seguem valendo — só a fila mudou.
+
+**O marcador virou o BOTÃO, e o rótulo virou o texto dele.** Era o contrário. É
+obrigatório depois do teto: na vista cheia dois terços do acervo fica sem
+rótulo, e como marcador `aria-hidden` isso seria acervo sem clique e sem Tab.
+
+**O palco preso à caixa aposentou um conserto.** Sem palco maior que a caixa, o
+eixo não tem como nascer fora da tela — e sai o ajuste automático de rolagem
+(`mexeuNaRolagem` com a bandeira `rolagemNossa`) que existia só para isso. **O
+quarto defeito desta tela deixou de ser possível em vez de ser corrigido de
+novo.** O `scrollbar-gutter: stable` foi junto: ele quebrava um laço de layout
+que precisava de rolagem para começar.
+
+**A vista cheia termina no ano atual.** A folga de respiro ficou só à esquerda;
+à direita, os 12% do `enquadrar` eram seiscentos anos de futuro vazio numa
+janela de cinco milênios. Por isso `janelaCheia` não usa mais o `enquadrar`,
+que alarga em torno do MEIO — o piso de `JANELA_MINIMA` continua valendo e
+cresce só para a esquerda. **O `enquadrar` segue intacto** para o link de
+"Quando" do resumo (decisão 12f), onde centrar é o certo.
+
+**O rótulo perdeu a caixa.** Sem borda e sem `--raised`: só o texto pendurado
+na haste, e a caixa volta no realce e no selecionado, uma por vez. O fundo
+`--canvas` fica, e é funcional — medido na maquete, sem nada atrás do texto os
+rótulos que se cruzam viram sopa ilegível. **A caixa antiga também OCLUÍA**; o
+que saiu foi o peso, não a oclusão. Faixa de 46 para 36px.
+
+**O título saiu da cor da matéria.** Sem `--raised` embaixo, texto colorido de
+13px cairia sobre `--canvas`, que **não está entre os fundos onde as 12
+matérias foram medidas em AA** (`docs/identidade-visual.md` §2 mede sobre
+`--paper`, `--panel` e `--raised`). A cor desceu para o marcador e para a
+haste, onde não depende de contraste de texto — e a haste vai a 1px e 50%,
+porque com quarenta juntas cor cheia vira cerca de piquetes.
+
+**Tipografia e raio.** Sete tamanhos avulsos entre 10,5 e 14px viraram
+`--t-peq`, `--t-mini` e **11px cru** nos numerais miúdos, exceção declarada na
+`identidade-visual.md` §3 porque a escala não tem degrau abaixo de 12. Raios de
+6 e 8px viraram `--raio-peq`. **Isto vale só nesta tela**: o grupo `(app)`
+inteiro tem ~145 tamanhos arbitrários (incluindo `9.5px` e `13.5px` no mapa e
+nos resumos) e nenhum arquivo usa `var(--t-*)`. A passada no resto é outra
+tarefa, e maior.
+
+O `loading.tsx` copia `ALTURA_CARTAO` e `ALTURA_FAIXA` na mão, porque não pode
+importar de um componente de cliente. **Se mudarem lá e não aqui, o esqueleto
+volta a mentir** e o salto de layout que ele existe para evitar volta junto.
 
 **9e. Toda rota é dinâmica, e é por isso que existem os `loading.tsx`.**
 Nenhuma página do `(app)` é estática: todas buscam no Supabase, então o build as
