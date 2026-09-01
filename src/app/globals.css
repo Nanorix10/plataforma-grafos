@@ -490,6 +490,49 @@ button:focus-visible,
   background-size: 26px 26px;
 }
 
+/* ---- ramo que abre e fecha ----
+
+   `grid-template-rows: 0fr → 1fr` anima ALTURA DESCONHECIDA sem medir nada em
+   JavaScript. É a razão de existir desta classe: `height: auto` não é animável,
+   e a alternativa — ler `scrollHeight` e escrever `height` em pixel a cada
+   abertura — recalcula layout no meio da animação e erra sempre que o conteúdo
+   muda de tamanho (aqui muda: a árvore filtra pela busca).
+
+   O filho precisa de `overflow: hidden` E `min-height: 0`. Sem o segundo, o
+   conteúdo do grid recusa encolher abaixo do tamanho natural e a linha de 0fr
+   não fecha nada.
+
+   Quem fecha um ramo tem de pôr `inert` no invólucro também — height 0 esconde
+   do olho, não do Tab. Ver `identidade-visual.md` §7. */
+.ramo {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.18s ease-out;
+}
+.ramo[data-aberto='true'] {
+  grid-template-rows: 1fr;
+}
+.ramo > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* A cascata dos itens de um ramo que abriu. O atraso vem por `style` inline,
+   com TETO — ver o orçamento de stagger na §7. O combinador `>` é obrigatório:
+   sem ele, um ramo aberto acenderia também os itens dos ramos fechados dentro
+   dele. */
+.ramo-item {
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out;
+}
+.ramo[data-aberto='true'] > * > .ramo-item {
+  opacity: 1;
+  transform: none;
+}
+
 /* O primeiro alvo do Tab em cada página, fora da tela até receber foco. Quem
    navega por teclado ou leitor de tela não deve ter de atravessar a barra
    lateral inteira — que aqui é a árvore de resumos, dezenas de links — para
