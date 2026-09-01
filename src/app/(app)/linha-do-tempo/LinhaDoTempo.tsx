@@ -353,12 +353,10 @@ export default function LinhaDoTempo({
    * espaço — e a resposta certa para falta de espaço neste eixo é o ZOOM, que
    * já existe e é a coisa que a tela sabe fazer.
    *
-   * Quem perde o rótulo é sempre o aglomerado, e é de graça: o empacotamento é
-   * first-fit em ordem cronológica, então a faixa 0 recolhe uma corrente de
-   * eventos espalhados da esquerda para a direita, a faixa 1 outra, e assim
-   * por diante. As faixas altas — as que o teto corta — são exatamente as que
-   * só existem onde os eventos se acotovelam. Aproximar espalha o aglomerado,
-   * a necessidade de faixa alta some e os rótulos voltam sozinhos.
+   * Quem perde o rótulo é decidido pela DURAÇÃO, e não pela ordem cronológica:
+   * quem dura mais escolhe faixa primeiro. Longe aparecem as eras; os fatos
+   * pontuais surgem conforme se aproxima, o aglomerado se desfaz e sobra
+   * faixa. Ver a fila logo abaixo — é lá que essa regra mora.
    *
    * Consequência que vale mais que a estética: com teto, `alturaConteudo`
    * nunca passa da caixa, o eixo não tem como nascer fora da tela e a rolagem
@@ -377,7 +375,12 @@ export default function LinhaDoTempo({
     )
     let fora = 0
 
-    const fim: Record<Lado, number[]> = { cima: [], baixo: [] }
+    /* As faixas guardam INTERVALOS ocupados, e não só o fim do último cartão.
+       Enquanto os eventos entravam em ordem cronológica, guardar o fim bastava:
+       o próximo sempre vinha à direita do anterior. Com a ordem por duração
+       (logo abaixo), um evento de 1453 pode ser colocado depois de um de 1900,
+       e comparar com "o fim" daria faixa ocupada como se estivesse livre. */
+    const ocupadas: Record<Lado, [number, number][][]> = { cima: [], baixo: [] }
     const saida: {
       e: Evento
       x1: number
@@ -389,17 +392,34 @@ export default function LinhaDoTempo({
     }[] = []
     /* O lado sai do ÍNDICE em `visiveis`, e não de um contador que avança
        dentro do laço. A diferença aparece ao navegar: o descarte do que está
-       fora da tela (o `continue` logo abaixo) acontece ANTES de o cartão ser
-       empilhado, então um contador só alternaria entre os DESENHADOS — e o lado
-       de cada evento passaria a depender de quais vizinhos calharam de estar na
-       moldura. Arrastar o eixo fazia os cartões pularem de cima para baixo.
+       fora da tela acontece ANTES de o rótulo ser empilhado, então um contador
+       só alternaria entre os DESENHADOS — e o lado de cada evento passaria a
+       depender de quais vizinhos calharam de estar na moldura. Arrastar o eixo
+       fazia os cartões pularem de cima para baixo.
 
        `visiveis` é a lista cronológica já filtrada e não muda com o zoom nem
        com o arrasto, então o lado fica estável. Ele muda só quando o filtro de
        matéria muda, que é quando deve mudar mesmo. E a alternância continua
        valendo entre vizinhos na tela: quem está visível é um trecho contíguo
-       da lista, então os índices seguem alternando a paridade. */
+       da lista, então os índices seguem alternando a paridade.
+
+       Isto vale mesmo agora que a ORDEM DE COLOCAÇÃO é outra: o lado continua
+       saindo do índice cronológico, e só a fila de quem escolhe faixa primeiro
+       mudou. */
     const ladoDoIndice = (i: number): Lado => (i % 2 === 0 ? 'cima' : 'baixo')
+
+    /* ---- quem está na tela ---- */
+    const candidatos: {
+      e: Evento
+      i: number
+      lado: Lado
+      x1: number
+      x2: number
+      xCartao: number
+      inicio: number
+      extensao: number
+      duracao: number
+    }[] = []
 
     for (const [i, e] of visiveis.entries()) {
       const lado = ladoDoIndice(i)
@@ -408,9 +428,9 @@ export default function LinhaDoTempo({
       const x2 = periodo ? escala(e.ano_fim as number) : x1
       const larg = larguraCartao(e.titulo, rotuloDoEvento(e))
 
-      /* Período que atravessa a tela inteira teria o cartão ancorado fora dela,
+      /* Período que atravessa a tela inteira teria o rótulo ancorado fora dela,
          à esquerda — o aluno estaria DENTRO da Idade Média sem ler o nome dela.
-         Aqui o cartão encosta na borda e continua visível enquanto a barra
+         Aqui o rótulo encosta na borda e continua visível enquanto a barra
          estiver passando. A haste acompanha, e segue caindo sobre a barra. */
       const xCartao = periodo && x1 < 6 && x2 > 6 ? Math.min(6, x2 - larg) : x1
 
@@ -419,21 +439,71 @@ export default function LinhaDoTempo({
       // diferença entre desenhar 20 eventos e desenhar todos os do banco
       if (extensao < -FOLGA || Math.min(x1, xCartao) > largura + FOLGA) continue
 
-      const inicio = Math.min(x1, xCartao)
-      let faixa = fim[lado].findIndex((f) => inicio > f + FOLGA)
-      if (faixa === -1) faixa = fim[lado].length
+      candidatos.push({
+        e,
+        i,
+        lado,
+        x1,
+        x2,
+        xCartao,
+        inicio: Math.min(x1, xCartao),
+        extensao,
+        duracao: anoFinal(e) - e.ano_inicio,
+      })
+    }
 
-      /* Passou do teto: não ocupa faixa — se ocupasse, empurraria o próximo
-         para uma faixa que também não existe — e entra como marcador puro. */
-      if (faixa >= teto) {
+    /* ---- a fila: QUEM DURA MAIS ESCOLHE FAIXA PRIMEIRO ----
+
+       Esta é a regra que decide o que se vê em cada zoom. As faixas são
+       poucas (o teto vem da altura da caixa), então alguém fica sem rótulo —
+       a pergunta é quem. Em ordem cronológica, era sorte: um ponto de um ano
+       tomava a faixa de uma era de trezentos só por vir antes, e afastar o
+       eixo podia apagar o nome do Renascimento e manter o de uma data solta
+       dentro dele.
+
+       Por duração, a tela se comporta como um mapa que troca de escala: longe
+       aparecem as eras, e os fatos pontuais surgem à medida que se aproxima e
+       o aglomerado se desfaz, liberando faixa. O evento não some por acaso —
+       some porque, naquele afastamento, ele é curto demais para o espaço que
+       sobrou.
+
+       A ordem é a mesma em qualquer zoom (duração em anos e em pixels crescem
+       juntas), e por isso não pisca: o que muda com o zoom é QUANTOS cabem,
+       não quem vem primeiro. Empate — todos os pontos duram 0 — desempata pelo
+       índice cronológico, para a fila ser determinística.
+
+       Nada disto mexe no MARCADOR: ponto e barra continuam todos na linha, em
+       qualquer zoom. O que a duração decide é o rótulo. */
+    const fila = [...candidatos].sort((a, b) => b.duracao - a.duracao || a.i - b.i)
+
+    for (const c of fila) {
+      const lanes = ocupadas[c.lado]
+      let faixa = -1
+      for (let f = 0; f < teto; f++) {
+        const nesta = lanes[f]
+        if (!nesta) {
+          lanes[f] = []
+          faixa = f
+          break
+        }
+        const cabe = nesta.every(
+          ([a, b]) => c.inicio >= b + FOLGA || c.extensao <= a - FOLGA
+        )
+        if (cabe) {
+          faixa = f
+          break
+        }
+      }
+
+      if (faixa === -1) {
+        // não coube em faixa nenhuma dentro do teto: fica só o marcador
         fora++
-        saida.push({ e, x1, x2, xCartao, lado, faixa: -1 })
+        saida.push({ e: c.e, x1: c.x1, x2: c.x2, xCartao: c.xCartao, lado: c.lado, faixa: -1 })
         continue
       }
 
-      fim[lado][faixa] = extensao
-
-      saida.push({ e, x1, x2, xCartao, lado, faixa })
+      lanes[faixa].push([c.inicio, c.extensao])
+      saida.push({ e: c.e, x1: c.x1, x2: c.x2, xCartao: c.xCartao, lado: c.lado, faixa })
     }
 
     return { colocados: saida, semRotulo: fora }
