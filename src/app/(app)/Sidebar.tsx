@@ -84,7 +84,7 @@ function ItemNav({
     <Link
       href={href}
       aria-current={ativo ? 'page' : undefined}
-      className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+      className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
         ativo
           ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento-claro)]'
           : 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
@@ -109,12 +109,22 @@ function ItemArvore({
   pathname,
   nivel,
   materiaDoGrupo,
+  atraso,
 }: {
   no: NoResumo
   pathname: string
   nivel: number
   /** matéria do bloco onde esta árvore está sendo desenhada */
   materiaDoGrupo: string
+  /**
+   * Atraso da cascata, em ms, ou `undefined` para não participar dela.
+   *
+   * Só os filhos DIRETOS de uma matéria escalonam. Escalonar em cada nível
+   * multiplicaria os atrasos pela profundidade da árvore, e um resumo de
+   * terceiro nível chegaria meio segundo depois do primeiro — bem além do
+   * orçamento da `identidade-visual.md` §7.
+   */
+  atraso?: number
 }) {
   const [aberto, setAberto] = useState(true)
   const href = `/resumos/${no.slug}`
@@ -136,7 +146,10 @@ function ItemArvore({
   const corDoTitulo = no.liberado ? corOutra : undefined
 
   return (
-    <li>
+    <li
+      className={atraso === undefined ? undefined : 'ramo-item'}
+      style={atraso === undefined ? undefined : { transitionDelay: `${atraso}ms` }}
+    >
       <div className="flex items-center gap-0.5" style={{ paddingLeft: nivel * 10 }}>
         {temFilhos ? (
           <button
@@ -144,7 +157,7 @@ function ItemArvore({
             onClick={() => setAberto((v) => !v)}
             aria-expanded={aberto}
             aria-label={aberto ? `Recolher ${no.titulo}` : `Expandir ${no.titulo}`}
-            className="w-[14px] h-[18px] shrink-0 flex items-center justify-center text-[var(--ink-faint)] hover:text-[var(--ink)] rounded focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+            className="w-[14px] h-[18px] shrink-0 flex items-center justify-center text-[var(--ink-faint)] hover:text-[var(--ink)] rounded transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             <Chevron aberto={aberto} />
           </button>
@@ -159,7 +172,7 @@ function ItemArvore({
           title={no.liberado ? no.titulo : `${no.titulo} — fora do seu plano`}
           aria-current={ativo ? 'page' : undefined}
           style={corDoTitulo ? { color: corDoTitulo } : undefined}
-          className={`flex-1 min-w-0 block px-1.5 py-[5px] rounded-md text-[12.5px] truncate focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+          className={`flex-1 min-w-0 block px-1.5 py-[5px] rounded-md text-[12.5px] truncate transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
             ativo
               ? 'shadow-[inset_0_0_0_1px_var(--line-forte)] text-[var(--ink)]'
               : no.liberado
@@ -185,15 +198,21 @@ function ItemArvore({
         ) : null}
       </div>
 
-      {temFilhos && aberto ? (
-        <ul
-          className="list-none m-0 p-0 shadow-[inset_1px_0_0_var(--line)]"
-          style={{ marginLeft: nivel * 10 + 7 }}
-        >
-          {no.filhos.map((f) => (
-            <ItemArvore key={f.slug} no={f} pathname={pathname} nivel={0} materiaDoGrupo={materiaDoGrupo} />
-          ))}
-        </ul>
+      {/* O ramo fica MONTADO mesmo fechado — é o que permite animar o fecho, e
+          não custa DOM novo: os nós já nascem abertos, então esta árvore
+          inteira já estava na página. Fechado, ele recebe `inert`: altura zero
+          esconde do olho, não do Tab. */}
+      {temFilhos ? (
+        <div className="ramo" data-aberto={aberto} inert={!aberto}>
+          <ul
+            className="list-none m-0 p-0 shadow-[inset_1px_0_0_var(--line)]"
+            style={{ marginLeft: nivel * 10 + 7 }}
+          >
+            {no.filhos.map((f) => (
+              <ItemArvore key={f.slug} no={f} pathname={pathname} nivel={0} materiaDoGrupo={materiaDoGrupo} />
+            ))}
+          </ul>
+        </div>
       ) : null}
     </li>
   )
@@ -340,15 +359,24 @@ export default function Sidebar({
         <BotaoTema className="ml-auto" />
       </div>
 
-      {/* Véu: fecha a gaveta ao tocar fora. Só existe com ela aberta. */}
-      {menuAberto ? (
-        <button
-          type="button"
-          aria-label="Fechar menu"
-          onClick={() => setMenuAberto(false)}
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
-        />
-      ) : null}
+      {/* Véu: fecha a gaveta ao tocar fora.
+
+          Fica MONTADO sempre, e some por opacidade. Antes era condicional, e
+          por isso a gaveta deslizava em 200ms enquanto o preto atrás dela
+          aparecia e sumia de estalo — os dois fazem parte do mesmo gesto e
+          precisam durar o mesmo tanto.
+
+          Fechado, `pointer-events-none` (senão ele engoliria os cliques da
+          página inteira, invisível) e fora do Tab por `inert`. */}
+      <button
+        type="button"
+        aria-label="Fechar menu"
+        onClick={() => setMenuAberto(false)}
+        inert={!menuAberto}
+        className={`lg:hidden fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${
+          menuAberto ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      />
 
       <aside
         id="barra-lateral"
@@ -517,7 +545,7 @@ export default function Sidebar({
                 type="button"
                 onClick={() => alternarGrupo(materia)}
                 aria-expanded={aberto}
-                className="w-full flex items-center gap-2 px-2.5 py-[5px] rounded-md text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+                className="w-full flex items-center gap-2 px-2.5 py-[5px] rounded-md text-[12.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
               >
                 <Chevron aberto={aberto} />
                 <span
@@ -531,13 +559,28 @@ export default function Sidebar({
                 <span className="ml-auto text-[10.5px] opacity-60">{itens.length}</span>
               </button>
 
-              {aberto && (
+              {/* A cascata mora aqui, e só aqui: os filhos diretos da matéria.
+                  O atraso tem TETO em seis itens — Biologia tem 46 resumos, e a
+                  25ms cada o último chegaria 1,15s depois do primeiro, contra os
+                  500ms de orçamento da §7. Do sétimo em diante todos chegam
+                  juntos: quem olha lê a cascata, quem não olha não espera.
+
+                  Fechando, o atraso é zero — cascata na saída é a sensação de
+                  interface travada. */}
+              <div className="ramo" data-aberto={aberto} inert={!aberto}>
                 <ul className="list-none m-0 ml-[13px] border-l border-[var(--line)] pl-0.5 p-0">
-                  {arvore.map((no) => (
-                    <ItemArvore key={no.slug} no={no} pathname={pathname} nivel={0} materiaDoGrupo={materia} />
+                  {arvore.map((no, i) => (
+                    <ItemArvore
+                      key={no.slug}
+                      no={no}
+                      pathname={pathname}
+                      nivel={0}
+                      materiaDoGrupo={materia}
+                      atraso={aberto ? Math.min(i, 6) * 25 : 0}
+                    />
                   ))}
                 </ul>
-              )}
+              </div>
             </div>
           )
         })}

@@ -334,11 +334,64 @@ está no arquivo.
 
 ## 7. Movimento
 
-Quase nada se move, e isso é a escolha. Nenhuma animação de entrada por rolagem,
-nenhum pulso, nenhuma física. O que muda é o que o dedo ou a tecla causou.
+### ~~Quase nada se move~~ — retirado em setembro/2026
 
-Transições existem só para troca de estado (cor, borda), em 120–150ms, e o
-`globals.css` já as desliga sob `prefers-reduced-motion`.
+> ~~Quase nada se move, e isso é a escolha. Nenhuma animação de entrada por
+> rolagem, nenhum pulso, nenhuma física. O que muda é o que o dedo ou a tecla
+> causou.~~
+
+A proibição foi **retirada a pedido do autor em 01/09/2026**, e o que a derrubou
+não foi gosto: ela já não descrevia o site. A landing tinha virado exceção
+declarada seis dias antes (§9 e decisão **13b**), com cascata de entrada, stagger
+e parallax de rolagem — três coisas que o parágrafo acima proíbe pelo nome. Uma
+regra que a maior página do site já contradiz não está governando nada; está só
+cobrando das telas pequenas um rigor que as grandes não pagam.
+
+Fica registrada, e não apagada, porque o argumento dela continua valendo como
+**instinto**: material de estudo não pede espetáculo, e movimento que não foi
+pedido por um gesto atrapalha quem está lendo. O que muda é que isso virou
+critério, e deixou de ser proibição.
+
+### A régua que fica no lugar
+
+**Todo movimento responde a alguma coisa.** Um gesto (toque, tecla, rolagem), ou
+uma mudança de estado que o site causou e precisa mostrar. Movimento que começa
+sozinho e se repete — pulso, respiração, brilho passeando — continua fora, e
+agora por um motivo dizível: ele compete com o texto, e aqui o texto é o produto.
+A única exceção é o `.esqueleto`, que pulsa justamente para dizer "ainda não
+chegou".
+
+**Três durações, e nada entre elas.**
+
+| Duração | Para quê |
+|---|---|
+| **120ms** | troca de estado: cor, borda, sombra. É o que já estava aqui. |
+| **180ms** | algo abre, fecha ou muda de tamanho na tela |
+| **200–400ms** | algo entra ou sai da tela inteira: gaveta, painel, transição de contexto |
+
+Acima de 400ms, só na landing, que é exceção declarada e tem outro trabalho a
+fazer (§9).
+
+**Entrada desacelera, saída acelera.** `ease-out` para o que chega, `ease-in`
+para o que sai, `ease` para troca de estado. Nada de overshoot fora da landing:
+o quique é simpático numa primeira dobra e é ruído numa barra lateral que a
+pessoa usa cem vezes por dia.
+
+**Stagger tem orçamento: 500ms no total, e ele estoura fácil.** Uma matéria com
+46 resumos a 25ms cada dá 1,15s — inaceitável. A saída é **teto no atraso**, não
+atraso menor: os primeiros seis itens escalonam, o resto chega junto. Quem olha
+lê a cascata; quem não olha não espera.
+
+**`prefers-reduced-motion` não é tratado caso a caso.** O `globals.css` zera
+duração de transição e de animação globalmente, então qualquer coisa nova já
+nasce coberta. O que NÃO está coberto é animação escrita em JavaScript, que
+ignora CSS — foi por isso que o `Movimento.tsx` da landing precisou do
+`gsap.matchMedia()` além da regra global.
+
+**Conteúdo escondido não pode ficar focável.** Isto não é estética e é o erro
+mais fácil de cometer ao animar: um bloco recolhido com `height: 0` e
+`overflow: hidden` continua no Tab, e quem navega por teclado cai dentro do que
+não está na tela. Use `inert` no invólucro fechado.
 
 ---
 
