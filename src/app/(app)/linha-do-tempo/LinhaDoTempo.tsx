@@ -35,10 +35,35 @@ const ERAS = [
 /* O piso da janela (`JANELA_MINIMA`) mudou para `lib/tempo.ts`: o link de
    "Quando" do resumo pede enquadramento por ali, e o mesmo número tem de valer
    para o zoom manual, para a vista cheia e para o link. */
-/* Teto do afastamento. Não é estética: `marcas` percorre a janela de passo em
-   passo, e sem limite um afastamento insistente monta uma lista de milhares de
-   marcas invisíveis a cada quadro. */
+/* Teto do afastamento. Continua existindo como rede de segurança — `marcas`
+   percorre a janela de passo em passo, e sem limite nenhum um afastamento
+   insistente monta uma lista de milhares de marcas invisíveis a cada quadro —,
+   mas quem manda de verdade agora é o `LIMITE` calculado dos dados: o eixo não
+   passa das suas próprias bordas. */
 const JANELA_MAXIMA = 20000
+
+/**
+ * Prende uma janela dentro das bordas do eixo.
+ *
+ * **O eixo tem fim.** Antes não tinha: arrastar e afastar levavam a milênios
+ * vazios em qualquer direção, e a linha só "acabava" onde a tela cortava — o
+ * que faz o aluno achar que há mais tempo lá adiante para procurar, quando não
+ * há. Agora o afastamento máximo é o acervo inteiro e o arrasto encosta nas
+ * pontas em vez de sair delas.
+ *
+ * A ordem importa: o span é fechado PRIMEIRO (nunca maior que o total, nunca
+ * menor que `JANELA_MINIMA`) e só então a janela é empurrada para dentro. Ao
+ * contrário, uma janela mais larga que o total sairia com `de` no lugar certo e
+ * `ate` fora da borda.
+ */
+function conter(j: Janela, limite: Janela): Janela {
+  const total = limite.ate - limite.de
+  const span = Math.max(JANELA_MINIMA, Math.min(j.ate - j.de, total))
+  let de = j.de
+  if (de + span > limite.ate) de = limite.ate - span
+  if (de < limite.de) de = limite.de
+  return { de, ate: de + span }
+}
 
 /* ---- os 11px ----
    Esta tela usa três tamanhos: `--t-peq` no título do rótulo, `--t-mini` no
@@ -169,9 +194,51 @@ export default function LinhaDoTempo({
     return { de: Math.floor(ate - span), ate }
   }, [])
 
-  const [janela, setJanela] = useState<Janela>(
-    () => janelaInicial ?? janelaCheia(eventos)
+  /**
+   * As bordas do eixo.
+   *
+   * Sai dos DADOS, e não de números escolhidos à mão: começa no evento mais
+   * antigo e termina no ano atual — ou no fim do último evento, se algum dia
+   * entrar um período que atravessa hoje. A folga de respiro fica à esquerda,
+   * pela mesma razão do `janelaCheia`.
+   *
+   * `ERAS[0].de` entra no mínimo porque o botão "Antiguidade" pede -3500, e um
+   * limite mais estreito que o botão faria o botão mentir: o aluno clicaria e o
+   * eixo pararia antes.
+   *
+   * Depende de `eventos` e não de `visiveis`: desligar um chip de matéria muda
+   * o que se vê, não até onde o tempo vai. Se dependesse do filtro, desligar
+   * História encolheria as bordas e empurraria a janela do aluno sozinha.
+   */
+  const limite = useMemo((): Janela => {
+    const agora = new Date().getFullYear()
+    if (eventos.length === 0) return { de: ERAS[0].de, ate: agora }
+    const min = Math.min(ERAS[0].de, ...eventos.map((e) => e.ano_inicio))
+    const ate = Math.max(agora, ...eventos.map(anoFinal))
+    return { de: Math.floor(min - Math.max((ate - min) * 0.06, 1)), ate }
+  }, [eventos])
+
+  /* A janela inicial já nasce contida: o `?de=&ate=` da URL é digitável à mão,
+     e um link salvo pode sobreviver ao acervo encolher. Contido aqui, no
+     inicializador, e não num efeito — pôr `setState` dentro de efeito é
+     justamente o que a regra do React Compiler acusa em `admin/editor`. */
+  const [janela, setJanela] = useState<Janela>(() =>
+    conter(janelaInicial ?? janelaCheia(eventos), limite)
   )
+
+  /* Toda mudança de janela passa por aqui. Espalhar o `conter` pelos cinco
+     lugares que mexem no eixo — arrasto, roda, botão de zoom, teclado, botões
+     de era — deixaria um deles de fora no primeiro ajuste futuro. */
+  const mudarJanela = useCallback(
+    (proxima: Janela | ((j: Janela) => Janela)) => {
+      setJanela((j) =>
+        conter(typeof proxima === 'function' ? proxima(j) : proxima, limite)
+      )
+    },
+    [limite]
+  )
+
+
 
   // mede a caixa; a ALTURA importa tanto quanto a largura, porque é ela que
   // decide onde fica o meio da página
@@ -215,14 +282,14 @@ export default function LinhaDoTempo({
     (destino: Janela) => {
       pararAnimacao()
       const menos = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      if (menos) return setJanela(destino)
+      if (menos) return mudarJanela(destino)
 
       const inicio = janela
       const t0 = performance.now()
       const passo = (t: number) => {
         const p = Math.min(1, (t - t0) / DURACAO_ANIMACAO)
         const e = 1 - Math.pow(1 - p, 3) // easeOutCubic
-        setJanela({
+        mudarJanela({
           de: inicio.de + (destino.de - inicio.de) * e,
           ate: inicio.ate + (destino.ate - inicio.ate) * e,
         })
@@ -230,23 +297,26 @@ export default function LinhaDoTempo({
       }
       animRef.current = requestAnimationFrame(passo)
     },
-    [janela, pararAnimacao]
+    [janela, pararAnimacao, mudarJanela]
   )
 
   /** Aplica zoom mantendo fixo o ano que está sob o ponteiro. */
   const aplicarZoom = useCallback(
     (fator: number, ancoraPx: number) => {
       pararAnimacao()
-      setJanela((j) => {
+      mudarJanela((j) => {
         const s = j.ate - j.de
-        const novo = Math.min(JANELA_MAXIMA, Math.max(JANELA_MINIMA, s * fator))
+        /* O afastamento para no acervo inteiro. Sem isto, afastar continuava
+           para sempre e o eixo virava uma linha perdida no vazio. */
+        const teto = Math.min(JANELA_MAXIMA, limite.ate - limite.de)
+        const novo = Math.min(teto, Math.max(JANELA_MINIMA, s * fator))
         if (novo === s) return j
         const frac = largura > 0 ? ancoraPx / largura : 0.5
         const anoAncora = j.de + frac * s
         return { de: anoAncora - frac * novo, ate: anoAncora + (1 - frac) * novo }
       })
     },
-    [largura, pararAnimacao]
+    [largura, pararAnimacao, mudarJanela, limite]
   )
 
   /* Roda do mouse dá zoom, e por isso precisa de `preventDefault` — senão a
@@ -291,7 +361,8 @@ export default function LinhaDoTempo({
     if (Math.abs(e.clientX - a.x) > 4) arrastou.current = true
     const anosPorPx = (a.ate - a.de) / largura
     const d = (e.clientX - a.x) * anosPorPx
-    setJanela({ de: a.de - d, ate: a.ate - d })
+    // encosta nas pontas em vez de sair delas
+    mudarJanela({ de: a.de - d, ate: a.ate - d })
   }
 
   function aoSoltar(e: React.PointerEvent) {
@@ -308,11 +379,11 @@ export default function LinhaDoTempo({
     if (e.key === 'ArrowLeft') {
       e.preventDefault()
       pararAnimacao()
-      setJanela((j) => ({ de: j.de - passo, ate: j.ate - passo }))
+      mudarJanela((j) => ({ de: j.de - passo, ate: j.ate - passo }))
     } else if (e.key === 'ArrowRight') {
       e.preventDefault()
       pararAnimacao()
-      setJanela((j) => ({ de: j.de + passo, ate: j.ate + passo }))
+      mudarJanela((j) => ({ de: j.de + passo, ate: j.ate + passo }))
     } else if (e.key === '+' || e.key === '=') {
       e.preventDefault()
       aplicarZoom(1 / 1.4, largura / 2)
