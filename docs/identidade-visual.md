@@ -180,6 +180,20 @@ serifa dava ar de revista quando o pedido é material de estudo.
 tamanho parece faltar, quase sempre o certo é usar o degrau vizinho — foi assim
 que os `30px` e `32px` da landing colapsaram em `--t-titulo`.
 
+> [!warning] A escala não tem degrau abaixo de 12px, e a linha do tempo precisa de um
+> `/linha-do-tempo` usa **11px cru** nos numerais miúdos — marca de ano, linha de
+> data do rótulo, balão do fio-guia. É **exceção declarada**, como o `--t-hero`:
+> empurrar a linha de data para 12px alarga todo rótulo contra a densidade que o
+> teto de faixas veio ganhar (decisão **9d-bis** do `CONTEXTO.md`). O resto da
+> tela usa `--t-peq`, `--t-mini` e `--t-base` — antes eram sete tamanhos avulsos
+> entre 10,5 e 14px, vários a 0,5px de distância um do outro.
+>
+> **O grupo `(app)` inteiro ainda está fora desta escala**: ~145 tamanhos
+> arbitrários, incluindo `9.5px` e `13.5px`, e nenhum arquivo usando `var(--t-*)`.
+> A linha do tempo foi a primeira a entrar. Alinhar o resto é tarefa própria, e
+> quem for fazê-la decide antes o que fazer com os numerais miúdos do mapa, que
+> têm o mesmo problema.
+
 `--t-hero` é o único que escala com a tela, e existe só para o `h1` da landing: é
 a primeira coisa que um desconhecido lê. Nas outras telas quem chegou já sabe onde
 está.
