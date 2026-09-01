@@ -9,7 +9,6 @@ import {
   anoFinal,
   coresDoEvento,
   corDoRotulo,
-  enquadrar,
   formatarAno,
   fundoDoMarcador,
   rotuloDoEvento,
@@ -41,10 +40,20 @@ const ERAS = [
    marcas invisíveis a cada quadro. */
 const JANELA_MAXIMA = 20000
 
-/* O cartão do evento tem duas linhas — título e data —, então a faixa é bem
-   mais alta do que era quando o rótulo era só um texto solto. */
-const ALTURA_CARTAO = 38
-const ALTURA_FAIXA = 46
+/* ---- os 11px ----
+   Esta tela usa três tamanhos: `--t-peq` no título do rótulo, `--t-mini` no
+   apoio e **11px cru** nos numerais miúdos — marca de ano, linha de data do
+   rótulo, balão do fio-guia. O 11px é EXCEÇÃO DECLARADA, não esquecimento: a
+   escala do `docs/identidade-visual.md` §3 não tem degrau abaixo de 12, e
+   empurrar a linha de data para 12px alarga todo rótulo contra a densidade que
+   o teto de faixas veio ganhar. Está registrada lá, como o `--t-hero` já é.
+   Antes daqui eram sete tamanhos avulsos entre 10,5 e 14, vários a 0,5px de
+   distância um do outro — o "desleixo" que a mesma seção nomeia. */
+
+/* O rótulo tem duas linhas — título e data. Encolheu quando a CAIXA saiu: sem
+   borda nem padding vertical para pagar, as duas linhas cabem em 30px. */
+const ALTURA_CARTAO = 30
+const ALTURA_FAIXA = 36
 /* Folga entre o eixo e o primeiro cartão de cada lado. Embaixo é maior porque
    é ali que moram os anos escritos — sem a diferença, o primeiro cartão de
    baixo sentaria em cima do "1453". */
@@ -57,9 +66,16 @@ const DURACAO_ANIMACAO = 420
 type Janela = { de: number; ate: number }
 type Lado = 'cima' | 'baixo'
 
-/** Largura aproximada do cartão, em px, para o empacotamento não sobrepor. */
+/**
+ * Largura aproximada do rótulo, em px, para o empacotamento não sobrepor.
+ *
+ * A constante era 26 — o padding e a borda da caixa. Sem caixa sobram os 4px
+ * de padding de cada lado, mas o número fica em 14 de propósito: o rótulo
+ * REALÇADO ganha a caixa de volta e cresce, e sem essa reserva ele passaria
+ * por cima do vizinho a cada passada do mouse.
+ */
 function larguraCartao(titulo: string, data: string) {
-  return Math.max(titulo.length * 7.1, data.length * 6.2) + 26
+  return Math.max(titulo.length * 7.1, data.length * 6.2) + 14
 }
 
 /**
@@ -124,17 +140,33 @@ export default function LinhaDoTempo({
     [eventos, desligadas]
   )
 
-  /** Janela que cobre tudo o que está ligado, com uma folga de respiro. */
+  /**
+   * Janela que cobre tudo o que está ligado — e que **termina no ano atual**.
+   *
+   * A folga de respiro ficou só do lado ESQUERDO. À direita ela abria séculos
+   * de nada depois do último evento: com uma janela de cinco milênios, os 12%
+   * do `enquadrar` são seiscentos anos de futuro vazio. O eixo termina hoje, e
+   * o aluno vê para onde o tempo dele está indo.
+   *
+   * Por isso este não usa mais o `enquadrar`, que alarga em torno do MEIO —
+   * simetria é justamente o que se está abrindo mão aqui. O piso de
+   * `JANELA_MINIMA` continua valendo, e continua aplicado à janela resultante
+   * e não a `min`/`max`, que era o defeito que criou o `enquadrar`; a
+   * diferença é que agora ele cresce só para a esquerda. O `enquadrar` segue
+   * intacto para o link de "Quando" do resumo, onde centrar é o certo.
+   *
+   * `ate` é o ano atual OU o fim do último evento, o que for maior: se algum
+   * dia entrar um período que atravessa a data de hoje, ele não pode nascer
+   * fora da tela na vista que se chama "Tudo".
+   */
   const janelaCheia = useCallback((lista: Evento[]): Janela => {
-    if (lista.length === 0) return { de: 1000, ate: new Date().getFullYear() }
+    const agora = new Date().getFullYear()
+    if (lista.length === 0) return { de: 1000, ate: agora }
     const min = Math.min(...lista.map((e) => e.ano_inicio))
-    const max = Math.max(...lista.map(anoFinal))
-    /* A folga e o piso saem do `enquadrar`, que é o mesmo que o link do resumo
-       usa. Antes o piso era calculado aqui e perdido em seguida: a folga de 6%
-       vinha de `min` e `max`, não da janela, então um recorte de um evento só
-       terminava com 2 anos de janela — menos que o mínimo. Nunca apareceu
-       porque a única entrada era o acervo inteiro. */
-    return enquadrar(min, max)
+    const ate = Math.max(agora, ...lista.map(anoFinal))
+    const bruto = Math.max(0, ate - min)
+    const span = Math.max(JANELA_MINIMA, bruto + Math.max(bruto * 0.06, 1))
+    return { de: Math.floor(ate - span), ate }
   }, [])
 
   const [janela, setJanela] = useState<Janela>(
@@ -307,9 +339,43 @@ export default function LinhaDoTempo({
    * Refeito a cada zoom porque a conta é em PIXEL, não em ano: o cartão tem
    * largura fixa na tela, então dois eventos que se sobrepõem afastados podem
    * caber lado a lado de perto.
+   *
+   * ---- O TETO DE FAIXAS ----
+   *
+   * Quantas faixas cabem de cada lado sai da ALTURA DA CAIXA, não da
+   * quantidade de eventos. Quem não acha faixa dentro do teto entra com
+   * `faixa: -1` e vira **só marcador no eixo** — sem haste e sem rótulo.
+   *
+   * Antes o palco crescia com os dados: 85 eventos na vista cheia davam 30
+   * faixas de cada lado e 2.852px de altura numa caixa de 430, o que obrigava
+   * a rolar para ler qualquer coisa e ainda assim entregava uma pilha de
+   * rótulos sobrepostos. O empilhamento não era informação, era falta de
+   * espaço — e a resposta certa para falta de espaço neste eixo é o ZOOM, que
+   * já existe e é a coisa que a tela sabe fazer.
+   *
+   * Quem perde o rótulo é sempre o aglomerado, e é de graça: o empacotamento é
+   * first-fit em ordem cronológica, então a faixa 0 recolhe uma corrente de
+   * eventos espalhados da esquerda para a direita, a faixa 1 outra, e assim
+   * por diante. As faixas altas — as que o teto corta — são exatamente as que
+   * só existem onde os eventos se acotovelam. Aproximar espalha o aglomerado,
+   * a necessidade de faixa alta some e os rótulos voltam sozinhos.
+   *
+   * Consequência que vale mais que a estética: com teto, `alturaConteudo`
+   * nunca passa da caixa, o eixo não tem como nascer fora da tela e a rolagem
+   * vertical deixa de existir. O ajuste automático que consertava isso — o
+   * `mexeuNaRolagem` com a bandeira `rolagemNossa` — foi embora junto, porque
+   * o defeito que ele corrigia deixou de ser possível.
    */
-  const { colocados, faixasCima, faixasBaixo } = useMemo(() => {
-    if (largura === 0) return { colocados: [], faixasCima: 1, faixasBaixo: 1 }
+  const { colocados, semRotulo } = useMemo(() => {
+    if (largura === 0) return { colocados: [], semRotulo: 0 }
+
+    /* O teto. `altura` pode ser 0 no primeiro quadro, antes de o
+       ResizeObserver medir: aí vale 1, e o quadro seguinte corrige. */
+    const teto = Math.max(
+      1,
+      Math.floor((altura / 2 - FOLGA_BAIXO - PADDING_V) / ALTURA_FAIXA)
+    )
+    let fora = 0
 
     const fim: Record<Lado, number[]> = { cima: [], baixo: [] }
     const saida: {
@@ -318,6 +384,7 @@ export default function LinhaDoTempo({
       x2: number
       xCartao: number
       lado: Lado
+      /** -1 = não coube no teto: só o marcador é desenhado. */
       faixa: number
     }[] = []
     /* O lado sai do ÍNDICE em `visiveis`, e não de um contador que avança
@@ -355,56 +422,44 @@ export default function LinhaDoTempo({
       const inicio = Math.min(x1, xCartao)
       let faixa = fim[lado].findIndex((f) => inicio > f + FOLGA)
       if (faixa === -1) faixa = fim[lado].length
+
+      /* Passou do teto: não ocupa faixa — se ocupasse, empurraria o próximo
+         para uma faixa que também não existe — e entra como marcador puro. */
+      if (faixa >= teto) {
+        fora++
+        saida.push({ e, x1, x2, xCartao, lado, faixa: -1 })
+        continue
+      }
+
       fim[lado][faixa] = extensao
 
       saida.push({ e, x1, x2, xCartao, lado, faixa })
     }
 
-    return {
-      colocados: saida,
-      faixasCima: Math.max(1, fim.cima.length),
-      faixasBaixo: Math.max(1, fim.baixo.length),
-    }
-  }, [visiveis, escala, largura])
+    return { colocados: saida, semRotulo: fora }
+  }, [visiveis, escala, largura, altura])
 
-  /* ---- o eixo fica no MEIO ----
-     A altura desenhada é o DOBRO do lado mais cheio, e não a soma dos dois.
-     Assim o meio do conteúdo é sempre o eixo, mesmo com quatro faixas em cima
-     e uma embaixo — somando, a linha escorregaria para longe do centro a cada
-     zoom. E como a altura nunca é menor que a da caixa, quando tudo cabe o
-     eixo cai exatamente no meio da tela. */
-  const precisaCima = FOLGA_CIMA + faixasCima * ALTURA_FAIXA + PADDING_V
-  const precisaBaixo = FOLGA_BAIXO + faixasBaixo * ALTURA_FAIXA + PADDING_V
-  const alturaConteudo = Math.max(altura, 2 * Math.max(precisaCima, precisaBaixo))
+  /* ---- o eixo fica no MEIO, e o palco NUNCA passa da caixa ----
+
+     O palco tem a altura da caixa, e o eixo mora exatamente no meio dela. Quem
+     garante que os rótulos cabem é o teto de faixas lá em cima, calculado a
+     partir desta mesma altura.
+
+     Isto substitui duas coisas de uma vez. A primeira era `alturaConteudo` =
+     dobro do lado mais cheio, que existia para o eixo cair no meio do palco
+     quando o palco crescia com os dados. A segunda era o ajuste automático de
+     rolagem — o `mexeuNaRolagem` com a bandeira `rolagemNossa` —, que
+     consertava o efeito colateral disso: com 85 eventos o palco ia a 3.036px
+     numa caixa de 632, a caixa rolava, rolagem começa no topo e quem abria a
+     página caía num campo vazio acima de tudo.
+
+     Nenhum dos dois é necessário quando o palco não cresce. O defeito não foi
+     corrigido de novo: deixou de ser possível.
+
+     `faixasCima` e `faixasBaixo` saíram junto: eram a contagem que alimentava
+     a altura, e ninguém mais pergunta por ela. */
+  const alturaConteudo = altura
   const centro = alturaConteudo / 2
-
-  /* ---- e o eixo tem que estar À VISTA, não só no meio do palco ----
-
-     `alturaConteudo` é o dobro do lado mais cheio, então com muitos eventos
-     empilhados o palco fica bem mais alto que a caixa — 3.036px contra 632px,
-     medido com os 85 eventos que entraram em 25/08. A caixa rola, e rolagem
-     começa no TOPO: o eixo, que mora em `centro`, nascia fora da tela, e quem
-     abria a página caía num campo vazio acima de tudo.
-
-     Enquanto o eixo coube na caixa isto não existia — com um evento só, o
-     palco tinha a altura da caixa. É defeito que só aparece com acervo, e por
-     isso ficou dois meses invisível.
-
-     A regra copia o `mexeuNoZoom` do grafo: o ajuste automático vale ENQUANTO
-     a pessoa não tiver rolado. A partir do primeiro gesto dela, a posição é
-     dela — rolar para ver a quarta faixa de cima e ser puxado de volta ao
-     centro seria pior que o defeito. */
-  const mexeuNaRolagem = useRef(false)
-  const rolagemNossa = useRef(false)
-
-  useEffect(() => {
-    const el = caixaRef.current
-    if (!el || mexeuNaRolagem.current) return
-    const alvo = centro - el.clientHeight / 2
-    if (alvo <= 0 || Math.abs(el.scrollTop - alvo) < 1) return
-    rolagemNossa.current = true
-    el.scrollTop = alvo
-  }, [centro])
 
   /** Marcas do eixo, em anos redondos dentro da janela visível. */
   const marcas = useMemo(() => {
@@ -440,7 +495,7 @@ export default function LinhaDoTempo({
               type="button"
               onClick={() => alternarMateria(slug)}
               aria-pressed={ligada}
-              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+              className="inline-flex items-center gap-1.5 rounded-[var(--raio-peq)] border px-2.5 py-1 text-[length:var(--t-mini)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
               style={{
                 borderColor: ligada ? m.cor : 'var(--line-forte)',
                 color: ligada ? m.cor : 'var(--ink-faint)',
@@ -461,13 +516,23 @@ export default function LinhaDoTempo({
           )
         })}
 
-        <div className="ml-auto flex items-center gap-1">
+        {/* Quantos eventos estão na tela como marcador puro, por não caberem
+            no teto de faixas. A tela dizendo em vez de escondendo: sem isto,
+            um recorte cheio parece ter menos acervo do que tem, e nada indica
+            que aproximar traz os nomes de volta. */}
+        {semRotulo > 0 ? (
+          <span className="ml-auto text-[length:var(--t-mini)] text-[var(--ink-faint)] tabular-nums">
+            {semRotulo} sem rótulo — aproxime
+          </span>
+        ) : null}
+
+        <div className={`${semRotulo > 0 ? 'ml-2' : 'ml-auto'} flex items-center gap-1`}>
           {ERAS.map((era) => (
             <button
               key={era.nome}
               type="button"
               onClick={() => irPara({ de: era.de, ate: era.ate })}
-              className="rounded-md px-2 py-1 text-[11.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+              className="rounded-[var(--raio-peq)] px-2 py-1 text-[length:var(--t-mini)] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
             >
               {era.nome}
             </button>
@@ -475,7 +540,7 @@ export default function LinhaDoTempo({
           <button
             type="button"
             onClick={() => irPara(janelaCheia(visiveis))}
-            className="rounded-md px-2 py-1 text-[11.5px] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+            className="rounded-[var(--raio-peq)] px-2 py-1 text-[length:var(--t-mini)] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             Tudo
           </button>
@@ -485,7 +550,7 @@ export default function LinhaDoTempo({
             type="button"
             onClick={() => aplicarZoom(1 / 1.4, largura / 2)}
             aria-label="Aproximar"
-            className="w-7 h-7 rounded-md text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+            className="w-7 h-7 rounded-[var(--raio-peq)] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             +
           </button>
@@ -493,7 +558,7 @@ export default function LinhaDoTempo({
             type="button"
             onClick={() => aplicarZoom(1.4, largura / 2)}
             aria-label="Afastar"
-            className="w-7 h-7 rounded-md text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+            className="w-7 h-7 rounded-[var(--raio-peq)] text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             −
           </button>
@@ -511,16 +576,6 @@ export default function LinhaDoTempo({
         onPointerUp={aoSoltar}
         onPointerCancel={aoSoltar}
         onPointerLeave={() => setGuia(null)}
-        /* A rolagem que o efeito acima faz também dispara este evento. A
-           bandeira distingue as duas: sem ela, o próprio ajuste automático se
-           cancelaria na primeira vez que rodasse. */
-        onScroll={() => {
-          if (rolagemNossa.current) {
-            rolagemNossa.current = false
-            return
-          }
-          mexeuNaRolagem.current = true
-        }}
         onDoubleClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect()
           aplicarZoom(1 / 2, e.clientX - r.left)
@@ -534,16 +589,17 @@ export default function LinhaDoTempo({
             e.preventDefault()
           }
         }}
-        /* `pan-y` e não `none`: o dedo continua rolando na vertical quando o
-           desenho é mais alto que a caixa, e só o movimento horizontal chega
-           aos nossos handlers, como deslocamento no tempo. */
-        /* `scrollbar-gutter: stable` evita um laço de layout real: quando o
-           desenho passa da altura da caixa, aparece a barra de rolagem, que
-           estreita a caixa; mais estreita, os cartões se reempacotam e podem
-           caber em menos faixas; cabendo, a barra some e a caixa alarga de
-           novo. Com a calha sempre reservada, a largura para de oscilar. */
-        style={{ touchAction: 'pan-y', scrollbarGutter: 'stable' }}
-        className="quadro relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden select-none cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acento)]"
+        /* `pan-y` continua, e não `none`, mesmo agora que a caixa não rola:
+           o gesto vertical volta a ser do navegador, que é o certo quando aqui
+           não há nada para rolar, e só o horizontal chega aos nossos handlers.
+
+           O `scrollbar-gutter: stable` foi embora com a rolagem. Ele existia
+           para quebrar um laço de layout — o desenho passava da altura, nascia
+           a barra, a barra estreitava a caixa, os cartões se reempacotavam em
+           menos faixas, a barra sumia e a caixa alargava de novo. Sem palco
+           maior que a caixa, o laço não tem como começar. */
+        style={{ touchAction: 'pan-y' }}
+        className="quadro relative flex-1 min-h-0 overflow-hidden select-none cursor-grab active:cursor-grabbing focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acento)]"
       >
         <div className="relative" style={{ height: alturaConteudo }}>
           {/* linhas verticais dos anos, atrás de tudo */}
@@ -568,7 +624,7 @@ export default function LinhaDoTempo({
             >
               <div className="absolute top-0 bottom-0 w-px bg-[var(--acento)] opacity-35" />
               <div
-                className="absolute -translate-x-1/2 rounded px-1.5 py-0.5 text-[10.5px] tabular-nums whitespace-nowrap bg-[var(--acento)] text-[var(--page)]"
+                className="absolute -translate-x-1/2 rounded-[var(--raio-peq)] px-1.5 py-0.5 text-[11px] tabular-nums whitespace-nowrap bg-[var(--acento)] text-[var(--page)]"
                 style={{ top: centro - 30 }}
               >
                 {formatarAno(Math.round(anoEm(guia)))}
@@ -604,61 +660,49 @@ export default function LinhaDoTempo({
             const periodo = e.ano_fim !== null
             const aberto = selecionado?.id === e.id
             const realce = aberto || sobre === e.id
+            /* Não coube no teto de faixas: fica só o marcador. É por isso que
+               ELE é o botão, e não o rótulo — sem isso, na vista cheia dois
+               terços do acervo virariam pontinho inerte, sem clique e sem Tab. */
+            const comRotulo = faixa !== -1
 
             const topoCartao =
               lado === 'cima'
                 ? centro - FOLGA_CIMA - (faixa + 1) * ALTURA_FAIXA
                 : centro + FOLGA_BAIXO + faixa * ALTURA_FAIXA
 
-            // a haste sai da borda do cartão que olha para o eixo
+            // a haste sai da borda do rótulo que olha para o eixo
             const bordaProxima = lado === 'cima' ? topoCartao + ALTURA_CARTAO : topoCartao
             const topoHaste = lado === 'cima' ? bordaProxima : centro
             const alturaHaste = Math.max(0, Math.abs(centro - bordaProxima))
 
+            const marcador = fundoDoMarcador(cores)
+
             return (
               <div key={e.id}>
-                {/* haste ligando o evento à sua data no eixo */}
-                <div
-                  aria-hidden="true"
-                  className="absolute"
-                  style={{
-                    left: xCartao,
-                    top: topoHaste,
-                    height: alturaHaste,
-                    width: realce ? 2 : 1,
-                    background: realce ? 'var(--acento)' : 'var(--line-forte)',
-                  }}
-                />
+                {/* Haste ligando o evento à sua data no eixo.
 
-                {/* marcador na própria linha: ponto para data única, barra
-                    para período — e a largura da barra É a duração */}
-                {periodo ? (
+                    Ela leva a COR da matéria — o mesmo fundo do marcador, com
+                    as listras do evento multimatéria — porque o título deixou
+                    de levar. Fina e a 50%: com quarenta hastes juntas, cor
+                    cheia vira cerca de piquetes. */}
+                {comRotulo ? (
                   <div
                     aria-hidden="true"
-                    className="absolute rounded-full"
+                    className="absolute"
                     style={{
-                      left: x1,
-                      width: Math.max(4, x2 - x1),
-                      height: realce ? 12 : 10,
-                      top: centro - (realce ? 5 : 4),
-                      background: fundoDoMarcador(cores),
+                      left: xCartao,
+                      top: topoHaste,
+                      height: alturaHaste,
+                      width: realce ? 2 : 1,
+                      background: realce ? 'var(--acento)' : marcador,
+                      opacity: realce ? 1 : 0.5,
                     }}
                   />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className="absolute rounded-full"
-                    style={{
-                      width: realce ? 16 : 13,
-                      height: realce ? 16 : 13,
-                      left: x1 - (realce ? 8 : 6.5),
-                      top: centro - (realce ? 7 : 5.5),
-                      background: fundoDoMarcador(cores),
-                      boxShadow: realce ? '0 0 0 3px var(--acento-fraco)' : undefined,
-                    }}
-                  />
-                )}
+                ) : null}
 
+                {/* O MARCADOR É O ALVO: ponto para data única, barra para
+                    período — e a largura da barra É a duração. Ele existe
+                    sempre, com rótulo ou sem, e é ele que abre o detalhe. */}
                 <button
                   type="button"
                   onClick={() => setSelecionado(aberto ? null : e)}
@@ -667,32 +711,79 @@ export default function LinhaDoTempo({
                   onFocus={() => setSobre(e.id)}
                   onBlur={() => setSobre((s) => (s === e.id ? null : s))}
                   aria-pressed={aberto}
-                  className="absolute flex flex-col justify-center rounded-lg border px-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
-                  style={{
-                    left: xCartao,
-                    top: topoCartao,
-                    height: ALTURA_CARTAO,
-                    background: realce ? 'var(--raised-hover)' : 'var(--raised)',
-                    borderColor: realce ? 'var(--acento)' : 'var(--line-forte)',
-                  }}
-                >
-                  <span
-                    className="text-[13px] font-medium leading-tight whitespace-nowrap"
-                    style={{ color: corDoRotulo(cores) }}
+                  aria-label={`${e.titulo}, ${rotuloDoEvento(e)}`}
+                  className="absolute rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]"
+                  style={
+                    periodo
+                      ? {
+                          left: x1,
+                          width: Math.max(4, x2 - x1),
+                          height: realce ? 12 : 10,
+                          top: centro - (realce ? 5 : 4),
+                          background: marcador,
+                        }
+                      : {
+                          width: realce ? 16 : 13,
+                          height: realce ? 16 : 13,
+                          left: x1 - (realce ? 8 : 6.5),
+                          top: centro - (realce ? 7 : 5.5),
+                          background: marcador,
+                          boxShadow: realce ? '0 0 0 3px var(--acento-fraco)' : undefined,
+                        }
+                  }
+                />
+
+                {/* O rótulo. Não é mais um cartão: sem borda e sem `--raised`,
+                    só o texto pendurado na haste.
+
+                    O fundo `--canvas` fica, e é funcional, não decoração — a
+                    caixa antiga também OCLUÍA, e sem nada atrás do texto os
+                    rótulos que se cruzam viram sopa ilegível. O que sai é o
+                    peso (borda, superfície elevada), não a oclusão.
+
+                    A caixa volta inteira no realce, e aí sim com `--raio-peq`
+                    e borda de acento: uma por vez, a que está sob o olho.
+
+                    O título vai em `--ink`, e não na cor da matéria. Sem a
+                    superfície `--raised` embaixo, o texto colorido cairia
+                    sobre `--canvas`, que não está entre os fundos onde as 12
+                    matérias foram medidas em AA. A cor não sumiu — desceu para
+                    o marcador e para a haste, que é onde ela não depende de
+                    contraste de texto. De quebra desfaz uma assimetria: antes
+                    o evento de uma matéria era colorido e o de várias era
+                    neutro, então a cor do título dizia QUANTAS matérias, não
+                    QUAL. */}
+                {comRotulo ? (
+                  <div
+                    aria-hidden="true"
+                    className="absolute flex flex-col justify-center whitespace-nowrap"
+                    style={{
+                      left: xCartao,
+                      top: topoCartao,
+                      height: ALTURA_CARTAO,
+                      padding: realce ? '0 8px' : '0 4px',
+                      borderRadius: 'var(--raio-peq)',
+                      border: `1px solid ${realce ? 'var(--acento)' : 'transparent'}`,
+                      background: realce ? 'var(--raised-hover)' : 'var(--canvas)',
+                      // no realce a caixa cresce; sem isto ela some atrás do vizinho
+                      zIndex: realce ? 5 : undefined,
+                    }}
                   >
-                    {e.titulo}
-                  </span>
-                  <span className="text-[10.5px] leading-tight text-[var(--ink-faint)] tabular-nums whitespace-nowrap">
-                    {rotuloDoEvento(e)}
-                  </span>
-                </button>
+                    <span className="text-[length:var(--t-peq)] font-medium leading-tight text-[var(--ink)]">
+                      {e.titulo}
+                    </span>
+                    <span className="text-[11px] leading-tight text-[var(--ink-faint)] tabular-nums">
+                      {rotuloDoEvento(e)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             )
           })}
 
           {visiveis.length === 0 ? (
             <p
-              className="absolute inset-x-0 text-center text-[13px] text-[var(--ink-faint)]"
+              className="absolute inset-x-0 text-center text-[length:var(--t-peq)] text-[var(--ink-faint)]"
               style={{ top: centro + FOLGA_BAIXO + 22 }}
             >
               {eventos.length === 0
@@ -718,12 +809,12 @@ export default function LinhaDoTempo({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2.5">
               <span
-                className="font-medium text-[14px]"
+                className="font-medium text-[length:var(--t-base)]"
                 style={{ color: corDoRotulo(coresSelecionado) }}
               >
                 {selecionado.titulo}
               </span>
-              <span className="text-[12px] text-[var(--ink-dim)] tabular-nums">
+              <span className="text-[length:var(--t-mini)] text-[var(--ink-dim)] tabular-nums">
                 {rotuloDoEvento(selecionado)}
               </span>
             </div>
@@ -738,7 +829,7 @@ export default function LinhaDoTempo({
                 return (
                   <span
                     key={slug}
-                    className="text-[11px] rounded-full border px-1.5 py-0.5"
+                    className="text-[11px] rounded-[var(--raio-peq)] border px-1.5 py-0.5"
                     style={{ borderColor: m.cor, color: m.cor }}
                   >
                     {m.nome}
@@ -748,14 +839,14 @@ export default function LinhaDoTempo({
             </div>
 
             {selecionado.descricao ? (
-              <p className="text-[12.5px] leading-snug text-[var(--ink-dim)] mt-1.5 text-pretty">
+              <p className="text-[length:var(--t-mini)] leading-snug text-[var(--ink-dim)] mt-1.5 text-pretty">
                 {selecionado.descricao}
               </p>
             ) : null}
             {selecionado.resumo_slug ? (
               <Link
                 href={`/resumos/${selecionado.resumo_slug}`}
-                className="inline-block text-[12.5px] text-[var(--acento)] hover:underline mt-1.5"
+                className="inline-block text-[length:var(--t-mini)] text-[var(--acento)] hover:underline mt-1.5"
               >
                 Abrir o resumo →
               </Link>
@@ -765,7 +856,7 @@ export default function LinhaDoTempo({
             type="button"
             onClick={() => setSelecionado(null)}
             aria-label="Fechar detalhe"
-            className="shrink-0 w-7 h-7 rounded-md text-[var(--ink-faint)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+            className="shrink-0 w-7 h-7 rounded-[var(--raio-peq)] text-[var(--ink-faint)] hover:bg-[var(--sel)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
           >
             ✕
           </button>
