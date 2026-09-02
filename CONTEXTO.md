@@ -352,6 +352,10 @@ Subscrito e sobrescrito são marcas (`<sub>`, `<sup>`), não caracteres Unicode.
 Os resumos antigos traziam `v₀` e `x²` colados, mas o Unicode só cobre alguns
 caracteres (não existe `q` subscrito) e não acompanha o tamanho do texto.
 
+**O que o editor de equações oferece mudou em 02/09 — ver 8d.** As paletas
+deixaram de ser sete listas escritas à mão e passaram a cobrir tudo o que o
+KaTeX desenha. A paleta `Ω Símbolos` desta decisão não foi tocada.
+
 **8c. As tabelas do editor viraram as caixas do Google Docs.**
 Os resumos de origem usavam tabela de uma célula só como caixa de destaque, e
 tabelas de duas colunas para linha do tempo (ano | evento) e glossário
@@ -360,6 +364,74 @@ dos dois usos reais. O CSS de tabela vive em `.conteudo-resumo`, então sai
 igual no editor e na página publicada — e tem uma media query que faz a tabela
 rolar sozinha no celular, porque não há garantia de que o `.tableWrapper` do
 TipTap venha dentro do HTML salvo.
+
+**8d. O editor de equações escreve TUDO o que o KaTeX desenha, e o catálogo é
+gerado da fonte dele.** (02/09/2026)
+
+As paletas eram sete listas escritas à mão, ~140 símbolos. Bastavam para o que
+já tinha sido migrado e falhavam no primeiro pedido de fora da lista — e o que
+o autor faz quando o símbolo não está ali é o que ele já fazia antes de o
+editor existir: procurar fora do site e colar.
+
+**O teto não é o Unicode; é o KaTeX.** A prévia renderiza com
+`throwOnError: true` e o botão "Inserir" trava no erro, então símbolo que o
+KaTeX não conhece não teria como ser escrito de qualquer jeito — e, se
+entrasse, quebraria na página do aluno, que é renderizada pelo mesmo motor
+(decisão 8). Prometer "todos os símbolos matemáticos" sem esse recorte seria
+promessa que a tela não pode cumprir.
+
+Por isso `ferramentas/gera-catalogo-simbolos.mjs` lê `node_modules/katex/src` e
+**renderiza cada candidato** antes de aceitá-lo; o que sai é
+`admin/editor/catalogo.ts`, com **693 comandos** que, por construção, são
+exatamente o conjunto que a tela consegue mostrar. Junto com as paletas
+curadas, são **749 botões em 12 abas**. Rode o gerador de novo quando o KaTeX
+for atualizado — a versão é exata no `package.json`, então ele não caduca
+sozinho.
+
+**As duas camadas, e a ordem é a decisão.** O que está escrito à mão em
+`paletas.ts` continua abrindo cada aba: são os símbolos do dia a dia, na ordem
+que faz sentido e com o gabarito de cursor pensado (a fração já para no
+numerador). A cauda gerada vem depois. Ordenar tudo junto — alfabético, por
+Unicode — afogaria a fração entre trinta variantes de dois pontos.
+
+**Sem busca, o catálogo seria pior que a lista curta.** Doze abas com até 190
+botões não se navegam por rolagem: o que estava a um relance vira caçada. A
+busca varre TUDO de uma vez, ignorando a aba aberta, e casa três coisas porque
+são três jeitos reais de saber o que se quer: o nome em português ("raiz"), o
+comando (`\sqrt`) e **o próprio caractere colado de fora** (`≠`) — este último
+é o caso que motivou a mudança.
+
+Quatro armadilhas que o caminho óbvio tem, e que só apareceram medindo:
+
+- **O `replace` do `defineSymbol` não serve para busca por caractere.** `\neq`
+  não é símbolo do KaTeX: é macro que expande para `\not=`, então o campo vem
+  vazio e colar um `≠` não acharia nada. Quem sabe é o **MathML**, que carrega
+  o `≠`, o `∉` e o `≰` prontos. Vale para as ~60 negações e para todo apelido
+  (`\R`, `\dots`, `\lArr`).
+- **Tirar todo acento combinante inverte o sentido do símbolo.** Em Unicode
+  `≠` é `=` mais uma barra, e `∉` é `∈` mais a mesma barra. Normalizar sem
+  recorte transformava os dois no sinal que eles NEGAM: buscar `≠` trazia `=`
+  no topo. Por isso o `normalizar` só tira acento de **letra latina**.
+- **Deduplicar por caractere apaga desenho que existe.** `\ne` e `\neq` são o
+  mesmo botão, mas `\Gamma` e `\varGamma` levam ao mesmo `Γ` do Unicode e são
+  reto e itálico. A chave é o **HTML renderizado**, não o caractere — e
+  gabarito não entra na dedupe, senão `\frac` engoliria `\tfrac`, que é
+  justamente a escolha que se faz na fórmula em bloco.
+- **Macro não tem grupo, e caía tudo em "Símbolos".** O `grupo` do
+  `defineSymbol` só existe para os símbolos declarados ali; as ~280 macros
+  (`\ne`, `\sube`, `\isin`, `\larr`) ficavam no balaio. Quem classifica agora é
+  `katex.__parse`, que expande a macro e diz o que ela virou. "Símbolos" caiu
+  de 153 para 94 botões, e "Relações" recebeu os que eram dela.
+
+**O custo está medido e fica onde já estava:** 44 KB de fonte, **9,7 KB
+comprimidos**, num chunk referenciado só por
+`admin/editor/[slug]` e `admin/editor/novo` — conferido nos
+`page_client-reference-manifest.js` do build, do mesmo jeito que a decisão 8
+confere o motor de 716 KB. Nenhum aluno paga por isso.
+
+**A paleta `Ω Símbolos` da barra de ferramentas continua sendo outro caminho**,
+e não foi tocada: ela insere o caractere direto no texto, sem KaTeX
+(decisão 8b). Símbolo solto no meio da frase e fórmula inteira seguem separados.
 
 **9. A hierarquia é escrita à mão (`pai_id`), nunca deduzida dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles

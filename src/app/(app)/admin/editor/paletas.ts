@@ -6,12 +6,28 @@
  *   mostra — o que aparece no botão (renderizado com KaTeX)
  *   latex  — o que é inserido no campo
  *   nome   — texto do tooltip, em português
+ *   alias  — sinônimos e o caractere Unicode, só para a busca achar
  *
  * `@` dentro do latex marca onde o cursor deve parar depois de inserir, e onde
  * ficam os "buracos" a preencher. É trocado por {} antes de renderizar.
+ *
+ * DUAS CAMADAS, E A ORDEM É A DECISÃO
+ * -----------------------------------
+ * O que está escrito à mão neste arquivo abre cada paleta: são os símbolos que
+ * o autor usa todo dia, na ordem em que fazem sentido e com o gabarito de
+ * cursor pensado (a fração já deixa o cursor no numerador). Depois deles vem o
+ * `CATALOGO`, gerado da própria fonte do KaTeX, que garante que NADA falta —
+ * 726 comandos, todos conferidos pela renderização.
+ *
+ * A ordem é o ponto: fila curada primeiro faz a paleta continuar navegável por
+ * reconhecimento; ordenar tudo junto (alfabético, por Unicode) afogaria a
+ * fração entre trinta variantes de dois pontos. Quem procura o que não está na
+ * frente usa a busca, que varre as duas camadas de uma vez.
  */
 
-export type Simbolo = { mostra: string; latex: string; nome: string }
+import { CATALOGO } from './catalogo'
+
+export type Simbolo = { mostra: string; latex: string; nome: string; alias?: string }
 export type Paleta = { id: string; rotulo: string; simbolos: Simbolo[] }
 
 const grego: Simbolo[] = [
@@ -174,15 +190,110 @@ const estruturas: Simbolo[] = [
   { mostra: '\\overbrace{ab}', latex: '\\overbrace{@}^{}', nome: 'chave em cima' },
 ]
 
+/**
+ * Junta a fila curada com a cauda do catálogo, sem repetir o que já está na
+ * frente. O `alias` carrega o caractere Unicode e os comandos que desenham o
+ * mesmo sinal (`\ne` para o `\neq` que ficou), que é o que faz colar um `≠` na
+ * busca encontrar o símbolo.
+ */
+function comCatalogo(id: string, curados: Simbolo[] = []): Simbolo[] {
+  const jaTem = new Set(curados.map((s) => s.latex))
+  // o sinônimo entra no mapa junto com o comando: a curada escreve `\neq`, e no
+  // catálogo o dono do `≠` é o `\ne`, que carrega `\neq` como sinônimo
+  const caractereDe = new Map<string, string>()
+  for (const i of CATALOGO[id] ?? []) {
+    if (!i.c) continue
+    for (const nome of [i.l, ...(i.s?.split(' ') ?? [])]) caractereDe.set(nome, i.c)
+  }
+
+  // O símbolo curado costuma ser um GABARITO (`\oint_{@}`), e o catálogo tem o
+  // comando cru (`\oint`) com o caractere. Sem emprestar o caractere, colar um
+  // `∮` na busca acharia só a versão crua — e a curada é a melhor das duas,
+  // porque já põe o cursor no limite de baixo.
+  const comAlias = curados.map((s) => {
+    const base = s.latex.match(/\\[a-zA-Z]+/)?.[0]
+    const chr = base ? caractereDe.get(base) : undefined
+    return chr ? { ...s, alias: [s.alias, chr].filter(Boolean).join(' ') } : s
+  })
+
+  const cauda = (CATALOGO[id] ?? [])
+    .filter((i) => !jaTem.has(i.l))
+    .map((i) => ({
+      // espaço não desenha nada: o botão sairia em branco e a paleta inteira
+      // ficaria uma fileira de vazios. As barras mostram o tamanho do vão.
+      mostra: id === 'espacos' ? `|${i.l}|` : (i.m ?? i.l),
+      latex: i.l,
+      nome: i.n,
+      alias: [i.c, i.s].filter(Boolean).join(' ') || undefined,
+    }))
+  return [...comAlias, ...cauda]
+}
+
 export const PALETAS: Paleta[] = [
-  { id: 'operacoes', rotulo: 'Operações', simbolos: operacoes },
-  { id: 'grego', rotulo: 'Letras gregas', simbolos: grego },
-  { id: 'relacoes', rotulo: 'Relações', simbolos: relacoes },
-  { id: 'setas', rotulo: 'Setas', simbolos: setas },
-  { id: 'simbolos', rotulo: 'Símbolos', simbolos: simbolos },
-  { id: 'estruturas', rotulo: 'Estruturas', simbolos: estruturas },
+  { id: 'operacoes', rotulo: 'Operações', simbolos: comCatalogo('operacoes', operacoes) },
+  { id: 'grego', rotulo: 'Letras gregas', simbolos: comCatalogo('grego', grego) },
+  { id: 'relacoes', rotulo: 'Relações', simbolos: comCatalogo('relacoes', relacoes) },
+  { id: 'setas', rotulo: 'Setas', simbolos: comCatalogo('setas', setas) },
+  { id: 'simbolos', rotulo: 'Símbolos', simbolos: comCatalogo('simbolos', simbolos) },
+  { id: 'delimitadores', rotulo: 'Delimitadores', simbolos: comCatalogo('delimitadores') },
+  { id: 'acentos', rotulo: 'Acentos e marcas', simbolos: comCatalogo('acentos') },
+  { id: 'estruturas', rotulo: 'Estruturas', simbolos: comCatalogo('estruturas', estruturas) },
+  { id: 'estilos', rotulo: 'Estilos de letra', simbolos: comCatalogo('estilos') },
+  { id: 'funcoes', rotulo: 'Funções', simbolos: comCatalogo('funcoes') },
+  { id: 'espacos', rotulo: 'Espaços', simbolos: comCatalogo('espacos') },
   { id: 'quimica', rotulo: 'Química', simbolos: quimica },
 ]
+
+/**
+ * Tira acento e caixa: quem digita "epsilon" tem de achar "épsilon".
+ *
+ * O recorte a LETRA LATINA não é preciosismo. Em Unicode `≠` é `=` mais uma
+ * barra combinante, e `∉` é `∈` mais a mesma barra — tirar todo combinante
+ * transformaria os dois no sinal que eles NEGAM, e colar um `≠` na busca
+ * traria `=` no topo, dizendo o contrário do que o autor procurou.
+ */
+function normalizar(texto: string) {
+  return texto
+    .normalize('NFD')
+    .replace(/([A-Za-z])[̀-ͯ]+/g, '$1')
+    .normalize('NFC')
+    .toLowerCase()
+}
+
+/**
+ * Índice único da busca. Um símbolo pode estar em mais de uma paleta (o `\cup`
+ * é operação e é conjunto), então a chave é o LaTeX — sem isso o mesmo botão
+ * apareceria duas vezes no resultado.
+ */
+const INDICE = (() => {
+  const porLatex = new Map<string, { simbolo: Simbolo; chave: string }>()
+  for (const paleta of PALETAS) {
+    for (const s of paleta.simbolos) {
+      if (porLatex.has(s.latex)) continue
+      porLatex.set(s.latex, {
+        simbolo: s,
+        chave: normalizar([s.nome, s.latex, s.alias, paleta.rotulo].filter(Boolean).join(' ')),
+      })
+    }
+  }
+  return [...porLatex.values()]
+})()
+
+/** Quantos símbolos o editor sabe escrever. Vai no rodapé da barra. */
+export const TOTAL_DE_SIMBOLOS = INDICE.length
+
+export function buscarSimbolos(termo: string, teto = 200): Simbolo[] {
+  const alvo = normalizar(termo.trim())
+  if (!alvo) return []
+  // termos separados por espaço são um E: "seta dupla" acha só quem tem os dois
+  const partes = alvo.split(/\s+/)
+  const achados: Simbolo[] = []
+  for (const { simbolo, chave } of INDICE) {
+    if (partes.every((p) => chave.includes(p))) achados.push(simbolo)
+    if (achados.length >= teto) break
+  }
+  return achados
+}
 
 /** Fórmulas inteiras, pra quem prefere começar de um exemplo. */
 export const EXEMPLOS: { nome: string; latex: string }[] = [
