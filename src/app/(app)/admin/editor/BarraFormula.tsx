@@ -3,12 +3,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import katex from 'katex'
 import 'katex/dist/contrib/mhchem.mjs'
-import { PALETAS, EXEMPLOS, type Simbolo } from './paletas'
+import { PALETAS, EXEMPLOS, buscarSimbolos, TOTAL_DE_SIMBOLOS, type Simbolo } from './paletas'
 
 /**
  * Barra de equação no espírito do Google Docs: paletas de símbolos clicáveis,
  * campo com o LaTeX e prévia ao vivo. O autor monta a fórmula clicando; quem
  * já sabe LaTeX digita direto no campo. Os dois caminhos editam a mesma coisa.
+ *
+ * A BUSCA É O QUE FAZ O CATÁLOGO INTEIRO SER USÁVEL
+ * -------------------------------------------------
+ * As paletas passaram de ~140 símbolos para os 726 que o KaTeX sabe desenhar
+ * (ver `catalogo.ts`). Doze abas com até 180 botões cada não se navegam só por
+ * rolagem: o que estava a um relance de olho vira uma caçada. Por isso a busca
+ * vem junto e varre TUDO de uma vez, ignorando a aba aberta — e casa três
+ * coisas, porque as três são jeitos reais de saber o que se quer: o nome em
+ * português ("raiz"), o comando ("\\sqrt") e o próprio caractere colado de
+ * outro lugar ("√"). O último é o caso que motivou tudo: o autor achava o
+ * símbolo fora do site e colava.
  */
 
 export type Alvo =
@@ -90,6 +101,7 @@ export default function BarraFormula({
   const [latex, setLatex] = useState(alvo.modo === 'editar' ? alvo.latex : '')
   const [emBloco, setEmBloco] = useState(alvo.emBloco)
   const [paleta, setPaleta] = useState(PALETAS[0].id)
+  const [busca, setBusca] = useState('')
   const campo = useRef<HTMLTextAreaElement>(null)
   const cursorDesejado = useRef<number | null>(null)
 
@@ -126,16 +138,21 @@ export default function BarraFormula({
     aoConfirmar(latex.trim(), emBloco)
   }
 
+  const procurando = busca.trim().length > 0
+  const resultados = useMemo(() => (procurando ? buscarSimbolos(busca) : []), [busca, procurando])
   const simbolosDaPaleta = PALETAS.find((p) => p.id === paleta)?.simbolos ?? []
+  const naGrade = procurando ? resultados : simbolosDaPaleta
 
   return (
     <div
       className="border-b border-[var(--line)] bg-[var(--panel)]"
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation()
-          aoCancelar()
-        }
+        if (e.key !== 'Escape') return
+        e.stopPropagation()
+        // Esc limpa a busca antes de fechar a barra: quem procurou e não achou
+        // quer voltar à paleta, não perder a fórmula que já montou
+        if (procurando) setBusca('')
+        else aoCancelar()
       }}
     >
       {/* abas das paletas */}
@@ -145,9 +162,12 @@ export default function BarraFormula({
             key={p.id}
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setPaleta(p.id)}
+            onClick={() => {
+              setPaleta(p.id)
+              setBusca('')
+            }}
             className={`px-2.5 py-1 rounded text-[12px] ${
-              paleta === p.id
+              paleta === p.id && !procurando
                 ? 'bg-[var(--sel)] font-medium text-[var(--ink)]'
                 : 'text-[var(--ink-dim)] hover:bg-[var(--sel)]'
             }`}
@@ -156,7 +176,7 @@ export default function BarraFormula({
           </button>
         ))}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-dim)] cursor-pointer">
             <input
               type="checkbox"
@@ -169,11 +189,37 @@ export default function BarraFormula({
         </div>
       </div>
 
+      {/* busca — varre as doze paletas de uma vez */}
+      <div className="px-3 pt-2 flex items-center gap-2">
+        <input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder={`Buscar entre ${TOTAL_DE_SIMBOLOS} símbolos: nome, comando ou o próprio sinal…`}
+          aria-label="Buscar símbolo por nome, comando LaTeX ou caractere"
+          spellCheck={false}
+          className="flex-1 min-w-0 h-[28px] text-[12px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-2.5 outline-none focus:border-[var(--stamp)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+        />
+        {procurando ? (
+          <span aria-live="polite" className="text-[11px] text-[var(--ink-dim)] whitespace-nowrap">
+            {resultados.length === 0
+              ? 'nada encontrado'
+              : `${resultados.length}${resultados.length >= 200 ? '+' : ''} resultado${resultados.length === 1 ? '' : 's'}`}
+          </span>
+        ) : null}
+      </div>
+
       {/* grade de símbolos */}
-      <div className="px-3 py-2 flex flex-wrap gap-0.5 max-h-[132px] overflow-y-auto">
-        {simbolosDaPaleta.map((s) => (
-          <BotaoSimbolo key={s.nome} simbolo={s} aoEscolher={inserir} />
+      <div className="px-3 py-2 flex flex-wrap gap-0.5 max-h-[152px] overflow-y-auto">
+        {naGrade.map((s) => (
+          <BotaoSimbolo key={s.latex} simbolo={s} aoEscolher={inserir} />
         ))}
+        {procurando && resultados.length === 0 ? (
+          <p className="text-[12px] text-[var(--ink-dim)] py-2">
+            Nenhum símbolo com isso. O editor escreve o que o KaTeX desenha — se o sinal não está
+            aqui, ele não renderiza na página do aluno.
+          </p>
+        ) : null}
       </div>
 
       {/* campo + prévia */}
