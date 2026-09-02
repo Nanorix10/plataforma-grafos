@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
 import { PROCESSOS } from '@/lib/processos'
+import { getFormulasSalvas } from '@/lib/formulas'
 import ResumoForm from '../ResumoForm'
 
 export default async function NovoResumoPage() {
@@ -17,12 +18,16 @@ export default async function NovoResumoPage() {
 
   // os tópicos do edital que o resumo novo pode cobrir (decisão 9i); o
   // formulário filtra pela matéria escolhida
-  const { data: topicos } = await supabase
-    .from('edital_topicos')
-    .select('id, texto, etapa, processo_slug, materia_slug, resumo_id')
-    .order('processo_slug')
-    .order('etapa')
-    .order('ordem')
+  const [{ data: topicos }, formulas] = await Promise.all([
+    supabase
+      .from('edital_topicos')
+      .select('id, texto, etapa, processo_slug, materia_slug, resumo_id')
+      .order('processo_slug')
+      .order('etapa')
+      .order('ordem'),
+    // as fórmulas guardadas do autor (decisão 8e)
+    getFormulasSalvas(),
+  ])
 
   const topicosEdital = (topicos ?? []).map((x) => ({
     id: x.id,
@@ -40,6 +45,7 @@ export default async function NovoResumoPage() {
         titulos={titulos}
         candidatosPai={todos ?? []}
         topicosEdital={topicosEdital}
+        formulas={formulas}
       />
     </div>
   )

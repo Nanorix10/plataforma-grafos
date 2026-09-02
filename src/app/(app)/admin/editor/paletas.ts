@@ -252,7 +252,7 @@ export const PALETAS: Paleta[] = [
  * transformaria os dois no sinal que eles NEGAM, e colar um `≠` na busca
  * traria `=` no topo, dizendo o contrário do que o autor procurou.
  */
-function normalizar(texto: string) {
+export function normalizar(texto: string) {
   return texto
     .normalize('NFD')
     .replace(/([A-Za-z])[̀-ͯ]+/g, '$1')
