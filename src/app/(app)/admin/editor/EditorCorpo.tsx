@@ -22,6 +22,9 @@ import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
 import BarraFormula, { type Alvo } from './BarraFormula'
+import { salvarFormula, excluirFormula } from './actions'
+// `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
+import type { FormulaSalva } from '@/lib/formulas'
 import Regua from './Regua'
 import { Imagem, TabelaLivre } from './imagem'
 import { TituloCorrido } from './tituloCorrido'
@@ -629,10 +632,16 @@ export default function EditorCorpo({
   margemEsq,
   margemDir,
   aoMudarMargens,
+  formulasIniciais = [],
 }: {
   conteudoInicial: string
   titulos: string[]
   resumoId?: string
+  /* As fórmulas guardadas (decisão 8e). Vêm da página porque a `BarraFormula`
+     monta e desmonta a cada uso — buscá-las lá dentro custaria uma ida ao
+     servidor por abertura da barra. Quem as segura entre aberturas é este
+     componente, que monta uma vez por página. */
+  formulasIniciais?: FormulaSalva[]
   /* Cor da matéria escolhida no formulário, repassada à folha como
      `--cor-materia`. Vem de fora (e não do `MATERIAS` aqui dentro) porque o
      `<select>` ainda pode mudar depois de o editor montar: quem segura esse
@@ -651,6 +660,9 @@ export default function EditorCorpo({
   const [palavras, setPalavras] = useState(0)
   const [telaCheia, setTelaCheia] = useState(false)
   const [alvoFormula, setAlvoFormula] = useState<Alvo | null>(null)
+  /* As duas ações devolvem a lista já atualizada, então não há um segundo
+     pedido para relê-la — e a lista sobrevive à barra fechar e reabrir. */
+  const [formulas, setFormulas] = useState<FormulaSalva[]>(formulasIniciais)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /* O editor por referência, e não pela variável do `useEditor`: os handlers de
@@ -940,9 +952,16 @@ export default function EditorCorpo({
           // remonta ao trocar de fórmula, pra o campo carregar o LaTeX certo
           key={alvoFormula.modo === 'editar' ? `e${alvoFormula.pos}` : 'novo'}
           alvo={alvoFormula}
+          formulas={formulas}
           aoConfirmar={confirmarFormula}
           aoRemover={removerFormula}
           aoCancelar={() => setAlvoFormula(null)}
+          aoSalvarFormula={async (nome, latex, emBloco) => {
+            setFormulas(await salvarFormula(nome, latex, emBloco))
+          }}
+          aoExcluirFormula={async (id) => {
+            setFormulas(await excluirFormula(id))
+          }}
         />
       ) : null}
 

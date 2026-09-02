@@ -5,6 +5,8 @@ import { salvarResumo, excluirResumo } from './actions'
 import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
 import EditorCorpo from './EditorCorpo'
+// `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
+import type { FormulaSalva } from '@/lib/formulas'
 import BotaoEnviar from '@/components/BotaoEnviar'
 import { MARGEM_PADRAO } from '@/lib/pagina'
 
@@ -119,12 +121,15 @@ export default function ResumoForm({
   candidatosPai = [],
   topicosEdital = [],
   topicosMarcados = [],
+  formulas = [],
 }: {
   resumo?: ResumoExistente
   titulos?: string[]
   candidatosPai?: CandidatoPai[]
   topicosEdital?: TopicoDoEdital[]
   topicosMarcados?: string[]
+  /* Só passa adiante, para o EditorCorpo (decisão 8e). */
+  formulas?: FormulaSalva[]
 }) {
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
@@ -344,6 +349,7 @@ export default function ResumoForm({
         <EditorCorpo
           conteudoInicial={resumo?.corpo ?? ''}
           titulos={titulos}
+          formulasIniciais={formulas}
           resumoId={resumo?.id}
           /* `materia` é estado, não `resumo.materia_slug`: trocar a matéria no
              `<select>` acima recolore a folha na hora, sem salvar antes. */

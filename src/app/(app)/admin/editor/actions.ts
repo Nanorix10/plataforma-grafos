@@ -4,12 +4,16 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getSessao } from '@/lib/sessao'
 import { MARGEM_PADRAO, ajustarMargens } from '@/lib/pagina'
+import type { FormulaSalva } from '@/lib/formulas'
 
 async function exigirAdmin() {
   const { supabase, userId, isAdmin } = await getSessao()
   if (!userId || !isAdmin) redirect('/resumos')
   return supabase
 }
+
+/** O cliente que `exigirAdmin` devolve, sem ter de nomear o genérico do supabase-js. */
+type SupabaseDoServidor = Awaited<ReturnType<typeof exigirAdmin>>
 
 export async function salvarResumo(formData: FormData) {
   const supabase = await exigirAdmin()
@@ -154,4 +158,79 @@ export async function excluirResumo(formData: FormData) {
   revalidatePath('/resumos')
   revalidatePath('/mapa')
   redirect('/admin/editor')
+}
+
+/* ---------------------------------------------------------------------------
+   Fórmulas salvas (decisão 8e)
+
+   As duas ações devolvem a LISTA INTEIRA já atualizada, em vez de só um "deu
+   certo". A `BarraFormula` monta e desmonta a cada uso, então ela não tem como
+   guardar estado entre aberturas; quem segura a lista é o `EditorCorpo`, e o
+   retorno é o que o deixa acertar a lista sem uma segunda ida ao servidor.
+   O `revalidatePath` continua, para quem recarregar a página achar o mesmo.
+--------------------------------------------------------------------------- */
+
+const CAMPOS_FORMULA = 'id, nome, latex, em_bloco'
+
+async function listarFormulas(supabase: SupabaseDoServidor): Promise<FormulaSalva[]> {
+  const { data } = await supabase.from('formulas_salvas').select(CAMPOS_FORMULA).order('nome')
+  return data ?? []
+}
+
+export async function salvarFormula(
+  nome: string,
+  latex: string,
+  emBloco: boolean
+): Promise<FormulaSalva[]> {
+  const supabase = await exigirAdmin()
+
+  // O servidor reconfere tudo o que a tela já conferiu: server action é
+  // endereço público, mesmo princípio da lista colada da decisão 10c.
+  const limpo = nome.trim()
+  const tex = latex.trim()
+  if (!limpo) throw new Error('A fórmula precisa de um nome.')
+  if (!tex) throw new Error('Não há fórmula para guardar.')
+  if (limpo.length > 80) throw new Error('O nome deve ter no máximo 80 caracteres.')
+  if (tex.length > 2000) throw new Error('A fórmula é longa demais para ser guardada.')
+
+  // Procura pelo NOME, e não por um id vindo do cliente — o nome é a
+  // identidade (ver a migration). A comparação sem caixa é a mesma que a tela
+  // usa para avisar "já existe"; se as duas divergissem, a tela prometeria
+  // substituir e o banco criaria uma segunda linha.
+  //
+  // A lista inteira desce em vez de um `ilike`: `_` e `%` são curingas do
+  // Postgres, e um nome com sublinhado viraria uma busca que casa demais. São
+  // dezenas de linhas, e o RLS já recorta pelo dono.
+  const atuais = await listarFormulas(supabase)
+  const igual = atuais.find((f) => f.nome.toLowerCase() === limpo.toLowerCase())
+
+  const { error } = igual
+    ? await supabase
+        .from('formulas_salvas')
+        .update({
+          nome: limpo,
+          latex: tex,
+          em_bloco: emBloco,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', igual.id)
+    : // `user_id` não vai aqui: a coluna tem `default auth.uid()` e a policy
+      // confere que é quem está pedindo.
+      await supabase.from('formulas_salvas').insert({ nome: limpo, latex: tex, em_bloco: emBloco })
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/editor', 'layout')
+  return listarFormulas(supabase)
+}
+
+export async function excluirFormula(id: string): Promise<FormulaSalva[]> {
+  const supabase = await exigirAdmin()
+  if (!id) throw new Error('id obrigatório.')
+
+  const { error } = await supabase.from('formulas_salvas').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/editor', 'layout')
+  return listarFormulas(supabase)
 }

@@ -433,6 +433,87 @@ confere o motor de 716 KB. Nenhum aluno paga por isso.
 e não foi tocada: ela insere o caractere direto no texto, sem KaTeX
 (decisão 8b). Símbolo solto no meio da frase e fórmula inteira seguem separados.
 
+**8e. A fórmula que o autor monta pode ser guardada com nome, e mora no
+banco.** (02/09/2026)
+
+A decisão 8d deu ao editor todos os símbolos que o KaTeX desenha. O que ele
+ainda não tinha era MEMÓRIA: nada do que o autor monta sobrevive ao fechar a
+barra, e as fórmulas que reaparecem são justamente as centrais de cada matéria
+— Bhaskara, Torricelli, Clapeyron, a síntese da amônia. Vinte caracteres de
+LaTeX remontados do zero toda vez.
+
+**Por que tabela, e não `localStorage`.** O navegador sairia sem migration
+nenhuma e morreria com a primeira limpeza de dados do site, não existiria no
+outro computador nem no celular, e não teria como ser recuperado. Isto é uma
+biblioteca construída ao longo de meses.
+
+**Por que por usuário, e não comum entre admins.** É a bancada de quem
+escreve, não conteúdo do acervo — daí ler ser `user_id = auth.uid()` e não "
+qualquer autenticado" como em `eventos`, onde o dado É do acervo. Abrir depois
+para uma biblioteca compartilhada é uma policy a menos; fechar depois de aberta
+seria tirar da vista o que alguém já usava.
+
+Três decisões dentro da tabela:
+
+- **O nome é a identidade, e a unicidade ignora a caixa.** Salvar "Bhaskara"
+  duas vezes atualiza a que existe. O índice é sobre `(user_id, lower(nome))`
+  porque a TELA compara sem caixa para avisar "já existe": com índice sensível
+  a maiúsculas, a interface prometeria substituir e o banco criaria uma segunda
+  linha — a tela mentiria, em silêncio.
+- **`em_bloco` vai junto do LaTeX.** "Linha própria" faz parte da fórmula, não
+  do momento em que ela foi usada; guardar só o LaTeX obrigaria a reajustar o
+  interruptor a cada reuso. Clicar na fórmula guardada religa o interruptor.
+- **`on delete cascade` no dono**, ao contrário do `set null` de
+  `eventos.resumo_id`: lá o evento continua sendo verdade sem o resumo, aqui a
+  linha não significa nada sem o dono.
+
+**"Minhas fórmulas" é LISTA, e as outras doze abas são grade.** A grade existe
+para varrer glifo por reconhecimento; uma fórmula guardada tem NOME, e o nome é
+o que se procura. Nome à esquerda em coluna fixa, desenho à direita — nessa
+ordem, porque o nome é a identidade e não pode cortar nunca. **A primeira
+versão punha o desenho numa coluna fixa de 200px e cortava fórmula longa em
+silêncio** (231px de conteúdo, pego medindo na maquete): agora o desenho ocupa
+o resto e ESMAECE no fim quando não cabe, com o LaTeX inteiro no `title`. Corte
+seco parece defeito; esmaecido diz que tem mais.
+
+Clicar INSERE no cursor, como todo botão da barra — uma regra só. Com o campo
+vazio (o caso normal ao abrir), inserir e substituir dão no mesmo. **O
+"Começar de um exemplo…" continua SUBSTITUINDO o campo**, e são duas regras na
+mesma barra: verruga declarada, não descuido. Ele é um ponto de partida e diz
+isso no rótulo.
+
+**Quem segura a lista é o `EditorCorpo`, não a barra.** A `BarraFormula` monta
+e desmonta a cada uso (tem `key`), então não tem como guardar estado entre
+aberturas — buscar lá dentro custaria uma ida ao servidor por abertura. A
+página busca uma vez e passa adiante; as duas server actions **devolvem a lista
+inteira já atualizada** em vez de um "deu certo", que é o que deixa a tela
+acertar sem um segundo pedido.
+
+**A ordem é alfabética, não pela mais recente.** Quem abre a aba procura uma
+fórmula de que LEMBRA o nome. "A última que salvei" é o caso raro, e para ele
+existe a busca — que também acha as guardadas, por nome, junto com os símbolos.
+
+Duas armadilhas fechadas, e a segunda vale além desta tela:
+
+- **`import type` é obrigatório** onde `lib/formulas.ts` é citado por
+  componente de cliente. Ele importa `getSessao` → `next/headers`; como tipo é
+  apagado na compilação, como valor quebraria o build. Mesma armadilha da
+  decisão 9d, que obrigou `lib/tempo.ts` a existir. Conferido no build: nenhum
+  chunk do navegador cita `formulas_salvas`.
+- **`hidden` PERDE para `flex` no Tailwind v4.** A fileira de ações levava as
+  duas classes para sumir enquanto o autor nomeia, e continuava na tela —
+  `display: flex`, medido, com o botão Inserir clicável. As duas são
+  utilitárias de `display`, e quem ganha é a ordem no CSS GERADO, não a ordem
+  no atributo `class`. A fileira passou a DESMONTAR. É a mesma família da
+  armadilha da decisão 9g-quinquies, um degrau acima: lá era CSS sem camada
+  contra utilitário, aqui é utilitário contra utilitário.
+
+**O deploy não depende da migration ter sido aplicada antes** — e isto corrige
+o que eu disse ao propor a mudança. `getFormulasSalvas` faz `data ?? []`, e uma
+tabela que não existe devolve erro com `data` nulo: a aba abre vazia e o resto
+do editor funciona. Aplicar a migration primeiro continua sendo o certo, porque
+até lá o botão Salvar falha — mas o intervalo não derruba o editor.
+
 **9. A hierarquia é escrita à mão (`pai_id`), nunca deduzida dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
