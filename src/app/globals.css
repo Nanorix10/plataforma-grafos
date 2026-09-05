@@ -432,6 +432,19 @@ h1, h2, h3, h4 {
   border-radius: var(--raio-peq);
   animation: pulsar 1.4s ease-in-out infinite;
 }
+/* A mesma barra, quando ela cai DENTRO de um cartão `--raised`.
+
+   No tema escuro `--sel` e `--raised` são a mesma cor (#29251D), então o
+   `.esqueleto` sobre cartão fica literalmente invisível — o cartão aparece, o
+   conteúdo dele não, e nada acusa. É o modo de falha da tela de espera: falha
+   em silêncio, escondendo. Até `/conta` nenhum esqueleto ficava sobre cartão,
+   e por isso nunca tinha aparecido.
+
+   `--line-forte` é a borda de cartão: o token que já existe para ser visto
+   sobre `--raised` nos dois temas. */
+.esqueleto-em-cartao {
+  background: var(--line-forte);
+}
 @keyframes pulsar {
   50% {
     opacity: 0.45;
