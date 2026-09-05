@@ -831,6 +831,25 @@ A barra lateral não entra em esqueleto nenhum: ela vive no layout do grupo, e o
 ponto do `loading.tsx` é justamente que o layout continue na tela e clicável
 enquanto o miolo carrega.
 
+**A cobertura fechou em 05/09, e o `(site)` fica de fora de propósito.**
+`/conta` era a última rota do `(app)` sem espera — e das mais lentas, porque faz
+duas idas à rede em série (`auth.getUser()` e a linha de `planos_usuarios`).
+Agora as seis rotas dinâmicas têm a sua. Já a landing e `/planos` saem do build
+como `○`, estáticas: elas não buscam nada, o HTML já está pronto quando o
+pedido chega, e um `loading.tsx` ali seria arquivo que nunca aparece. **Se
+alguma delas passar a buscar dados, o marcador do build vira `ƒ` e aí sim a
+espera é devida** — é o marcador que decide, não a impressão de que a página
+"demora".
+
+**Esqueleto dentro de cartão precisa da variante `.esqueleto-em-cartao`.** No
+tema escuro `--sel` (fundo do `.esqueleto`) e `--raised` (fundo do cartão) são a
+MESMA cor, `#29251D`. Até `/conta` nenhum esqueleto caía sobre cartão, então o
+choque nunca tinha aparecido; quando apareceu, o cartão desenhava e o miolo
+dele sumia — sem erro, sem console, visível só no tema escuro. A variante troca
+o fundo por `--line-forte`, que é o token que já existe para ser visto sobre
+`--raised` nos dois temas. É a mesma família de defeito da decisão 13b: **tela
+de espera falha em silêncio e falha escondendo.**
+
 **9f. Botão que salva mostra que está salvando.**
 Toda escrita é server action, e a espera acontece do outro lado do mundo. O
 `components/BotaoEnviar.tsx` usa `useFormStatus` — que só enxerga o formulário
