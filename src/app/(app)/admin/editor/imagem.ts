@@ -33,7 +33,45 @@ import { Table } from '@tiptap/extension-table'
  * viraria 100 pixels e a imagem encolheria sozinha ao reabrir o resumo.
  */
 
-type Quebra = 'bloco' | 'emLinha' | 'aoRedorEsq' | 'aoRedorDir'
+type Quebra =
+  | 'bloco'
+  | 'emLinha'
+  | 'aoRedorEsq'
+  | 'aoRedorDir'
+  | 'margemEsq'
+  | 'margemDir'
+
+/**
+ * A figura mora na MARGEM da folha, e não dentro da coluna.
+ *
+ * É posição do mesmo eixo que `bloco` e `aoRedor*` — nenhuma figura é bloco e
+ * lateral ao mesmo tempo —, por isso entrou aqui e não num atributo novo. O
+ * lado vai dentro do valor, como `aoRedorEsq`/`aoRedorDir` já faziam: assim
+ * cada modo tem uma regra de CSS sua, sem seletores se cruzando.
+ */
+export function naMargem(q: unknown): boolean {
+  return q === 'margemEsq' || q === 'margemDir'
+}
+
+/**
+ * O respiro entre a figura lateral e o texto.
+ *
+ * **Este número está escrito DUAS vezes**: aqui e em `--vao-lateral`, no
+ * `globals.css`. O CSS não importa de TypeScript, e o painel precisa da conta
+ * para saber se ainda sobra largura útil na margem. Se mudarem lá e não aqui, o
+ * aviso do painel passa a mentir — é a mesma armadilha do `ALTURA_CARTAO` do
+ * `loading.tsx` da linha do tempo.
+ */
+export const VAO_LATERAL = 16
+
+/**
+ * Abaixo disto a lateral não serve para nada.
+ *
+ * O `max-width` amarrado à régua impede a figura de sair da folha, e só isso:
+ * com a margem em 60px ela ficaria com 44px de largura, ilegível, e o aluno
+ * receberia esse selo como se fosse intenção. O painel avisa antes.
+ */
+export const LARGURA_MINIMA_LATERAL = 90
 
 /** Lê um atributo no elemento ou no `<img>` de dentro dele. */
 function pegar(el: HTMLElement, nome: string): string | null {
@@ -171,7 +209,11 @@ export const Imagem = Node.create({
         class: 'figura',
         'data-quebra': a.quebra,
         'data-alinhamento': a.alinhamento,
-        'data-escapa': a.escapa ? 'sim' : null,
+        /* `escapa` e os modos de margem são opostos exatos: um faz a figura
+           comer as duas margens, o outro a faz morar dentro de uma. O painel já
+           impede a combinação, mas HTML antigo pode chegar com `escapa` gravado
+           e ser trocado para lateral — então o atributo morre aqui também. */
+        'data-escapa': a.escapa && !naMargem(a.quebra) ? 'sim' : null,
         'data-margem': a.margem || null,
         style: estiloFigura.join(';'),
       },

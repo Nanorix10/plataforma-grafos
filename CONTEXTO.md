@@ -1395,6 +1395,52 @@ medida por cima da figura de verdade e some quando ela é desmarcada. Só as
 alças da direita puxam: as da esquerda exigiriam mover a imagem enquanto ela
 cresce, e numa figura centralizada o desenho fugiria do ponteiro.
 
+**11c-bis. A figura pode morar na MARGEM, e aí o texto não se mexe** (06/09).
+`quebra` ganhou `margemEsq` e `margemDir`. O `float` com texto ao redor resolvia
+metade do pedido "imagem ao lado sem atrapalhar o texto": a figura fica dentro
+da coluna e o parágrafo se deforma em volta dela. Nos modos novos ela sai da
+coluna e vai para a margem da folha, que estava vazia — 150px de cada lado no
+padrão, e ajustáveis pela régua.
+
+O mecanismo é o **espelho do `[data-escapa]`**: `float` mais margem negativa do
+tamanho exato da régua, lendo as mesmas `--margem-esq`/`--margem-dir`. Com a
+margem negativa, o que a caixa do float reserva dentro da coluna é negativo — e
+é por isso que o texto não encurta uma letra (medido: coluna 620, parágrafo 620,
+figura 134 começando 16px depois do fim da coluna). O `float` ainda dá a âncora
+vertical de graça, sem `position: absolute`.
+
+**Três travas que o desenho precisou:**
+
+- **`escapa` e margem são opostos exatos** — um come as duas margens, o outro
+  mora dentro de uma —, e juntos o resultado dependeria da ordem das regras. O
+  painel desliga um ao ligar o outro, o `renderHTML` não grava os dois, e o CSS
+  tem `:not([data-quebra^='margem'])`. Três porque HTML já publicado pode chegar
+  com `escapa` e ser trocado para lateral.
+- **A porcentagem passou a ter uma definição só:** é sempre do espaço onde a
+  figura mora — a coluna, no texto; a margem, na lateral. Vale para os botões e
+  para o denominador das alças, que antes era sempre a coluna.
+- **O `max-width` preso à régua não basta.** Ele impede a figura de sair da
+  folha; não impede que ela vire um selo de 44px numa margem de 60, que o aluno
+  recebe como se fosse intenção. Daí `LARGURA_MINIMA_LATERAL` (90px) e o aviso
+  no painel, que nomeia o gesto — arrastar a régua.
+
+A queda no celular é em **767px**, e não nos 640 do `aoRedor`: motivos
+diferentes. O `float` cai porque não sobra linha para contornar; o lateral cai
+porque, sem as variáveis da régua, some o lugar onde morar.
+
+Ver `docs/superpowers/specs/2026-09-06-imagem-na-margem-design.md`. A *faixa
+lateral* — o texto encolher para caber figura grande ao lado — foi recusada por
+ora com motivo: exige partir o corpo em região de duas colunas, nó novo no
+esquema.
+
+**11c-ter. O editor e a leitura discordavam entre 640 e 767px** (achado e
+consertado em 06/09). A folha do editor aplicava as margens da régua em `sm:`
+(640px) e a página do aluno em `md:` (768px): nessa faixa o editor recuava o
+texto pela régua e a leitura não — WYSIWYG quebrado sem ninguém ver. A regra de
+celular do `[data-escapa]` no `globals.css` usa `max-width: 767px`, ou seja, já
+estava casada com a página do aluno e contra o editor. Os três concordam agora,
+em `md`.
+
 **O que o Docs tem e aqui NÃO tem, de propósito:**
 
 - **Atrás do texto / à frente do texto.** Exigem posição absoluta por cima do
@@ -1707,10 +1753,16 @@ funcionam, com alinhamento, quatro larguras e a saída das margens — ver decis
 11 e 11b. A armadilha antiga (colar não dava erro, o ProseMirror descartava em
 silêncio) está fechada.
 
-Ficou de fora de propósito: **redimensionar arrastando o canto** e **legenda**.
-As duas pedem um NodeView do TipTap, que é um pedaço à parte; as quatro larguras
-prontas cobrem o caso comum, e a legenda dá para escrever como parágrafo logo
-abaixo enquanto isso.
+> [!done] Corrigido em 2026-09-06
+> ~~Ficou de fora de propósito: **redimensionar arrastando o canto** e
+> **legenda**. As duas pedem um NodeView do TipTap…~~ **As duas existem** —
+> `AlcasImagem.tsx` faz o arrasto por sobreposição (justamente para NÃO precisar
+> de NodeView, ver 11c) e `legenda` é atributo do nó, gravado como
+> `<figcaption>`. O parágrafo acima ficou para trás quando elas foram
+> construídas, e sobreviveu duas semanas afirmando o contrário do código.
+
+Desde 06/09 a figura também pode morar **na margem da folha**, sem o texto se
+mexer (11c-bis).
 
 Continua valendo o atalho para tirar as imagens do Google Docs: **`.docx` é um
 zip**. Baixando o documento como Word, as imagens ficam todas em `word/media/`,

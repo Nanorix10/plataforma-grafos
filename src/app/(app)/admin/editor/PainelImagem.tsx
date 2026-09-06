@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import type { Editor } from '@tiptap/react'
-import { LARGURAS } from './imagem'
+import { LARGURA_MINIMA_LATERAL, LARGURAS, naMargem, VAO_LATERAL } from './imagem'
 import { enviarImagem } from './actions'
 
 /**
@@ -106,16 +106,35 @@ export default function PainelImagem({
   editor,
   aoEnviarErro,
   aoMudarEnvio,
+  margemEsq,
+  margemDir,
 }: {
   editor: Editor
   aoEnviarErro: (erro: string | null) => void
   aoMudarEnvio: (delta: number) => void
+  /* As margens da régua chegam aqui só para uma coisa: saber se ainda sobra
+     largura útil quando a figura vai para a lateral. */
+  margemEsq: number
+  margemDir: number
 }) {
   const trocaRef = useRef<HTMLInputElement>(null)
   const a = editor.getAttributes('image')
 
   const set = (attrs: Record<string, unknown>) =>
     editor.chain().focus().updateAttributes('image', attrs).run()
+
+  const lateral = naMargem(a.quebra)
+
+  /** Largura que sobra na margem escolhida, já descontado o vão até o texto. */
+  const larguraDaLateral =
+    (a.quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL
+
+  /* Ir para a lateral DESLIGA o `escapa`: um faz a figura comer as duas
+     margens, o outro a faz morar dentro de uma. Deixar os dois ligados daria um
+     desenho que depende da ordem das regras de CSS. O `renderHTML` tem a mesma
+     trava, para o HTML gravado antes desta tela existir. */
+  const irParaMargem = (lado: 'margemEsq' | 'margemDir') =>
+    set({ quebra: lado, escapa: false })
 
   /** Volta tudo ao estado de imagem recém-inserida, menos o arquivo em si. */
   function redefinir() {
@@ -178,17 +197,44 @@ export default function PainelImagem({
         <Opcao ativo={a.quebra === 'aoRedorDir'} onClick={() => set({ quebra: 'aoRedorDir' })} title="O texto contorna a imagem pela esquerda">
           ◨ Texto à esquerda
         </Opcao>
-      </Grupo>
-
-      {/* ---- posição ---- */}
-      <Grupo>
-        <Opcao ativo={a.alinhamento === 'esquerda'} onClick={() => set({ alinhamento: 'esquerda' })} title="Alinhar à esquerda">⇤</Opcao>
-        <Opcao ativo={a.alinhamento === 'centro'} onClick={() => set({ alinhamento: 'centro' })} title="Centralizar">⇔</Opcao>
-        <Opcao ativo={a.alinhamento === 'direita'} onClick={() => set({ alinhamento: 'direita' })} title="Alinhar à direita">⇥</Opcao>
-        <Opcao ativo={a.escapa === true} onClick={() => set({ escapa: !a.escapa })} title="A imagem passa das margens e ocupa a folha inteira">
-          ⤢ Sair da margem
+        {/* Os dois modos laterais. **O nome muda de eixo aqui**: os rótulos
+            acima dizem onde fica o TEXTO ("Texto à direita"), porque é ele que
+            se deforma; estes dizem onde fica a FIGURA, porque o texto não se
+            mexe — não há lado de texto a nomear. */}
+        <Opcao ativo={a.quebra === 'margemEsq'} onClick={() => irParaMargem('margemEsq')} title="A imagem sai da coluna e vai para a margem esquerda da folha; o texto não muda de largura">
+          ◐ Margem esquerda
+        </Opcao>
+        <Opcao ativo={a.quebra === 'margemDir'} onClick={() => irParaMargem('margemDir')} title="A imagem sai da coluna e vai para a margem direita da folha; o texto não muda de largura">
+          ◑ Margem direita
         </Opcao>
       </Grupo>
+
+      {/* ---- posição ----
+          Some inteiro no modo lateral: `alinhamento` só tem regra de CSS sob
+          `[data-quebra='bloco']`, e "Sair da margem" é o oposto exato de morar
+          dentro dela. Controle inerte na tela é pior que controle ausente —
+          quem clica e não vê nada acontecer conclui que a tela quebrou. */}
+      {lateral ? null : (
+        <Grupo>
+          <Opcao ativo={a.alinhamento === 'esquerda'} onClick={() => set({ alinhamento: 'esquerda' })} title="Alinhar à esquerda">⇤</Opcao>
+          <Opcao ativo={a.alinhamento === 'centro'} onClick={() => set({ alinhamento: 'centro' })} title="Centralizar">⇔</Opcao>
+          <Opcao ativo={a.alinhamento === 'direita'} onClick={() => set({ alinhamento: 'direita' })} title="Alinhar à direita">⇥</Opcao>
+          <Opcao ativo={a.escapa === true} onClick={() => set({ escapa: !a.escapa })} title="A imagem passa das margens e ocupa a folha inteira">
+            ⤢ Sair da margem
+          </Opcao>
+        </Grupo>
+      )}
+
+      {/* O `max-width` do CSS impede a figura de sair da folha e só isso: numa
+          margem estreita ela vira um selo ilegível, e o aluno recebe isso como
+          se fosse intenção. O aviso nomeia o gesto que resolve. */}
+      {lateral && larguraDaLateral < LARGURA_MINIMA_LATERAL ? (
+        <p role="status" className="w-full text-[11.5px] text-[var(--stamp)] leading-snug">
+          A margem {a.quebra === 'margemEsq' ? 'esquerda' : 'direita'} tem{' '}
+          {Math.max(0, larguraDaLateral)}px úteis — a figura sairia pequena demais para
+          servir. Arraste a régua para alargar essa margem.
+        </p>
+      ) : null}
 
       {/* ---- tamanho ---- */}
       <Grupo>
