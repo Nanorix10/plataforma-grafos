@@ -925,6 +925,8 @@ export default function EditorCorpo({
               editor={editor}
               aoEnviarErro={setErroImagem}
               aoMudarEnvio={(d) => setEnviando((n) => n + d)}
+              margemEsq={margemEsq}
+              margemDir={margemDir}
             />
           ) : null}
         </>
@@ -978,7 +980,7 @@ export default function EditorCorpo({
         {/* As alças ficam AQUI, e não dentro da folha: elas são medidas em
             relação a esta caixa, que é a que rola. */}
         {editor && editor.isActive('image') ? (
-          <AlcasImagem editor={editor} containerRef={mesaRef} />
+          <AlcasImagem editor={editor} containerRef={mesaRef} margemEsq={margemEsq} margemDir={margemDir} />
         ) : null}
         {/* A régua acompanha a folha e rola junto com ela: presa no topo, ela
             apontaria para uma folha que já saiu de baixo. */}
@@ -986,10 +988,17 @@ export default function EditorCorpo({
 
         <div className="px-4">
         <div
-          /* As margens vêm da régua, em variáveis de CSS. Abaixo de `sm` elas
+          /* As margens vêm da régua, em variáveis de CSS. Abaixo de `md` elas
              são ignoradas e vale um recuo fixo de 24px: 150px de margem numa
-             tela de 390px não deixaria coluna nenhuma. */
-          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[var(--pagina)] px-6 py-8 sm:pl-[var(--margem-esq)] sm:pr-[var(--margem-dir)] sm:py-[58px] ${
+             tela de 390px não deixaria coluna nenhuma.
+
+             **Era `sm` (640px) até 06/09, e a página do aluno sempre foi `md`
+             (768px).** Entre 640 e 767 os dois desenhavam a folha diferente: o
+             editor recuava pela régua e a leitura não, com o WYSIWYG quebrado
+             nessa faixa sem ninguém ver. A regra de celular do `[data-escapa]`
+             no `globals.css` usa `max-width: 767px`, ou seja, já estava casada
+             com a página do aluno e contra o editor. Os três agora concordam. */
+          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[var(--pagina)] px-6 py-8 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] sm:py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
           /* A variável fica na folha, não no `.conteudo-resumo` do TipTap:

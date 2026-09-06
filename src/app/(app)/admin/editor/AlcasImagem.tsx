@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
+import { naMargem, VAO_LATERAL } from './imagem'
 
 /**
  * As alças de redimensionar da imagem selecionada — o gesto do Google Docs.
@@ -24,13 +25,33 @@ type Caixa = { topo: number; esq: number; larg: number; alt: number }
 export default function AlcasImagem({
   editor,
   containerRef,
+  margemEsq,
+  margemDir,
 }: {
   editor: Editor
   containerRef: React.RefObject<HTMLDivElement | null>
+  /* Só para o modo lateral: lá a porcentagem é da margem, não da coluna. */
+  margemEsq: number
+  margemDir: number
 }) {
   const [caixa, setCaixa] = useState<Caixa | null>(null)
-  const arrasto = useRef<{ x0: number; larg0: number; alt0: number; larguraDaColuna: number } | null>(null)
+  const arrasto = useRef<{
+    x0: number
+    larg0: number
+    alt0: number
+    /* O denominador da porcentagem gravada: a coluna quando a figura está no
+       texto, a margem quando está na lateral. Uma frase só, sem exceção — ver
+       a spec `2026-09-06-imagem-na-margem-design.md`. */
+    referencia: number
+    /* +1 quando arrastar para a DIREITA aumenta a figura, −1 quando é o
+       contrário. Em `margemDir` a borda de fora é a presa e quem cresce é a de
+       dentro, que fica à esquerda: sem inverter, o gesto puxa ao contrário. */
+    sinal: 1 | -1
+  } | null>(null)
   const [arrastando, setArrastando] = useState(false)
+
+  const quebra = editor.getAttributes('image').quebra
+  const lateral = naMargem(quebra)
 
   /** Acha a `<figure>` do nó selecionado e mede onde ela está na tela. */
   const medir = useCallback(() => {
@@ -80,11 +101,11 @@ export default function AlcasImagem({
       const a = arrasto.current
       if (!a) return
       e.preventDefault()
-      const nova = Math.max(24, a.larg0 + (e.clientX - a.x0))
-      /* Grava em PORCENTAGEM da coluna, não nos pixels arrastados: pixel
-         amarraria a imagem à largura da folha do dia em que foi arrastada, e
-         bastaria mexer na régua para ela estourar. */
-      const pct = Math.round((nova / a.larguraDaColuna) * 100)
+      const nova = Math.max(24, a.larg0 + (e.clientX - a.x0) * a.sinal)
+      /* Grava em PORCENTAGEM do espaço onde a figura mora, não nos pixels
+         arrastados: pixel amarraria a imagem à largura da folha do dia em que
+         foi arrastada, e bastaria mexer na régua para ela estourar. */
+      const pct = Math.round((nova / a.referencia) * 100)
       editor
         .chain()
         .updateAttributes('image', { largura: `${Math.min(100, Math.max(5, pct))}%`, altura: '' })
@@ -120,7 +141,10 @@ export default function AlcasImagem({
       x0: e.clientX,
       larg0: c.larg,
       alt0: c.alt,
-      larguraDaColuna: pai?.clientWidth || c.larg,
+      referencia: lateral
+        ? Math.max(24, (quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL)
+        : pai?.clientWidth || c.larg,
+      sinal: quebra === 'margemDir' ? -1 : 1,
     }
     setArrastando(true)
   }
@@ -138,30 +162,29 @@ export default function AlcasImagem({
           várias perto uma da outra */}
       <div className="absolute inset-0 outline outline-2 outline-[var(--acento)] outline-offset-1 rounded-[2px]" />
 
-      {/* Só as alças da direita puxam. As da esquerda exigiriam mover a imagem
-          enquanto ela cresce, e numa figura centralizada isso faz o desenho
-          fugir do ponteiro — o gesto vira briga. */}
-      <button
-        type="button"
-        tabIndex={-1}
-        onPointerDown={comecar}
-        title="Arraste para redimensionar"
-        className={`${alca} right-[-6px] top-[-6px] cursor-nesw-resize`}
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        onPointerDown={comecar}
-        title="Arraste para redimensionar"
-        className={`${alca} right-[-6px] bottom-[-6px] cursor-nwse-resize`}
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        onPointerDown={comecar}
-        title="Arraste para redimensionar"
-        className={`${alca} right-[-6px] top-1/2 -translate-y-1/2 cursor-ew-resize`}
-      />
+      {/* Puxa sempre a alça de DENTRO — a que aponta para o texto —, porque a
+          de fora fica na borda presa e arrastá-la não teria para onde crescer.
+          No fluxo normal e em `margemEsq` a de dentro é a direita, que é a de
+          sempre; em `margemDir` a borda presa é a direita (ela encosta na beira
+          da folha), então quem puxa é a esquerda.
+
+          A regra da 11c continua valendo onde ela foi escrita: numa figura
+          CENTRALIZADA, alça da esquerda faz o desenho fugir do ponteiro. Na
+          lateral não há esse problema — a figura está ancorada numa borda, e o
+          lado oposto é o único que se move. */}
+      {(lateral && quebra === 'margemDir'
+        ? ['left-[-6px] top-[-6px] cursor-nwse-resize', 'left-[-6px] bottom-[-6px] cursor-nesw-resize', 'left-[-6px] top-1/2 -translate-y-1/2 cursor-ew-resize']
+        : ['right-[-6px] top-[-6px] cursor-nesw-resize', 'right-[-6px] bottom-[-6px] cursor-nwse-resize', 'right-[-6px] top-1/2 -translate-y-1/2 cursor-ew-resize']
+      ).map((posicao) => (
+        <button
+          key={posicao}
+          type="button"
+          tabIndex={-1}
+          onPointerDown={comecar}
+          title="Arraste para redimensionar"
+          className={`${alca} ${posicao}`}
+        />
+      ))}
 
       {/* o tamanho aparece enquanto arrasta, como na régua */}
       {arrastando ? (

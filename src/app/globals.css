@@ -1079,8 +1079,55 @@ h3 {
   }
 }
 
+/* ---- a figura mora na margem ----
+   A resposta ao "quero pôr imagem ao lado sem atrapalhar o texto". O `float`
+   com texto ao redor, acima, resolve metade: a figura fica DENTRO da coluna e o
+   parágrafo se deforma em volta dela. Aqui ela sai da coluna e vai para a
+   margem da folha, que estava vazia — 150px de cada lado no padrão.
+
+   **O truque é a margem negativa do tamanho EXATO da régua**, igual ao
+   `[data-escapa]` mais abaixo: com ela, o que a caixa do float reserva dentro
+   da coluna é negativo, e o texto não encurta uma letra. O `float` continua
+   sendo quem dá a âncora vertical de graça — a figura nasce na altura do
+   parágrafo em que foi inserida, sem `position: absolute` e sem contexto de
+   posicionamento.
+
+   O `max-width` preso à mesma variável é o que impede a figura de sair da
+   folha quando a régua aperta. Ele NÃO resolve o caso todo: com margem estreita
+   a figura vira um selo ilegível, e quem avisa disso é o painel do editor
+   (`LARGURA_MINIMA_LATERAL`). */
+.conteudo-resumo {
+  /* escrito também em `VAO_LATERAL`, no `admin/editor/imagem.ts` — o painel
+     precisa da conta e o CSS não importa de TypeScript */
+  --vao-lateral: 16px;
+}
+.conteudo-resumo .figura[data-quebra='margemEsq'] {
+  float: left;
+  margin: 0.3em 0 0.6em calc(var(--margem-esq, 0px) * -1);
+  max-width: calc(var(--margem-esq, 0px) - var(--vao-lateral));
+}
+.conteudo-resumo .figura[data-quebra='margemDir'] {
+  float: right;
+  margin: 0.3em calc(var(--margem-dir, 0px) * -1) 0.6em 0;
+  max-width: calc(var(--margem-dir, 0px) - var(--vao-lateral));
+}
+
+/* No celular não existe margem onde morar: abaixo de 767px a régua deixa de
+   valer e o recuo passa a ser fixo (ver `[data-escapa]`). O corte é em 767 e
+   não nos 640 do `float` de propósito — os dois caem por motivos diferentes: o
+   `aoRedor` porque não sobra linha para contornar, o lateral porque some o
+   lugar. */
+@media (max-width: 767px) {
+  .conteudo-resumo .figura[data-quebra='margemEsq'],
+  .conteudo-resumo .figura[data-quebra='margemDir'] {
+    float: none;
+    max-width: 100%;
+    margin: 1.2em auto;
+  }
+}
+
 /* O espaçamento em volta que o painel controla, nos modos que não são float. */
-.conteudo-resumo .figura[data-margem]:not([data-quebra^='aoRedor']) {
+.conteudo-resumo .figura[data-margem]:not([data-quebra^='aoRedor']):not([data-quebra^='margem']) {
   padding: var(--margem-figura);
 }
 
@@ -1142,8 +1189,14 @@ h3 {
    do aluno, que é o que mantém o WYSIWYG de pé.
 
    A mesma regra atende imagem e tabela de propósito: são as duas coisas que o
-   autor pediu que tivessem liberdade, e uma regra só não tem como divergir. */
-.conteudo-resumo [data-escapa='sim'] {
+   autor pediu que tivessem liberdade, e uma regra só não tem como divergir.
+
+   O `:not([data-quebra^='margem'])` protege o modo lateral: os dois são
+   opostos — este come as DUAS margens, aquele mora dentro de UMA —, e juntos o
+   `width:auto` daqui brigaria com o `float` de lá, com o resultado dependendo
+   da ordem das regras. O `renderHTML` já não grava os dois juntos; esta é a
+   segunda tranca, para o HTML que foi gravado antes dela existir. */
+.conteudo-resumo [data-escapa='sim']:not([data-quebra^='margem']) {
   width: auto;
   max-width: none;
   margin-left: calc(var(--margem-esq, 0px) * -1);
