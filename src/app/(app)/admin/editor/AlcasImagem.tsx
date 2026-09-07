@@ -45,7 +45,14 @@ export default function AlcasImagem({
      em vez de mudar o tamanho da figura. */
   recortando: boolean
 }) {
+  /* Duas caixas, e a diferença só existe quando há recorte: `caixa` é a FOTO
+     INTEIRA (o `<img>`, que continua sendo a imagem toda), e `caixaVisivel` é o
+     pedaço que aparece (a moldura). O modo de recorte precisa da primeira, para
+     desenhar o que está sendo descartado; a moldura de seleção e as alças de
+     redimensionar precisam da segunda, senão ficam em volta de um retângulo que
+     o autor não vê — foi o que aconteceu na primeira prova do gesto. */
   const [caixa, setCaixa] = useState<Caixa | null>(null)
+  const [caixaVisivel, setCaixaVisivel] = useState<Caixa | null>(null)
   const arrasto = useRef<{
     x0: number
     larg0: number
@@ -90,14 +97,19 @@ export default function AlcasImagem({
     const img = figura?.querySelector('img')
     if (!img) return setCaixa(null)
 
-    const r = img.getBoundingClientRect()
     const rc = container.getBoundingClientRect()
-    setCaixa({
-      topo: r.top - rc.top + container.scrollTop,
-      esq: r.left - rc.left,
-      larg: r.width,
-      alt: r.height,
-    })
+    const medida = (el: Element): Caixa => {
+      const r = el.getBoundingClientRect()
+      return {
+        topo: r.top - rc.top + container.scrollTop,
+        esq: r.left - rc.left,
+        larg: r.width,
+        alt: r.height,
+      }
+    }
+    const moldura = figura?.querySelector('.moldura')
+    setCaixa(medida(img))
+    setCaixaVisivel(medida(moldura ?? img))
   }, [editor, containerRef])
 
   /* Remede a cada transação e a cada rolagem: mudar a régua, trocar o
@@ -193,7 +205,7 @@ export default function AlcasImagem({
   function comecar(e: React.PointerEvent) {
     e.preventDefault()
     e.stopPropagation()
-    const c = caixa
+    const c = caixaVisivel ?? caixa
     if (!c) return
     // a coluna de texto é o pai da figura: é dela que a porcentagem sai
     const pos = editor.state.selection.from
@@ -301,11 +313,12 @@ export default function AlcasImagem({
     )
   }
 
+  const cv = caixaVisivel ?? caixa
   return (
     <div
       aria-hidden="true"
       className="absolute pointer-events-none z-20"
-      style={{ top: caixa.topo, left: caixa.esq, width: caixa.larg, height: caixa.alt }}
+      style={{ top: cv.topo, left: cv.esq, width: cv.larg, height: cv.alt }}
     >
       {/* moldura fina: é ela que diz QUAL imagem está selecionada quando há
           várias perto uma da outra */}
