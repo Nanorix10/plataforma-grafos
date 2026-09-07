@@ -1007,6 +1007,7 @@ export default function EditorCorpo({
               aoMudarEnvio={(d) => setEnviando((n) => n + d)}
               margemEsq={margemEsq}
               margemDir={margemDir}
+              aoMudarMargens={aoMudarMargens}
               recortando={recortePos !== null && editor.state.selection.from === recortePos}
               aoRecortar={(ligado) =>
                 setRecortePos(ligado ? editor.state.selection.from : null)

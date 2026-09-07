@@ -1420,9 +1420,36 @@ vertical de graça, sem `position: absolute`.
   figura mora — a coluna, no texto; a margem, na lateral. Vale para os botões e
   para o denominador das alças, que antes era sempre a coluna.
 - **O `max-width` preso à régua não basta.** Ele impede a figura de sair da
-  folha; não impede que ela vire um selo de 44px numa margem de 60, que o aluno
-  recebe como se fosse intenção. Daí `LARGURA_MINIMA_LATERAL` (90px) e o aviso
-  no painel, que nomeia o gesto — arrastar a régua.
+  folha; não impede que ela vire um selo numa margem estreita, que o aluno
+  recebe como se fosse intenção. Daí `LARGURA_MINIMA_LATERAL` e o aviso no
+  painel.
+
+> [!warning] O piso nasceu abaixo do padrão, e por isso nunca disparou (07/09)
+> `LARGURA_MINIMA_LATERAL` era **90**, e a margem padrão é **150** — 134px de
+> figura, acima do piso. O aviso ficava calado exatamente no estado em que
+> **todo** resumo começa: quem clicava em "margem direita" numa folha
+> recém-aberta recebia um gráfico de 134×84px, ilegível, sem uma palavra de
+> explicação. O piso só pegava margens que ninguém usa.
+>
+> Foi assim que o defeito apareceu: o autor perguntou "por que a imagem fica
+> pequena". A resposta era o número, não o CSS — a lateral funcionava como
+> projetada, e a projeção é que estava calibrada para o caso raro.
+>
+> Agora o piso é **170**, o que põe o padrão dentro do aviso, e o aviso deixou
+> de mandar o autor procurar a régua: traz **⇥ Alargar para 284px**, que leva a
+> margem a `MARGEM_LATERAL_CONFORTAVEL` (300) de uma vez, e **◨ Ou deixe o texto
+> contornar**, que é a saída oposta — `aoRedor` põe a figura de volta na coluna,
+> com até 60% dela (372px na régua padrão), ao preço de o parágrafo se deformar.
+> Mais largura do que qualquer margem dá sem estreitar a leitura.
+>
+> O alvo do botão é aparado contra a margem OPOSTA antes de chegar à régua:
+> passar `MARGEM_LATERAL_CONFORTAVEL` cru faria `ajustarMargens` tirar o excesso
+> dos dois lados proporcionalmente, e a margem oposta se mexeria sem ninguém ter
+> pedido. Quando não sobra folga, o botão não aparece — só o contornar.
+>
+> **A lição, que não é sobre imagem:** um limite cujo valor não foi conferido
+> contra o estado inicial do produto é decoração. Vale para todo piso, teto e
+> `LARGURA_MINIMA_*` daqui.
 
 A queda no celular é em **767px**, e não nos 640 do `aoRedor`: motivos
 diferentes. O `float` cai porque não sobra linha para contornar; o lateral cai
