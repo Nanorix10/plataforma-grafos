@@ -68,10 +68,28 @@ export const VAO_LATERAL = 16
  * Abaixo disto a lateral não serve para nada.
  *
  * O `max-width` amarrado à régua impede a figura de sair da folha, e só isso:
- * com a margem em 60px ela ficaria com 44px de largura, ilegível, e o aluno
- * receberia esse selo como se fosse intenção. O painel avisa antes.
+ * numa margem estreita ela vira um selo ilegível, e o aluno recebe esse selo
+ * como se fosse intenção. O painel avisa antes.
+ *
+ * **Este número já foi 90, e 90 era o pior valor possível**: a margem padrão é
+ * 150, o que deixa 134px de figura — acima de 90, então o aviso nunca disparava
+ * justamente no ÚNICO estado em que todo resumo começa. Quem clicava em "margem
+ * direita" numa folha recém-aberta recebia um gráfico de 134×84px, ilegível, e
+ * nenhuma explicação. Um piso que só pega o caso raro é um piso decorativo.
+ *
+ * 170 põe o padrão dentro do aviso, e é aí que o botão de alargar aparece.
  */
-export const LARGURA_MINIMA_LATERAL = 90
+export const LARGURA_MINIMA_LATERAL = 170
+
+/**
+ * A margem que o botão "Alargar a margem" persegue.
+ *
+ * 300 deixa 284px de figura — a mesma ordem de grandeza do que o modo "texto ao
+ * redor" alcança (60% de uma coluna de 620 = 372px), que é o tamanho em que um
+ * gráfico volta a ser legível. Não é o máximo possível: alargar mais estreita a
+ * coluna de leitura, e a lateral existe para não atrapalhar o texto.
+ */
+export const MARGEM_LATERAL_CONFORTAVEL = 300
 
 /* ============================================================
    RECORTE

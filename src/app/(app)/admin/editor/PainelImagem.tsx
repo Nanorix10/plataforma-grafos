@@ -7,9 +7,11 @@ import {
   LARGURAS,
   lerNatural,
   lerRecorte,
+  MARGEM_LATERAL_CONFORTAVEL,
   naMargem,
   VAO_LATERAL,
 } from './imagem'
+import { COLUNA_MINIMA, LARGURA_PAGINA } from '@/lib/pagina'
 import { enviarImagem } from './actions'
 
 /**
@@ -115,16 +117,20 @@ export default function PainelImagem({
   aoMudarEnvio,
   margemEsq,
   margemDir,
+  aoMudarMargens,
   recortando,
   aoRecortar,
 }: {
   editor: Editor
   aoEnviarErro: (erro: string | null) => void
   aoMudarEnvio: (delta: number) => void
-  /* As margens da régua chegam aqui só para uma coisa: saber se ainda sobra
-     largura útil quando a figura vai para a lateral. */
+  /* As margens da régua chegam aqui para saber se ainda sobra largura útil
+     quando a figura vai para a lateral — e, desde que o aviso ganhou botão,
+     para poder alargá-la sem mandar o autor procurar a régua. */
   margemEsq: number
   margemDir: number
+  /** A mesma função que a régua chama ao ser arrastada. */
+  aoMudarMargens: (esq: number, dir: number) => void
   /* O modo de recorte vive no `EditorCorpo` porque duas telas o leem: este
      painel, que o liga, e a sobreposição de alças, que muda de função. */
   recortando: boolean
@@ -141,6 +147,30 @@ export default function PainelImagem({
   /** Largura que sobra na margem escolhida, já descontado o vão até o texto. */
   const larguraDaLateral =
     (a.quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL
+
+  /* ---- alargar a margem sem sair do painel ----
+     O aviso antigo dizia "arraste a régua" e parava aí. Era um diagnóstico
+     mandando o autor executar o remédio à mão, num controle que fica na outra
+     ponta da tela — e a régua é justamente o gesto que ninguém acerta de
+     primeira, porque mover uma margem mexe na coluna inteira.
+
+     O alvo não é `MARGEM_LATERAL_CONFORTAVEL` cru: `ajustarMargens` apararia o
+     excesso dos DOIS lados proporcionalmente, e a margem oposta se mexeria sem
+     ninguém ter pedido. Então o teto é calculado aqui, contra a margem oposta,
+     e o que chega à régua já cabe. */
+  const margemOposta = a.quebra === 'margemEsq' ? margemDir : margemEsq
+  const alvoDaMargem = Math.min(
+    MARGEM_LATERAL_CONFORTAVEL,
+    LARGURA_PAGINA - margemOposta - COLUNA_MINIMA
+  )
+  /** Só oferece o botão quando ele tem o que fazer. */
+  const podeAlargar =
+    lateral && alvoDaMargem > (a.quebra === 'margemEsq' ? margemEsq : margemDir)
+
+  const alargarMargem = () =>
+    a.quebra === 'margemEsq'
+      ? aoMudarMargens(alvoDaMargem, margemDir)
+      : aoMudarMargens(margemEsq, alvoDaMargem)
 
   /* Ir para a lateral DESLIGA o `escapa`: um faz a figura comer as duas
      margens, o outro a faz morar dentro de uma. Deixar os dois ligados daria um
@@ -253,11 +283,33 @@ export default function PainelImagem({
           margem estreita ela vira um selo ilegível, e o aluno recebe isso como
           se fosse intenção. O aviso nomeia o gesto que resolve. */}
       {lateral && larguraDaLateral < LARGURA_MINIMA_LATERAL ? (
-        <p role="status" className="w-full text-[11.5px] text-[var(--stamp)] leading-snug">
-          A margem {a.quebra === 'margemEsq' ? 'esquerda' : 'direita'} tem{' '}
-          {Math.max(0, larguraDaLateral)}px úteis — a figura sairia pequena demais para
-          servir. Arraste a régua para alargar essa margem.
-        </p>
+        <div role="status" className="w-full flex items-center gap-2 flex-wrap text-[11.5px] text-[var(--stamp)] leading-snug">
+          <span>
+            A margem {a.quebra === 'margemEsq' ? 'esquerda' : 'direita'} tem{' '}
+            {Math.max(0, larguraDaLateral)}px úteis — a figura não passa disso, e
+            nesse tamanho um gráfico deixa de se ler.
+          </span>
+          {podeAlargar ? (
+            <Opcao
+              ativo={false}
+              onClick={alargarMargem}
+              title={`Leva a margem para ${alvoDaMargem}px e a figura para ${alvoDaMargem - VAO_LATERAL}px. Mexe na régua da folha inteira, então o texto reflui — a régua desfaz.`}
+            >
+              ⇥ Alargar para {alvoDaMargem - VAO_LATERAL}px
+            </Opcao>
+          ) : null}
+          {/* A outra saída, e às vezes a certa: "texto ao redor" põe a figura
+              DENTRO da coluna, com até 60% dela (372px na régua padrão), ao
+              preço de o parágrafo se deformar em volta. É mais largura do que
+              qualquer margem dá sem estreitar a leitura. */}
+          <Opcao
+            ativo={false}
+            onClick={() => set({ quebra: a.quebra === 'margemEsq' ? 'aoRedorEsq' : 'aoRedorDir' })}
+            title="A figura volta para dentro da coluna e o texto a contorna. Cabe bem mais (até 60% da coluna), mas o parágrafo muda de forma."
+          >
+            {a.quebra === 'margemEsq' ? '◧' : '◨'} Ou deixe o texto contornar
+          </Opcao>
+        </div>
       ) : null}
 
       {/* ---- tamanho ---- */}
