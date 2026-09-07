@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
-import { naMargem, VAO_LATERAL } from './imagem'
+import {
+  escreverRecorte,
+  lerRecorte,
+  naMargem,
+  RECORTE_MINIMO_VISIVEL,
+  VAO_LATERAL,
+  type Recorte,
+} from './imagem'
 
 /**
  * As alças de redimensionar da imagem selecionada — o gesto do Google Docs.
@@ -27,12 +34,16 @@ export default function AlcasImagem({
   containerRef,
   margemEsq,
   margemDir,
+  recortando,
 }: {
   editor: Editor
   containerRef: React.RefObject<HTMLDivElement | null>
   /* Só para o modo lateral: lá a porcentagem é da margem, não da coluna. */
   margemEsq: number
   margemDir: number
+  /* Ligado, as alças trocam de função: puxam as bordas do recorte para dentro
+     em vez de mudar o tamanho da figura. */
+  recortando: boolean
 }) {
   const [caixa, setCaixa] = useState<Caixa | null>(null)
   const arrasto = useRef<{
@@ -50,8 +61,20 @@ export default function AlcasImagem({
   } | null>(null)
   const [arrastando, setArrastando] = useState(false)
 
-  const quebra = editor.getAttributes('image').quebra
+  const atributos = editor.getAttributes('image')
+  const quebra = atributos.quebra
   const lateral = naMargem(quebra)
+  /* Recorte ausente é o mesmo que "nada cortado ainda" para esta tela: as alças
+     começam nas bordas da foto e só o primeiro arrasto grava alguma coisa. */
+  const recorte: Recorte = lerRecorte(atributos.recorte) ?? { t: 0, r: 0, b: 0, l: 0 }
+  const arrastoRecorte = useRef<{
+    lado: 't' | 'r' | 'b' | 'l'
+    x0: number
+    y0: number
+    inicial: Recorte
+    fotoLarg: number
+    fotoAlt: number
+  } | null>(null)
 
   /** Acha a `<figure>` do nó selecionado e mede onde ela está na tela. */
   const medir = useCallback(() => {
@@ -125,6 +148,46 @@ export default function AlcasImagem({
     }
   }, [arrastando, editor])
 
+  /* O arrasto do recorte. Separado do de redimensionar porque o que ele grava é
+     outro atributo, com outra conta e outro travamento. */
+  const [recortandoLado, setRecortandoLado] = useState<'t' | 'r' | 'b' | 'l' | null>(null)
+  useEffect(() => {
+    if (!recortandoLado) return
+    function aoMover(e: PointerEvent) {
+      const a = arrastoRecorte.current
+      if (!a) return
+      e.preventDefault()
+      /* Os pixels arrastados viram % da FOTO INTEIRA, que é o que o atributo
+         guarda. A foto inteira é justamente o que o `<img>` mede: ele é a
+         imagem toda, e quem esconde o resto é a moldura em volta. */
+      const dxPct = ((e.clientX - a.x0) / a.fotoLarg) * 100
+      const dyPct = ((e.clientY - a.y0) / a.fotoAlt) * 100
+      const r = { ...a.inicial }
+      const teto = 100 - RECORTE_MINIMO_VISIVEL
+      if (a.lado === 'l') r.l = Math.min(Math.max(0, a.inicial.l + dxPct), teto - r.r)
+      if (a.lado === 'r') r.r = Math.min(Math.max(0, a.inicial.r - dxPct), teto - r.l)
+      if (a.lado === 't') r.t = Math.min(Math.max(0, a.inicial.t + dyPct), teto - r.b)
+      if (a.lado === 'b') r.b = Math.min(Math.max(0, a.inicial.b - dyPct), teto - r.t)
+      const vazio = r.t === 0 && r.r === 0 && r.b === 0 && r.l === 0
+      editor
+        .chain()
+        .updateAttributes('image', { recorte: vazio ? '' : escreverRecorte(r), altura: '' })
+        .run()
+    }
+    function aoSoltar() {
+      setRecortandoLado(null)
+      arrastoRecorte.current = null
+    }
+    window.addEventListener('pointermove', aoMover)
+    window.addEventListener('pointerup', aoSoltar)
+    window.addEventListener('pointercancel', aoSoltar)
+    return () => {
+      window.removeEventListener('pointermove', aoMover)
+      window.removeEventListener('pointerup', aoSoltar)
+      window.removeEventListener('pointercancel', aoSoltar)
+    }
+  }, [recortandoLado, editor])
+
   if (!caixa) return null
 
   function comecar(e: React.PointerEvent) {
@@ -149,8 +212,94 @@ export default function AlcasImagem({
     setArrastando(true)
   }
 
+  /* Um handler só, com o lado vindo do `data-lado` do botão. A versão que
+     devolvia um handler por lado criava quatro funções durante a renderização,
+     e a regra do React Compiler que o Next 16 traz recusa isso. */
+  function comecarRecorte(e: React.PointerEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    const c = caixa
+    if (!c) return
+    const lado = e.currentTarget.dataset.lado as 't' | 'r' | 'b' | 'l'
+    arrastoRecorte.current = {
+      lado,
+      x0: e.clientX,
+      y0: e.clientY,
+      inicial: recorte,
+      fotoLarg: c.larg,
+      fotoAlt: c.alt,
+    }
+    setRecortandoLado(lado)
+  }
+
   const alca =
     'absolute w-[11px] h-[11px] rounded-full bg-[var(--acento)] shadow-[0_0_0_2px_var(--paper)] pointer-events-auto'
+
+  /* ---- modo recorte ----
+     A caixa medida é a FOTO INTEIRA: o `<img>` do DOM é a imagem toda, e quem
+     esconde o resto é a moldura em volta dele. Então o retângulo do recorte é
+     só uma fração dessa caixa, e as duas cópias abaixo — a apagada por baixo, a
+     nítida recortada por cima — mostram o que fica e o que sai.
+
+     Mostrar o descartado em vez de escondê-lo é o ponto: recorte que só some
+     com o pedaço obriga a desfazer para lembrar o que havia ali. */
+  if (recortando) {
+    const cx = {
+      esq: (caixa.larg * recorte.l) / 100,
+      topo: (caixa.alt * recorte.t) / 100,
+      larg: (caixa.larg * (100 - recorte.l - recorte.r)) / 100,
+      alt: (caixa.alt * (100 - recorte.t - recorte.b)) / 100,
+    }
+    return (
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none z-20"
+        style={{ top: caixa.topo, left: caixa.esq, width: caixa.larg, height: caixa.alt }}
+      >
+        {/* A foto inteira, apagada: é o que está sendo descartado.
+            `<img>` cru e não `next/image` de propósito — o corpo do resumo
+            também é `<img>` cru (decisão 11b, sem `remotePatterns`), e a
+            sobreposição precisa casar pixel a pixel com ele. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={atributos.src}
+          alt=""
+          className="absolute inset-0 w-full h-full opacity-30"
+        />
+        {/* a fatia que fica, nítida, recortada por uma janela */}
+        <div
+          className="absolute overflow-hidden outline outline-2 outline-[var(--acento)]"
+          style={{ left: cx.esq, top: cx.topo, width: cx.larg, height: cx.alt }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={atributos.src}
+            alt=""
+            className="absolute max-w-none"
+            style={{ left: -cx.esq, top: -cx.topo, width: caixa.larg, height: caixa.alt }}
+          />
+        </div>
+
+        {/* uma alça por borda, no meio dela */}
+        <button type="button" tabIndex={-1} data-lado="l" onPointerDown={comecarRecorte} title="Arraste para cortar pela esquerda"
+          className={`${alca} cursor-ew-resize`}
+          style={{ left: cx.esq - 5.5, top: cx.topo + cx.alt / 2 - 5.5 }} />
+        <button type="button" tabIndex={-1} data-lado="r" onPointerDown={comecarRecorte} title="Arraste para cortar pela direita"
+          className={`${alca} cursor-ew-resize`}
+          style={{ left: cx.esq + cx.larg - 5.5, top: cx.topo + cx.alt / 2 - 5.5 }} />
+        <button type="button" tabIndex={-1} data-lado="t" onPointerDown={comecarRecorte} title="Arraste para cortar por cima"
+          className={`${alca} cursor-ns-resize`}
+          style={{ left: cx.esq + cx.larg / 2 - 5.5, top: cx.topo - 5.5 }} />
+        <button type="button" tabIndex={-1} data-lado="b" onPointerDown={comecarRecorte} title="Arraste para cortar por baixo"
+          className={`${alca} cursor-ns-resize`}
+          style={{ left: cx.esq + cx.larg / 2 - 5.5, top: cx.topo + cx.alt - 5.5 }} />
+
+        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10.5px] tabular-nums px-1.5 py-0.5 rounded bg-[var(--acento)] text-[var(--page)] whitespace-nowrap">
+          recortando — {Math.round(100 - recorte.l - recorte.r)}% × {Math.round(100 - recorte.t - recorte.b)}% da foto
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div

@@ -116,6 +116,68 @@ function Bt({
   )
 }
 
+/**
+ * Mede o arquivo antes de ele virar imagem na página.
+ *
+ * `createImageBitmap` lê do próprio `File`, sem uma segunda ida à rede. Se
+ * falhar (formato que o navegador não decodifica), devolve `null` e o resumo se
+ * cura depois, em `curarNaturais`.
+ */
+async function medirArquivo(f: File): Promise<{ l: number; a: number } | null> {
+  try {
+    const bmp = await createImageBitmap(f)
+    const d = { l: bmp.width, a: bmp.height }
+    bmp.close()
+    return d
+  } catch {
+    return null
+  }
+}
+
+/** O mesmo, para uma imagem que já está no bucket. */
+function medirUrl(src: string): Promise<{ l: number; a: number } | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve({ l: img.naturalWidth, a: img.naturalHeight })
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
+}
+
+/**
+ * Preenche o tamanho original das imagens que não o têm.
+ *
+ * O atributo `natural` nasceu com o recorte, então todo o acervo anterior está
+ * sem ele — e sem ele não há recorte (falta a proporção para saber a altura do
+ * que sobrou) nem reserva de espaço (o resumo salta ao abrir). Em vez de
+ * migration ou script, cada resumo se cura na primeira vez que é aberto aqui.
+ *
+ * `addToHistory: false` porque isto não é edição do autor: sem a marca, o
+ * primeiro Ctrl+Z depois de abrir desfaria uma medição em vez do que ele
+ * acabou de escrever.
+ */
+async function curarNaturais(ed: Editor) {
+  const alvos: { pos: number; src: string }[] = []
+  ed.state.doc.descendants((node, pos) => {
+    if (node.type.name === 'image' && !node.attrs.natural && typeof node.attrs.src === 'string') {
+      alvos.push({ pos, src: node.attrs.src })
+    }
+  })
+
+  for (const alvo of alvos) {
+    const d = await medirUrl(alvo.src)
+    if (!d || ed.isDestroyed) continue
+    /* A posição é reconferida: entre a medição e a escrita o autor pode ter
+       digitado, e gravar a medida de uma imagem em cima de outro nó seria pior
+       do que não medir. */
+    const atual = ed.state.doc.nodeAt(alvo.pos)
+    if (!atual || atual.type.name !== 'image' || atual.attrs.src !== alvo.src) continue
+    const tr = ed.state.tr.setNodeAttribute(alvo.pos, 'natural', `${d.l} ${d.a}`)
+    tr.setMeta('addToHistory', false)
+    ed.view.dispatch(tr)
+  }
+}
+
 function Sep() {
   return <span className="w-px h-[18px] bg-[var(--line)] mx-1 shrink-0" />
 }
@@ -673,6 +735,10 @@ export default function EditorCorpo({
   /* A "mesa" onde a folha rola. As alças da imagem se medem em relação a ela. */
   const mesaRef = useRef<HTMLDivElement>(null)
   const [enviando, setEnviando] = useState(0)
+  /* A posição da imagem que está sendo recortada, e não um booleano: assim o
+     modo se desliga sozinho quando a seleção vai para outro lugar, sem efeito
+     nenhum vigiando. */
+  const [recortePos, setRecortePos] = useState<number | null>(null)
   const [erroImagem, setErroImagem] = useState<string | null>(null)
 
   /**
@@ -695,10 +761,18 @@ export default function EditorCorpo({
           setErroImagem(r.erro)
           continue
         }
+        /* O tamanho do arquivo é lido AQUI, do próprio `File`, e não depois pela
+           rede: é o que torna o recorte possível (sem a proporção original não
+           dá para saber a altura do que sobrou) e o que faz o navegador
+           reservar o espaço certo antes de a imagem chegar. */
+        const medida = await medirArquivo(arquivo)
         editorRef.current
           ?.chain()
           .focus()
-          .insertContent({ type: 'image', attrs: { src: r.url, alt: '' } })
+          .insertContent({
+            type: 'image',
+            attrs: { src: r.url, alt: '', natural: medida ? `${medida.l} ${medida.a}` : '' },
+          })
           .createParagraphNear()
           .run()
       } catch {
@@ -862,6 +936,12 @@ export default function EditorCorpo({
     },
     onCreate: ({ editor }) => {
       setPalavras(editor.storage.characterCount?.words?.() ?? 0)
+      /* O acervo antigo não tem o tamanho original das imagens — o dado é novo.
+         Em vez de migration ou script, cada resumo se cura ao ser aberto: as
+         imagens sem a medida são lidas e o atributo é gravado. Ver a spec do
+         recorte. **Isto marca o resumo como alterado**, e o autosave vai rodar
+         uma vez em resumo antigo; é o preço de não ter script de acervo. */
+      void curarNaturais(editor)
     },
   })
 
@@ -927,6 +1007,10 @@ export default function EditorCorpo({
               aoMudarEnvio={(d) => setEnviando((n) => n + d)}
               margemEsq={margemEsq}
               margemDir={margemDir}
+              recortando={recortePos !== null && editor.state.selection.from === recortePos}
+              aoRecortar={(ligado) =>
+                setRecortePos(ligado ? editor.state.selection.from : null)
+              }
             />
           ) : null}
         </>
@@ -980,7 +1064,13 @@ export default function EditorCorpo({
         {/* As alças ficam AQUI, e não dentro da folha: elas são medidas em
             relação a esta caixa, que é a que rola. */}
         {editor && editor.isActive('image') ? (
-          <AlcasImagem editor={editor} containerRef={mesaRef} margemEsq={margemEsq} margemDir={margemDir} />
+          <AlcasImagem
+            editor={editor}
+            containerRef={mesaRef}
+            margemEsq={margemEsq}
+            margemDir={margemDir}
+            recortando={recortePos !== null && editor.state.selection.from === recortePos}
+          />
         ) : null}
         {/* A régua acompanha a folha e rola junto com ela: presa no topo, ela
             apontaria para uma folha que já saiu de baixo. */}
