@@ -1463,6 +1463,14 @@ abrir um resumo antigo dispara um autosave.
   mediriam a caixa girada — girar DEPOIS de recortar funciona.
 - **`altura` é limpo e desligado**, no painel e no `renderHTML`: ele corta pelo
   meio com `object-fit: cover`, que é a mesma coisa por outro caminho.
+- **A borda pedia `content-box` na moldura** (achado ao conferir as
+  combinações, 06/09). O site é `border-box`, então a borda come a caixa: o
+  `aspect-ratio` passava a valer para a caixa COM borda, a caixa de conteúdo
+  encolhia nos dois eixos, e a janela deixava de ser a fração exata da imagem —
+  com 6px de borda o recorte saía 6px fora do lugar. Na mesma varredura, o caso
+  girado parecia errado e **não estava**: `getBoundingClientRect` devolve a
+  caixa alinhada aos eixos de um elemento girado, então quem estava errada era a
+  medição. Medido por layout (`clientWidth`/`offsetHeight`), bate.
 - **`.conteudo-resumo img` dá `margin-top: 1.2em` a toda imagem**, e dentro da
   moldura isso empurrava a foto 20,4px para baixo ANTES do `translate` — o
   recorte inteiro saía deslocado, com a conta certa e o desenho errado. A
