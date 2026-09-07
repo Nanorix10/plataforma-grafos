@@ -1433,6 +1433,46 @@ lateral* — o texto encolher para caber figura grande ao lado — foi recusada 
 ora com motivo: exige partir o corpo em região de duas colunas, nó novo no
 esquema.
 
+**11c-quater. O recorte é uma moldura, e não toca no arquivo** (06/09).
+`recorte` guarda quanto saiu de cada lado, em % da imagem ORIGINAL, e `natural`
+guarda as dimensões do arquivo. Com recorte, a `<figure>` ganha um
+`<span class="moldura">` que esconde o resto, e a `<img>` de dentro é ampliada
+(`width: 100/fw%`) e empurrada (`translate(-l%, -t%)`). A porcentagem de
+`translate` é do próprio elemento, então os números crus do recorte servem
+direto — não dependem da largura da coluna. Sem recorte o HTML é o de sempre, e
+nenhuma figura publicada mudou de forma.
+
+**Não destrutivo, por decisão do autor**, como os filtros de cor. O preço fica
+declarado: quem abrir o endereço da imagem vê a foto inteira, então **recorte
+aqui não é censura**. Se um dia o pedaço precisar sumir de verdade, isso é outra
+funcionalidade e ela grava arquivo novo.
+
+**`natural` é obrigatório, e paga um segundo aluguel.** Sem a proporção original
+não dá para saber a altura do que sobrou. Ela também vira `width`/`height` no
+`<img>`, e aí o navegador reserva o espaço certo antes de a imagem chegar — o
+pulo de layout que todo resumo com imagem dava acabou junto. O acervo antigo não
+tem o dado: `curarNaturais` mede e grava na primeira vez que o resumo é aberto
+no editor, com `addToHistory: false`. Sem migration e sem script — o preço é que
+abrir um resumo antigo dispara um autosave.
+
+**Três armadilhas, e a terceira só apareceu na tela:**
+
+- **O giro passa para a moldura** quando há recorte. Na imagem ele giraria
+  depois do `translate`, em torno de um centro deslocado, e o desenho escaparia
+  da moldura. E recortar com giro ligado é recusado no painel, porque as alças
+  mediriam a caixa girada — girar DEPOIS de recortar funciona.
+- **`altura` é limpo e desligado**, no painel e no `renderHTML`: ele corta pelo
+  meio com `object-fit: cover`, que é a mesma coisa por outro caminho.
+- **`.conteudo-resumo img` dá `margin-top: 1.2em` a toda imagem**, e dentro da
+  moldura isso empurrava a foto 20,4px para baixo ANTES do `translate` — o
+  recorte inteiro saía deslocado, com a conta certa e o desenho errado. A
+  moldura anula margem, raio e sombra da imagem e assume os três. Junto veio o
+  `width: fit-content` da figura: com a largura na moldura, `60%` se resolvia
+  contra uma caixa que dependia do próprio filho e virava 300px onde deveriam
+  ser 372. A figura volta a `width: auto` quando tem moldura.
+
+Ver `docs/superpowers/specs/2026-09-06-recorte-de-imagem-design.md`.
+
 **11c-ter. O editor e a leitura discordavam entre 640 e 767px** (achado e
 consertado em 06/09). A folha do editor aplicava as margens da régua em `sm:`
 (640px) e a página do aluno em `md:` (768px): nessa faixa o editor recuava o
@@ -1448,8 +1488,18 @@ em `md`.
   muda de largura com a régua e com a tela — a imagem cairia em cima da frase
   errada em metade dos aparelhos.
 - **Fixar posição na página.** Não há páginas: o resumo é uma rolagem só.
-- **Recortar e máscara de forma.** Pedem uma interface de recorte própria; a
-  altura fixa com `object-fit: cover` cobre o caso simples.
+- **Máscara de forma** (círculo, estrela). Pede `clip-path` por forma e uma
+  galeria de formas, e ninguém pediu.
+
+> [!done] Recorte saiu desta lista em 2026-09-06
+> ~~**Recortar e máscara de forma.** Pedem uma interface de recorte própria; a
+> altura fixa com `object-fit: cover` cobre o caso simples.~~ **O caso simples
+> deixou de bastar:** `altura` corta SEMPRE pelo meio, e o que o autor faz o
+> tempo todo é tirar a barra do Windows do topo de um print, a folga da borda
+> de uma foto de prova, a marca d'água de um canto. O argumento não caiu — o
+> CUSTO caiu: a sobreposição de `AlcasImagem.tsx` já existe, e o modo de
+> recorte troca a função das alças em vez de construir outra interface.
+> Ver **11c-quater**.
 
 Os ajustes de cor são **filtros de CSS**, então não tocam no arquivo: dá para
 voltar atrás sempre, e a mesma imagem serve a dois resumos com ajustes

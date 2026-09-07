@@ -73,6 +73,57 @@ export const VAO_LATERAL = 16
  */
 export const LARGURA_MINIMA_LATERAL = 90
 
+/* ============================================================
+   RECORTE
+   ============================================================
+   Não destrutivo: o arquivo no bucket continua inteiro e o recorte é CSS, como
+   brilho e giro. Dá para desfazer sempre, e a mesma imagem serve a dois resumos
+   com recortes diferentes.
+
+   **O preço, declarado:** o pedaço cortado continua no arquivo, e quem abrir o
+   endereço da imagem vê a foto inteira. Recorte aqui NÃO é censura — se um dia
+   for preciso que o pedaço suma de verdade, isso é outra funcionalidade, e ela
+   grava arquivo novo.
+
+   Ver `docs/superpowers/specs/2026-09-06-recorte-de-imagem-design.md`. */
+
+/** Quanto foi cortado de cada lado, em % da imagem ORIGINAL. */
+export type Recorte = { t: number; r: number; b: number; l: number }
+
+/** Sobra pelo menos isto de imagem em cada eixo. Alça que pode zerar a figura
+    produz uma figura invisível sem avisar. */
+export const RECORTE_MINIMO_VISIVEL = 10
+
+/** `"10 0 25 5"` → `{t:10,r:0,b:25,l:5}`. Vazio ou torto vira `null`. */
+export function lerRecorte(bruto: unknown): Recorte | null {
+  if (typeof bruto !== 'string' || !bruto.trim()) return null
+  const p = bruto.trim().split(/\s+/).map(Number)
+  if (p.length !== 4 || p.some((n) => !Number.isFinite(n) || n < 0)) return null
+  const [t, r, b, l] = p
+  // sem isto, uma string gravada errada geraria divisão por zero no renderHTML
+  if (t + b > 100 - RECORTE_MINIMO_VISIVEL || l + r > 100 - RECORTE_MINIMO_VISIVEL) return null
+  if (t === 0 && r === 0 && b === 0 && l === 0) return null
+  return { t, r, b, l }
+}
+
+export function escreverRecorte(r: Recorte): string {
+  const n = (v: number) => Math.round(v * 10) / 10
+  return `${n(r.t)} ${n(r.r)} ${n(r.b)} ${n(r.l)}`
+}
+
+/** `"1600 900"` → `{l:1600,a:900}`. */
+export function lerNatural(bruto: unknown): { l: number; a: number } | null {
+  if (typeof bruto !== 'string' || !bruto.trim()) return null
+  const [l, a] = bruto.trim().split(/\s+/).map(Number)
+  if (!Number.isFinite(l) || !Number.isFinite(a) || l <= 0 || a <= 0) return null
+  return { l, a }
+}
+
+/** A fração da imagem que sobra visível em cada eixo. */
+export function fracoes(r: Recorte) {
+  return { fw: (100 - r.l - r.r) / 100, fh: (100 - r.t - r.b) / 100 }
+}
+
 /** Lê um atributo no elemento ou no `<img>` de dentro dele. */
 function pegar(el: HTMLElement, nome: string): string | null {
   return el.getAttribute(nome) ?? el.querySelector('img')?.getAttribute(nome) ?? null
@@ -150,6 +201,22 @@ export const Imagem = Node.create({
       saturacao: { default: 100, parseHTML: (el) => numero(pegar(el, 'data-saturacao'), 100) },
       opacidade: { default: 100, parseHTML: (el) => numero(pegar(el, 'data-opacidade'), 100) },
       recolorir: { default: 'nenhum', parseHTML: (el) => pegar(el, 'data-recolorir') ?? 'nenhum' },
+
+      /** `"t r b l"` em % da imagem original; vazio = imagem inteira. */
+      recorte: { default: '', parseHTML: (el) => pegar(el, 'data-recorte') ?? '' },
+      /**
+       * `"largura altura"` do ARQUIVO, em px.
+       *
+       * É o que torna o recorte de cima e de baixo possível: sem a proporção
+       * original não dá para saber a altura do que sobrou. O editor preenche
+       * sozinho quando a imagem carrega, então o acervo antigo se cura ao ser
+       * aberto — sem migration e sem script.
+       *
+       * Serve a uma segunda coisa de graça: com ela, `renderHTML` emite
+       * `width`/`height` no `<img>`, o navegador reserva o espaço certo antes
+       * de a imagem chegar, e o resumo para de saltar ao abrir.
+       */
+      natural: { default: '', parseHTML: (el) => pegar(el, 'data-natural') ?? '' },
     }
   },
 
@@ -164,13 +231,48 @@ export const Imagem = Node.create({
   renderHTML({ node, HTMLAttributes }) {
     const a = node.attrs
 
-    const estiloImagem: string[] = [`width:${a.largura}`]
-    if (a.altura) estiloImagem.push(`height:${a.altura}`, 'object-fit:cover')
-    if (a.rotacao) estiloImagem.push(`transform:rotate(${a.rotacao}deg)`)
-    if (a.opacidade !== 100) estiloImagem.push(`opacity:${Number(a.opacidade) / 100}`)
-    if (a.bordaLargura > 0) {
-      estiloImagem.push(`border:${a.bordaLargura}px ${a.bordaEstilo} ${a.bordaCor}`)
+    /* O recorte só existe com a proporção original em mãos: sem ela não dá para
+       saber a altura do que sobrou. Imagem antiga, sem `natural`, simplesmente
+       não recorta — e o painel diz isso em vez de a opção sumir calada. */
+    const rec = lerRecorte(a.recorte)
+    const nat = lerNatural(a.natural)
+    const recortando = rec !== null && nat !== null
+
+    const estiloImagem: string[] = []
+    const estiloMoldura: string[] = []
+
+    if (recortando) {
+      const { fw, fh } = fracoes(rec)
+      /* A imagem é ampliada até que a FATIA visível ocupe a moldura inteira, e
+         empurrada para que a fatia comece na borda. A porcentagem de
+         `translate` é do próprio elemento, então os números crus do recorte
+         servem direto — sem conversão, sem depender da largura da coluna. */
+      estiloImagem.push(`width:${Math.round((100 / fw) * 1000) / 1000}%`)
+      estiloImagem.push(`transform:translate(-${rec.l}%,-${rec.t}%)`)
+      estiloMoldura.push(`width:${a.largura}`)
+      estiloMoldura.push(
+        `aspect-ratio:${Math.round(fw * nat.l)}/${Math.round(fh * nat.a)}`
+      )
+      /* O giro passa para a MOLDURA. Na imagem ele giraria depois do
+         `translate`, em torno de um centro que já saiu do lugar, e o desenho
+         escaparia da moldura. A borda vem junto: ela emoldura o que se vê. */
+      if (a.rotacao) estiloMoldura.push(`transform:rotate(${a.rotacao}deg)`)
+      if (a.bordaLargura > 0) {
+        estiloMoldura.push(`border:${a.bordaLargura}px ${a.bordaEstilo} ${a.bordaCor}`)
+      }
+      /* `altura` é a MESMA coisa feita de outro jeito: ela corta pelo meio com
+         `object-fit: cover`. Com recorte, quem manda é o recorte. O painel já
+         limpa o campo; isto atende o HTML gravado antes de o painel existir. */
+    } else {
+      estiloImagem.push(`width:${a.largura}`)
+      if (a.altura) estiloImagem.push(`height:${a.altura}`, 'object-fit:cover')
+      if (a.rotacao) estiloImagem.push(`transform:rotate(${a.rotacao}deg)`)
+      if (a.bordaLargura > 0) {
+        estiloImagem.push(`border:${a.bordaLargura}px ${a.bordaEstilo} ${a.bordaCor}`)
+      }
     }
+
+    if (a.opacidade !== 100) estiloImagem.push(`opacity:${Number(a.opacidade) / 100}`)
     const f = filtro(a)
     if (f) estiloImagem.push(`filter:${f}`)
 
@@ -196,12 +298,23 @@ export const Imagem = Node.create({
         'data-saturacao': a.saturacao !== 100 ? a.saturacao : null,
         'data-opacidade': a.opacidade !== 100 ? a.opacidade : null,
         'data-recolorir': a.recolorir !== 'nenhum' ? a.recolorir : null,
+        'data-recorte': recortando ? a.recorte : null,
+        'data-natural': a.natural || null,
+        /* As dimensões do arquivo viram atributos de verdade, e não só `data-`:
+           é o que faz o navegador reservar o espaço certo antes de a imagem
+           chegar. O CSS acima continua mandando no tamanho exibido. */
+        width: nat?.l ?? null,
+        height: nat?.a ?? null,
       }),
     ]
 
-    const miolo = a.link
+    const comLink = a.link
       ? ['a', { href: a.link, target: '_blank', rel: 'noopener noreferrer' }, imagem]
       : imagem
+
+    const miolo = recortando
+      ? ['span', { class: 'moldura', style: estiloMoldura.join(';') }, comLink]
+      : comLink
 
     return [
       'figure',

@@ -1131,6 +1131,60 @@ h3 {
   padding: var(--margem-figura);
 }
 
+/* ---- a moldura do recorte ----
+   Só existe quando a figura tem recorte; sem ele o HTML é o de sempre, e
+   nenhuma figura já publicada muda de forma.
+
+   Ela esconde o que sobrou, e a `<img>` de dentro é ampliada e empurrada para a
+   fatia escolhida encostar na borda. Todas as contas saem do `renderHTML`
+   (`admin/editor/imagem.ts`), porque a página do aluno é HTML cru e não tem
+   JavaScript para fazê-las. */
+.conteudo-resumo .figura .moldura {
+  display: block;
+  overflow: hidden;
+  /* a proporção vem embutida, calculada do recorte e do tamanho original */
+  max-width: 100%;
+  /* A moldura assume o acabamento que era da imagem — ver a regra abaixo. */
+  border-radius: var(--raio-peq);
+  box-shadow: 0 0 0 1px var(--line-forte);
+}
+.conteudo-resumo .figura .moldura > a {
+  display: block;
+}
+
+/* Com recorte, quem carrega a largura escolhida é a MOLDURA — e aí a figura não
+   pode continuar `fit-content`: a porcentagem se resolveria contra uma caixa
+   que depende do próprio filho, e `60%` deixava de ser 60% da coluna (virava
+   300px onde deveriam ser 372). A figura volta a ocupar a coluna, e o
+   alinhamento passa para a moldura. */
+.conteudo-resumo .figura[data-quebra='bloco']:has(> .moldura) {
+  width: auto;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='centro'] > .moldura {
+  margin-left: auto;
+  margin-right: auto;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='direita'] > .moldura {
+  margin-left: auto;
+}
+.conteudo-resumo .figura .moldura img {
+  display: block;
+  /* a largura e o `translate` vêm embutidos; a altura acompanha a proporção */
+  height: auto;
+  max-width: none;
+  /* **Estas três anulações não são estética, são o recorte funcionando.**
+     `.conteudo-resumo img` dá a toda imagem `margin-top: 1.2em` (20,4px), raio
+     e sombra. Dentro da moldura a margem empurra a foto para baixo ANTES do
+     `translate`, e o recorte inteiro sai deslocado — o pedaço que deveria ser
+     cortado em cima continua aparecendo. Foi assim que este defeito apareceu
+     na primeira conferência: a conta estava certa e o desenho, errado.
+     Raio e sombra vão junto porque emoldurariam a foto inteira, incluindo o
+     que a moldura esconde. */
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .conteudo-resumo .figura figcaption {
   font-family: var(--fonte-texto), sans-serif;
   font-size: var(--t-peq);

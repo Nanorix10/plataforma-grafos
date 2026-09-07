@@ -2,7 +2,14 @@
 
 import { useRef } from 'react'
 import type { Editor } from '@tiptap/react'
-import { LARGURA_MINIMA_LATERAL, LARGURAS, naMargem, VAO_LATERAL } from './imagem'
+import {
+  LARGURA_MINIMA_LATERAL,
+  LARGURAS,
+  lerNatural,
+  lerRecorte,
+  naMargem,
+  VAO_LATERAL,
+} from './imagem'
 import { enviarImagem } from './actions'
 
 /**
@@ -108,6 +115,8 @@ export default function PainelImagem({
   aoMudarEnvio,
   margemEsq,
   margemDir,
+  recortando,
+  aoRecortar,
 }: {
   editor: Editor
   aoEnviarErro: (erro: string | null) => void
@@ -116,6 +125,10 @@ export default function PainelImagem({
      largura útil quando a figura vai para a lateral. */
   margemEsq: number
   margemDir: number
+  /* O modo de recorte vive no `EditorCorpo` porque duas telas o leem: este
+     painel, que o liga, e a sobreposição de alças, que muda de função. */
+  recortando: boolean
+  aoRecortar: (ligado: boolean) => void
 }) {
   const trocaRef = useRef<HTMLInputElement>(null)
   const a = editor.getAttributes('image')
@@ -136,6 +149,16 @@ export default function PainelImagem({
   const irParaMargem = (lado: 'margemEsq' | 'margemDir') =>
     set({ quebra: lado, escapa: false })
 
+  const temRecorte = lerRecorte(a.recorte) !== null
+  /* Sem a proporção do arquivo não há como saber a altura do que sobrou. O
+     editor grava esse dado assim que a imagem carrega, então isto é falso por
+     um instante numa imagem antiga — e o botão diz o motivo em vez de sumir. */
+  const podeRecortar = lerNatural(a.natural) !== null && !a.rotacao
+
+  const motivoSemRecorte = !lerNatural(a.natural)
+    ? 'Ainda lendo o tamanho original desta imagem. Um instante e o recorte libera.'
+    : 'Zere o giro para recortar — as alças mediriam a caixa girada, e o corte sairia torto. Girar DEPOIS de recortar funciona.'
+
   /** Volta tudo ao estado de imagem recém-inserida, menos o arquivo em si. */
   function redefinir() {
     set({
@@ -152,6 +175,7 @@ export default function PainelImagem({
       saturacao: 100,
       opacidade: 100,
       recolorir: 'nenhum',
+      recorte: '',
     })
   }
 
@@ -256,10 +280,45 @@ export default function PainelImagem({
             value={a.altura ?? ''}
             onChange={(e) => set({ altura: e.target.value })}
             placeholder="auto"
-            title="Vazio mantém a proporção original. Com valor, a imagem é cortada para caber (object-fit: cover)."
-            className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px]"
+            disabled={temRecorte}
+            title={
+              temRecorte
+                ? 'Desligado porque a imagem está recortada: os dois cortam, e o recorte manda.'
+                : 'Vazio mantém a proporção original. Com valor, a imagem é cortada para caber (object-fit: cover).'
+            }
+            className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px] disabled:opacity-45"
           />
         </Campo>
+
+        {/* ---- recorte ----
+            A 11c recusava recorte porque ele "pede interface própria". O
+            argumento não caiu; o custo caiu: a sobreposição de alças já existe,
+            e aqui ela só troca de função. */}
+        <Opcao
+          ativo={recortando}
+          onClick={() => (podeRecortar ? aoRecortar(!recortando) : undefined)}
+          title={
+            podeRecortar
+              ? 'Puxe as bordas para dentro. O que sair fica escondido, não apagado — o arquivo continua inteiro.'
+              : motivoSemRecorte
+          }
+        >
+          <span className={podeRecortar ? undefined : 'opacity-45'}>
+            {recortando ? '⛶ Concluir recorte' : '⛶ Recortar'}
+          </span>
+        </Opcao>
+        {temRecorte ? (
+          <Opcao
+            ativo={false}
+            onClick={() => {
+              set({ recorte: '' })
+              aoRecortar(false)
+            }}
+            title="Desfaz o recorte e volta à imagem inteira. O arquivo nunca foi tocado, então isto funciona a qualquer momento."
+          >
+            ↺ Imagem inteira
+          </Opcao>
+        ) : null}
         <Campo rotulo="giro">
           <Numerico valor={a.rotacao ?? 0} aoMudar={(n) => set({ rotacao: n })} min={-360} max={360} sufixo="°" />
         </Campo>
