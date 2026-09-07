@@ -1463,6 +1463,12 @@ abrir um resumo antigo dispara um autosave.
   mediriam a caixa girada — girar DEPOIS de recortar funciona.
 - **`altura` é limpo e desligado**, no painel e no `renderHTML`: ele corta pelo
   meio com `object-fit: cover`, que é a mesma coisa por outro caminho.
+- **A moldura de seleção media a foto inteira** (achado provando o gesto,
+  06/09). `AlcasImagem` mede o `<img>`, que continua sendo a imagem toda: depois
+  de recortar, o contorno de seleção e as alças de redimensionar ficavam em
+  volta de um retângulo maior do que o que o autor vê, com alça pairando fora da
+  figura. Agora são duas caixas — a foto inteira, que o modo de recorte precisa
+  para desenhar o descartado, e a moldura, que é onde a seleção se desenha.
 - **A borda pedia `content-box` na moldura** (achado ao conferir as
   combinações, 06/09). O site é `border-box`, então a borda come a caixa: o
   `aspect-ratio` passava a valer para a caixa COM borda, a caixa de conteúdo
