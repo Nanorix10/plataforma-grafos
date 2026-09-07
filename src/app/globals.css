@@ -1147,6 +1147,13 @@ h3 {
   /* A moldura assume o acabamento que era da imagem — ver a regra abaixo. */
   border-radius: var(--raio-peq);
   box-shadow: 0 0 0 1px var(--line-forte);
+  /* **`content-box` não é preferência, é o recorte funcionando com borda.**
+     O site inteiro é `border-box`, e aí a borda come a caixa: o `aspect-ratio`
+     passa a valer para a caixa COM borda, a caixa de conteúdo encolhe os mesmos
+     pixels nos dois eixos, e a janela deixa de ser a fração exata da imagem —
+     com borda de 6px o recorte saía 6px fora do lugar. Aqui a borda fica por
+     fora, e a proporção continua descrevendo só o que se vê. */
+  box-sizing: content-box;
 }
 .conteudo-resumo .figura .moldura > a {
   display: block;
