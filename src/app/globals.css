@@ -1124,42 +1124,72 @@ h3 {
   /* escrito também em `VAO_LATERAL`, no `admin/editor/imagem.ts` — o painel
      precisa da conta e o CSS não importa de TypeScript */
   --vao-lateral: 16px;
-  /* a âncora da faixa lateral: é contra ESTA caixa que o `calc(100% + vão)`
-     mede, e ela é exatamente a coluna de texto */
-  position: relative;
 }
-.conteudo-resumo .figura[data-quebra='margemEsq'],
-.conteudo-resumo .figura[data-quebra='margemDir'] {
-  position: absolute;
-  /* posição estática no eixo vertical — ver o bloco acima */
-  top: auto;
-  bottom: auto;
-  /* a margem de 1.2em de `.figura` deslocaria a posição estática para baixo */
-  margin: 0;
-}
+
+/* **O `float` é o que impede colisão, e é por isso que ele voltou.**
+
+   A caixa do float é subtraída da coluna pela margem negativa (largura da faixa
+   MENOS a régua inteira dá negativo), então nenhuma linha de texto encurta. Mas
+   a caixa continua existindo no fluxo, e é justamente essa existência que dá as
+   três garantias que a versão fora de fluxo não tinha:
+
+   - duas figuras laterais do mesmo lado **empilham** em vez de se sobreporem;
+   - uma figura no fim do resumo é contida pelo `clear` do `::after`, em vez de
+     desenhar por cima dos backlinks;
+   - o que escapa das margens (`[data-escapa]`) desce em vez de passar por baixo.
+
+   Fora de fluxo nada disso existe, porque "não ocupar espaço" e "não colidir"
+   são a mesma pergunta com respostas opostas. É o construto canônico de nota de
+   margem (o Tufte CSS faz igual), e é canônico por este motivo.
+
+   `width` e não `max-width`: com `max-width` a caixa encolhe até a largura
+   natural do arquivo, e aí `50%` deixa de ser metade da faixa para virar metade
+   de uma caixa que depende do próprio filho — o mesmo defeito que a moldura do
+   recorte teve. Com a faixa de largura fixa, a porcentagem tem um denominador
+   só, que é a regra escrita na 11c-bis. */
 .conteudo-resumo .figura[data-quebra='margemEsq'] {
-  right: calc(100% + var(--vao-lateral));
+  float: left;
   width: calc(var(--margem-esq, 0px) - var(--vao-lateral));
+  margin: 0.3em 0 0.6em calc(var(--margem-esq, 0px) * -1);
+  clear: left;
 }
 .conteudo-resumo .figura[data-quebra='margemDir'] {
-  left: calc(100% + var(--vao-lateral));
+  float: right;
   width: calc(var(--margem-dir, 0px) - var(--vao-lateral));
+  margin: 0.3em calc(var(--margem-dir, 0px) * -1) 0.6em 0;
+  clear: right;
 }
+
+/* **O `clear` de mesmo lado não é zelo, é a correção de um erro que eu tinha
+   assumido resolvido.**
+
+   Voltar ao `float` deveria empilhar duas figuras laterais do mesmo lado. Não
+   empilhou: `float` só desce quando falta espaço HORIZONTAL na linha, e a margem
+   negativa deixa a largura efetiva da caixa em −16px. Sempre cabe, então a
+   segunda figura ia parar exatamente em cima da primeira — medido: as duas em
+   topo 215 e base 451.
+
+   A mesma margem negativa que tira a figura do caminho do texto tira também a
+   garantia de empilhamento. `clear` de um lado só devolve a segunda sem afetar
+   a outra margem: uma figura à direita e uma à esquerda no mesmo ponto
+   continuam lado a lado, cada uma na sua faixa.
+
+   O preço: uma lateral logo depois de uma figura com "texto ao redor" DO MESMO
+   LADO desce para além dela, mesmo sem se sobreporem — `clear` não sabe
+   distinguir os dois tipos de `float`. Descer um pouco é o erro certo a cometer
+   quando a alternativa é desenhar por cima. */
 
 /* No celular não existe margem onde morar: abaixo de 767px a régua deixa de
    valer e o recuo passa a ser fixo (ver `[data-escapa]`). O corte é em 767 e
    não nos 640 do `float` de propósito — os dois caem por motivos diferentes: o
    `aoRedor` porque não sobra linha para contornar, o lateral porque some o
-   lugar. Aqui a figura VOLTA para o fluxo: sem margem onde morar, fora de fluxo
-   ela desenharia por cima do texto. */
+   lugar. */
 @media (max-width: 767px) {
   .conteudo-resumo .figura[data-quebra='margemEsq'],
   .conteudo-resumo .figura[data-quebra='margemDir'] {
-    position: static;
+    float: none;
     width: auto;
     max-width: 100%;
-    left: auto;
-    right: auto;
     margin: 1.2em auto;
   }
 }
@@ -1300,6 +1330,12 @@ h3 {
   max-width: none;
   margin-left: calc(var(--margem-esq, 0px) * -1);
   margin-right: calc(var(--margem-dir, 0px) * -1);
+  /* **O `clear` fecha a última colisão possível da faixa lateral.** Quem escapa
+     ocupa as DUAS margens, que é exatamente onde a figura lateral mora — e sem
+     isto os dois se sobrepõem, porque um bloco passa por baixo de um `float` de
+     margem negativa sem encostar nele. Descer é a única saída: encolher a
+     tabela desmentiria o "escapa", e encolher a figura desmentiria a faixa. */
+  clear: both;
 }
 
 /* No celular as margens da régua são ignoradas (o recuo é fixo de 1.5rem),

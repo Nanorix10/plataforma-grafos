@@ -1408,38 +1408,52 @@ margem negativa, o que a caixa do float reservava dentro da coluna era negativo 
 e era por isso que o texto não encurtava uma letra (medido: coluna 620, parágrafo
 620, figura 134 começando 16px depois do fim da coluna).
 
-> [!important] O `float` virou `position: absolute` — a faixa saiu do fluxo (08/09)
-> Pedido do autor, textual: *"quero que a área lateral seja algo fora do corpo do
-> resumo, que caminhe junto com ele mas não tenha contato com o conteúdo"*.
+> [!important] A faixa saiu do fluxo e voltou no mesmo dia — e o que ficou é melhor (08/09)
+> **Ida.** Pedido textual do autor: *"quero que a área lateral seja algo fora do
+> corpo do resumo, que caminhe junto com ele mas não tenha contato com o
+> conteúdo"*. Virou `position: absolute` com `top: auto` (posição estática), que
+> entrega isso ao pé da letra: a figura não ocupa, não empurra e não é empurrada,
+> e a âncora vertical continua de graça. Medido e publicado (PR #57).
 >
-> O `float` cumpria a parte visível — o texto não se mexia —, mas a figura
-> continuava **dentro do fluxo**, e fluxo é contato: ela empilhava com outros
-> `float`, obedecia ao `clear` e disputava lugar com tabela larga.
+> **Volta.** O autor viu o resultado e respondeu: *"quero que a imagem fique
+> intacta e não tenha nada de colisão com o texto"*. Os dois preços que eu tinha
+> declarado — duas laterais se sobrepondo, e a lateral do fim vazando sobre os
+> backlinks — eram inaceitáveis, e não havia como ter os dois: **"não ocupar
+> espaço" e "não colidir" são a mesma pergunta com respostas opostas.**
 >
-> `position: absolute` com **`top: auto`** entrega as duas coisas de uma vez.
-> `top: auto` fora de fluxo significa *posição estática*: onde a caixa estaria se
-> estivesse no fluxo. A âncora vertical continua saindo de graça — sem JS e sem
-> conta —, e agora a figura não ocupa, não empurra e não é empurrada. O eixo
-> horizontal vem de `left`/`right: calc(100% + var(--vao-lateral))`, onde 100% é a
-> coluna: a figura começa um vão depois dela e termina na borda da folha.
+> **O que ficou.** `float` mais margem negativa de novo — é o construto canônico
+> de nota de margem, e é canônico por este motivo —, agora com duas trancas que a
+> versão de 06/09 não tinha:
 >
-> Medido, régua 150/300, tela 1440 — e **igual no editor e na leitura**: coluna
-> 470, todos os parágrafos 470 (nenhum encurtou), figura direita de 964 a 1248
-> (borda da folha), figura esquerda de 328 a 462, cada uma nascendo exatamente na
-> base do parágrafo anterior à sua posição no HTML. Abaixo de 767px volta a
-> `position: static` — sem margem onde morar, fora de fluxo ela desenharia por
-> cima do texto.
+> - **`clear: left`/`clear: right` na própria figura.** Voltar ao `float` deveria
+>   empilhar duas laterais do mesmo lado; **não empilhou**, e só a medição pegou:
+>   `float` só desce quando falta espaço HORIZONTAL, e a margem negativa deixa a
+>   largura efetiva em −16px, então sempre cabe — as duas caíam exatamente uma
+>   sobre a outra (topo 215 e base 451 nas duas). A mesma margem negativa que tira
+>   a figura do caminho do texto tira a garantia de empilhamento. `clear` de um
+>   lado só devolve isso sem afetar a outra margem.
+> - **`clear: both` no `[data-escapa='sim']`.** Quem escapa ocupa as duas margens,
+>   que é onde a lateral mora; sem isto um bloco passava por baixo do `float` de
+>   margem negativa sem encostar nele.
 >
-> **Os dois preços, medidos e declarados:**
-> 1. Duas laterais próximas se **sobrepõem** (medido: duas no mesmo ponto, topo
->    1000 e base 1237 nas duas). É a definição de "sem contato", não defeito. O
->    editor mostra igual ao aluno, então o autor vê ao escrever.
-> 2. Uma lateral no fim do resumo **vaza** (medido: base 1237 contra fim do
->    resumo em 1159 e backlinks em 1223 — 78px além, 14px dentro). O
->    `.conteudo-resumo::after { clear: both }` continua valendo para os `float`,
->    mas `clear` não alcança quem está fora de fluxo. **Este é o único dos dois
->    que o WYSIWYG não mostra** — no editor não há backlinks embaixo —, e por
->    isso é o único que ganhou aviso no painel.
+> **Varredura de colisão, quatro casos, régua 150/300 a 1380px** — retângulos
+> comparados dois a dois contra todo parágrafo, tabela e a seção de backlinks:
+> duas do mesmo lado (empilham: 215→451 e 467→703), uma no último parágrafo
+> (contida: base 1487, fim do resumo 1497), lateral seguida de tabela que escapa,
+> e uma em cada margem no mesmo ponto (lado a lado). **Zero sobreposições nos
+> quatro**, e todo parágrafo com 470px, igual à coluna.
+>
+> **O preço que sobrou, medido:** uma lateral logo depois de uma figura com
+> "texto ao redor" do MESMO lado desce para além dela mesmo sem se sobreporem
+> (medido: `aoRedorDir` até 1282, a lateral começando em 1395) — `clear` não sabe
+> distinguir os dois tipos de `float`. Descer um pouco é o erro certo quando a
+> alternativa é desenhar por cima.
+>
+> **Duas lições.** Um pedido de forma ("fora do corpo") e um de comportamento
+> ("sem colisão") podem ser incompatíveis, e só o segundo se descobre usando. E:
+> voltar a um mecanismo antigo não é voltar ao estado antigo — o `float` de hoje
+> tem as duas trancas que o de 06/09 não tinha, e a segunda delas eu só encontrei
+> porque medi em vez de confiar na minha própria explicação.
 
 **Três travas que o desenho precisou:**
 

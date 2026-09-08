@@ -172,24 +172,11 @@ export default function PainelImagem({
       ? aoMudarMargens(alvoDaMargem, margemDir)
       : aoMudarMargens(margemEsq, alvoDaMargem)
 
-  /* ---- a lateral no fim do resumo ----
-     A faixa lateral é `position: absolute`, então a figura não empurra o fim do
-     resumo para baixo — e o `clear` que protege os backlinks não alcança quem
-     está fora de fluxo. Uma lateral nos últimos blocos desenha por cima da
-     seção "Resumos que citam este".
-
-     **É o único dos dois preços que o WYSIWYG não mostra**: a sobreposição
-     entre duas laterais aparece na folha do editor igual à do aluno, mas aqui
-     não existe nada embaixo do resumo para a colisão bater. Daí o aviso. */
-  const noFimDoResumo = (() => {
-    if (!lateral) return false
-    const { doc, selection } = editor.state
-    let indice = -1
-    doc.forEach((_no, offset, i) => {
-      if (offset === selection.from) indice = i
-    })
-    return indice >= 0 && indice >= doc.childCount - 2
-  })()
+  /* Houve aqui um aviso de "figura lateral no fim do resumo", de quando a faixa
+     era `position: absolute` e vazava por cima dos backlinks. O `float` voltou e
+     o `clear` do `.conteudo-resumo::after` contém a figura de novo, então o
+     aviso passou a mentir — e aviso que mente é pior que aviso nenhum, porque
+     ensina a ignorar os outros. Ver a decisão 11c-bis. */
 
   /* Ir para a lateral DESLIGA o `escapa`: um faz a figura comer as duas
      margens, o outro a faz morar dentro de uma. Deixar os dois ligados daria um
@@ -329,15 +316,6 @@ export default function PainelImagem({
             {a.quebra === 'margemEsq' ? '◧' : '◨'} Ou deixe o texto contornar
           </Opcao>
         </div>
-      ) : null}
-
-      {noFimDoResumo ? (
-        <p role="status" className="w-full text-[11.5px] text-[var(--stamp)] leading-snug">
-          Esta figura está no fim do resumo. Como a faixa lateral fica fora do
-          fluxo, ela não empurra o fim para baixo — na página do aluno vai
-          desenhar por cima de “Resumos que citam este”. Suba a figura alguns
-          parágrafos, ou use “▭ Quebrar texto”.
-        </p>
       ) : null}
 
       {/* ---- tamanho ---- */}
