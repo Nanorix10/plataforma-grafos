@@ -55,22 +55,22 @@ function IconePessoa() {
 }
 
 /**
- * Marcador dos itens fixos do menu. Substitui os glifos ▤ ◈ ✎, que eram
- * caracteres tipográficos — desenhavam diferente em cada sistema e não
- * significavam nada pra quem não conhece o símbolo. Um ponto que acende
- * quando o item está aberto diz a mesma coisa sem depender da fonte.
+ * Um item da navegação fixa.
+ *
+ * **Aqui havia um `Ponto`** — uma bolinha que servia de marcador da lista e
+ * acendia no item aberto. Ele saiu, e não por gosto: os sete itens fixos
+ * ocupavam 255px de altura, enquanto a árvore de matérias — que é o conteúdo da
+ * barra e cresce com o acervo — vivia espremida num painel com rolagem. A
+ * metade que menos importa era a mais espaçosa.
+ *
+ * O item ativo não perde pista não-cromática com a saída do ponto: o anel de
+ * `inset` em volta continua lá, e é forma, não cor. É o que mantém de pé a
+ * regra do `lib/materias.ts` — cor é reforço, nunca a única pista.
+ *
+ * O aperto vale só de `lg` para cima, que é onde a barra é coluna fixa de tela
+ * cheia e a árvore disputa altura. Abaixo disso ela é gaveta, e ali sete linhas
+ * de 29px seriam alvo de toque pequeno demais sem ganhar nada em troca.
  */
-function Ponto({ ativo }: { ativo: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-        ativo ? 'bg-[var(--acento)]' : 'border border-[var(--ink-faint)]'
-      }`}
-    />
-  )
-}
-
 function ItemNav({
   href,
   ativo,
@@ -84,7 +84,7 @@ function ItemNav({
     <Link
       href={href}
       aria-current={ativo ? 'page' : undefined}
-      className={`flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+      className={`flex items-center px-2.5 py-[7px] lg:py-[3px] rounded-lg text-[13px] transition-colors duration-[120ms] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
         ativo
           ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento-claro)]'
           : 'text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
@@ -495,27 +495,27 @@ export default function Sidebar({
       {/* navegação fixa */}
       <nav className="px-2 pb-2 flex flex-col gap-0.5">
         <ItemNav href="/resumos" ativo={pathname === '/resumos'}>
-          <Ponto ativo={pathname === '/resumos'} /> Todos os resumos
+          Todos os resumos
         </ItemNav>
         <ItemNav href="/mapa" ativo={pathname === '/mapa'}>
-          <Ponto ativo={pathname === '/mapa'} /> Mapa de conexões
+          Mapa de conexões
         </ItemNav>
         <ItemNav href="/linha-do-tempo" ativo={pathname === '/linha-do-tempo'}>
-          <Ponto ativo={pathname === '/linha-do-tempo'} /> Linha do tempo
+          Linha do tempo
         </ItemNav>
         <ItemNav href="/edital" ativo={pathname === '/edital'}>
-          <Ponto ativo={pathname === '/edital'} /> Edital
+          Edital
         </ItemNav>
         {isAdmin ? (
           <>
             <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin/editor')}>
-              <Ponto ativo={pathname.startsWith('/admin/editor')} /> Editor
+              Editor
             </ItemNav>
             <ItemNav href="/admin/eventos" ativo={pathname.startsWith('/admin/eventos')}>
-              <Ponto ativo={pathname.startsWith('/admin/eventos')} /> Eventos
+              Eventos
             </ItemNav>
             <ItemNav href="/admin/pessoas" ativo={pathname.startsWith('/admin/pessoas')}>
-              <Ponto ativo={pathname.startsWith('/admin/pessoas')} /> Pessoas
+              Pessoas
             </ItemNav>
           </>
         ) : null}
