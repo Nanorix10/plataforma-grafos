@@ -1277,13 +1277,44 @@ h3 {
 }
 /* `ambos` só ganha a segunda coluna quando ela cabe de verdade; abaixo disso a
    faixa da esquerda cede e as figuras dela voltam ao fluxo. */
-/* As DUAS faixas ao mesmo tempo pedem 1942px de largura de tela. É raro, e é
-   por isso que a segunda coluna tem corte próprio: até lá, `ambos` desenha só a
-   da direita e as figuras da esquerda voltam ao fluxo do texto. */
-@media (min-width: 1960px) {
+/* ---- as DUAS faixas ao mesmo tempo ----
+   Pedido: "deixa eu colocar em uma coluna esquerda e outra direita".
+
+   A conta com tudo em cena não fecha em tela nenhuma comum: 262 (barra do site)
+   + 128+24 (trilho) + 230 + 24 + 920 + 24 + 230 = **1842px**, e com faixa de
+   280 vai a 1942. Num monitor de 1920 sobra pouco, e abaixo disso não sobra
+   nada.
+
+   **Então o trilho cede o lugar — e só ele.** Das três colunas que disputam a
+   tela, é a única que tem substituto: o sumário da seção existe também nos
+   títulos do próprio texto, enquanto a faixa e a folha não existem em outro
+   lugar. E cede apenas nos resumos que usam as duas faixas, que são os que o
+   autor montou de propósito como página ilustrada.
+
+   Sem o trilho a conta cai para 1690 com faixa de 230, e as duas colunas passam
+   a caber a partir de 1700. De 1880 em diante o trilho volta, porque aí cabem
+   os quatro. */
+@media (min-width: 1700px) {
+  .leitura[data-faixa='ambos'] {
+    --faixa: 230px;
+    grid-template-columns: var(--faixa) [folha] minmax(0, var(--pagina)) var(--faixa);
+  }
+  .leitura[data-faixa='ambos'] .trilho {
+    display: none;
+  }
+}
+@media (min-width: 1880px) {
   .leitura[data-faixa='ambos'] {
     grid-template-columns:
       var(--trilho-largura) var(--faixa) [folha] minmax(0, var(--pagina)) var(--faixa);
+  }
+  .leitura[data-faixa='ambos'] .trilho {
+    display: block;
+  }
+}
+@media (min-width: 1980px) {
+  .leitura[data-faixa='ambos'] {
+    --faixa: 280px;
   }
 }
 
@@ -1316,7 +1347,9 @@ h3 {
     margin: 1.2em auto;
   }
 }
-@media (max-width: 1959px) {
+/* Abaixo do corte das duas faixas, `ambos` desenha só a da direita e as figuras
+   da esquerda voltam ao fluxo do texto. */
+@media (max-width: 1699px) {
   .leitura[data-faixa='ambos'] .figura[data-quebra='faixaEsq'] {
     position: static;
     width: auto;
@@ -1677,10 +1710,27 @@ h3 {
   grid-column: folha;
 }
 
+/* **O `display: none` mudou de lugar, e isso é um conserto.**
+
+   Ele estava AQUI, sem media query — e o `@media (min-width: 1340px)` que o
+   liga fica ACIMA, no bloco do `.leitura`. As duas regras têm a mesma
+   especificidade (0,1,0), então quem vinha depois ganhava: o trilho ficava
+   escondido em TODA largura de tela, desde sempre. Media query não acrescenta
+   especificidade, e é exatamente aí que se tropeça.
+
+   O sumário nunca apareceu para ninguém. Achado montando a faixa lateral, que
+   precisa saber se a coluna do trilho existe para calcular quanta tela sobra —
+   uma coluna fantasma de 152px estragava a conta das duas faixas.
+
+   Agora o esconder é explícito e não depende de ordem. */
 .trilho {
-  display: none;
   grid-column: 1;
   padding-top: 2.5rem;
+}
+@media (max-width: 1339px) {
+  .trilho {
+    display: none;
+  }
 }
 .trilho-fixa {
   position: sticky;

@@ -1495,6 +1495,38 @@ partir de 1620, e abaixo disso a figura volta a ser bloco no meio do texto. As
 duas faixas ao mesmo tempo pedem 1960. Em todas, folha 920 e texto 620 — **o
 texto nunca se mexe**, que é a frase do pedido.
 
+> [!bug] O trilho nunca apareceu — desde sempre, em toda tela (08/09)
+> `.trilho { display: none }` estava escrito **depois** do
+> `@media (min-width: 1340px) { .trilho { display: block } }`. As duas têm a
+> mesma especificidade (0,1,0), e **media query não acrescenta especificidade** —
+> então quem vinha por último ganhava, e o sumário lateral ficava escondido em
+> qualquer largura. Estava assim no CSS publicado; conferido no arquivo servido
+> em produção antes do conserto.
+>
+> Achado montando as duas faixas: a conta de quanta tela sobra precisa saber se
+> a coluna do trilho existe, e uma coluna fantasma de 152px estragava o cálculo.
+> Um defeito que ninguém veria por olhar — a página não errava, só não mostrava.
+>
+> O esconder virou `@media (max-width: 1339px)`, explícito e independente de
+> ordem.
+
+**11c-sexies. As duas faixas ao mesmo tempo, e o trilho cedendo o lugar** (08/09).
+Pedido: *"deixa eu colocar em uma coluna esquerda e outra direita"*. A conta com
+tudo em cena dá **1842px** (262 barra + 128+24 trilho + 230 + 24 + 920 + 24 +
+230), e 1942 com faixa de 280 — num monitor de 1920 sobra pouco, e abaixo disso
+não sobra nada.
+
+**O trilho cede o lugar, e só ele.** Das colunas que disputam a tela é a única
+com substituto: o sumário existe também nos títulos do próprio texto, enquanto a
+faixa e a folha não existem em outro lugar. E cede apenas nos resumos com as duas
+faixas, que são os que o autor montou de propósito como página ilustrada. Sem ele
+a conta cai para 1690, e as duas colunas passam a caber a partir de 1700; de 1880
+em diante o trilho volta, porque aí cabem os quatro.
+
+Medido: 2000 → 280+280 com trilho; 1920 e 1880 → 230+230 com trilho; 1750 e 1700
+→ 230+230 sem trilho; 1680 → só a direita; 1400 → as duas no fluxo. Em todas,
+folha 920, texto 620 e zero sobreposição entre figura e texto.
+
 **Três travas que o desenho precisou:**
 
 - **`escapa` e margem são opostos exatos** — um come as duas margens, o outro
