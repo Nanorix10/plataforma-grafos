@@ -1455,6 +1455,46 @@ e era por isso que o texto não encurtava uma letra (medido: coluna 620, parágr
 > tem as duas trancas que o de 06/09 não tinha, e a segunda delas eu só encontrei
 > porque medi em vez de confiar na minha própria explicação.
 
+**11c-quinquies. A FAIXA lateral: uma área fora da folha, com colocação livre** (08/09).
+Pedido textual: *"faz uma área do lado da página do texto para eu colocar imagens
+livremente sem nem tocar no texto"*. Não é a 11c-bis com outro nome — é o modo
+que ela recusou em 06/09 como "projeto seguinte", e a diferença é de espécie:
+
+| | `margem*` (11c-bis) | `faixa*` (esta) |
+|---|---|---|
+| onde mora | dentro da folha | fora da folha |
+| custo para o texto | come a margem da régua | zero, a coluna não muda |
+| posição vertical | ancorada ao parágrafo | número livre, arrastado |
+
+**São duas peças, e elas precisam ser duas.** A grade do `.leitura` reserva a
+coluna; a figura se posiciona dentro dela com `position: absolute` contra a
+coluna de texto. A grade sozinha não serve porque o corpo é uma lista PLANA de
+blocos e não há como pôr um filho numa segunda coluna sem quebrar a ordem do
+texto; o absolute sozinho não serve porque sem a coluna reservada a figura sai
+da tela e cria rolagem horizontal.
+
+**`topo` é em pixels, não em porcentagem da altura do resumo.** O resumo cresce a
+cada palavra digitada — em porcentagem, escrever um parágrafo moveria todas as
+figuras da faixa de uma vez.
+
+> [!warning] Dois erros que só a medição pegou
+> **`grid-column: -2` deixou de encontrar a folha.** Enquanto a folha era a
+> última coluna, `-2` funcionava. Com a faixa à direita ela deixou de ser a
+> última, e o artigo foi parar DENTRO da faixa: saiu com 396px em vez de 920, e
+> o texto com 96. `-2` é "a última coluna", não "a penúltima". Agora a linha
+> tem nome (`[folha]`), que não depende de quantas colunas existem.
+>
+> **`minmax(0, var(--pagina))` prefere espremer a folha a estourar a conta.** Os
+> cortes de tela foram calculados sem contar a barra lateral do site, e a 1920 a
+> folha saiu com 883px e o texto com 583 — sem erro nenhum, sem rolagem, sem
+> nada acusando. Os cortes agora saem da conta inteira: 262 (barra) + 128+24
+> (trilho) + 920 (folha) + 24 (vão) + a faixa.
+
+Larguras conferidas de 375px a 1980px: a faixa vale 280 a partir de 1700, 230 a
+partir de 1620, e abaixo disso a figura volta a ser bloco no meio do texto. As
+duas faixas ao mesmo tempo pedem 1960. Em todas, folha 920 e texto 620 — **o
+texto nunca se mexe**, que é a frase do pedido.
+
 **Três travas que o desenho precisou:**
 
 - **`escapa` e margem são opostos exatos** — um come as duas margens, o outro

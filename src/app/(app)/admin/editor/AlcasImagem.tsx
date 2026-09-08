@@ -5,6 +5,7 @@ import type { Editor } from '@tiptap/react'
 import {
   escreverRecorte,
   lerRecorte,
+  naFaixa,
   naMargem,
   RECORTE_MINIMO_VISIVEL,
   VAO_LATERAL,
@@ -68,9 +69,17 @@ export default function AlcasImagem({
   } | null>(null)
   const [arrastando, setArrastando] = useState(false)
 
+  /* O arrasto que MOVE a figura na faixa. Separado do de redimensionar porque
+     grava outro atributo — `topo`, em pixels crus — e porque é o gesto que dá
+     sentido à palavra "livremente": na faixa não há âncora a parágrafo nenhum,
+     e a altura é exatamente onde o autor soltou. */
+  const arrastoTopo = useRef<{ y0: number; topo0: number } | null>(null)
+  const [movendo, setMovendo] = useState(false)
+
   const atributos = editor.getAttributes('image')
   const quebra = atributos.quebra
   const lateral = naMargem(quebra)
+  const emFaixa = naFaixa(quebra)
   /* Recorte ausente é o mesmo que "nada cortado ainda" para esta tela: as alças
      começam nas bordas da foto e só o primeiro arrasto grava alguma coisa. */
   const recorte: Recorte = lerRecorte(atributos.recorte) ?? { t: 0, r: 0, b: 0, l: 0 }
@@ -160,6 +169,32 @@ export default function AlcasImagem({
     }
   }, [arrastando, editor])
 
+  useEffect(() => {
+    if (!movendo) return
+    function aoMover(e: PointerEvent) {
+      const a = arrastoTopo.current
+      if (!a) return
+      e.preventDefault()
+      /* Pixels crus, e não porcentagem da altura do resumo: o resumo cresce a
+         cada palavra digitada, e em porcentagem escrever um parágrafo moveria
+         todas as figuras da faixa de uma vez. */
+      const topo = Math.max(0, Math.round(a.topo0 + (e.clientY - a.y0)))
+      editor.chain().updateAttributes('image', { topo }).run()
+    }
+    function aoSoltar() {
+      setMovendo(false)
+      arrastoTopo.current = null
+    }
+    window.addEventListener('pointermove', aoMover)
+    window.addEventListener('pointerup', aoSoltar)
+    window.addEventListener('pointercancel', aoSoltar)
+    return () => {
+      window.removeEventListener('pointermove', aoMover)
+      window.removeEventListener('pointerup', aoSoltar)
+      window.removeEventListener('pointercancel', aoSoltar)
+    }
+  }, [movendo, editor])
+
   /* O arrasto do recorte. Separado do de redimensionar porque o que ele grava é
      outro atributo, com outra conta e outro travamento. */
   const [recortandoLado, setRecortandoLado] = useState<'t' | 'r' | 'b' | 'l' | null>(null)
@@ -216,12 +251,27 @@ export default function AlcasImagem({
       x0: e.clientX,
       larg0: c.larg,
       alt0: c.alt,
-      referencia: lateral
-        ? Math.max(24, (quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL)
-        : pai?.clientWidth || c.larg,
+      /* O denominador da porcentagem: a coluna no texto, a margem na lateral, a
+         própria faixa quando a figura está nela. A largura da faixa é decidida
+         por media query no CSS, então quem sabe o número é o DOM, não o TS. */
+      referencia: emFaixa
+        ? Math.max(24, parseFloat(
+            getComputedStyle(pai?.closest('.leitura') ?? document.documentElement)
+              .getPropertyValue('--faixa')
+          ) || c.larg)
+        : lateral
+          ? Math.max(24, (quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL)
+          : pai?.clientWidth || c.larg,
       sinal: quebra === 'margemDir' ? -1 : 1,
     }
     setArrastando(true)
+  }
+
+  function comecarTopo(e: React.PointerEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    arrastoTopo.current = { y0: e.clientY, topo0: Math.max(0, Number(atributos.topo) || 0) }
+    setMovendo(true)
   }
 
   /* Um handler só, com o lado vindo do `data-lado` do botão. A versão que
@@ -324,6 +374,17 @@ export default function AlcasImagem({
           várias perto uma da outra */}
       <div className="absolute inset-0 outline outline-2 outline-[var(--acento)] outline-offset-1 rounded-[2px]" />
 
+      {/* Na faixa a figura inteira é pega e arrastada. Só ali: no fluxo do
+          texto a posição é do parágrafo, e arrastar prometeria um controle que
+          o modo não tem. */}
+      {emFaixa ? (
+        <div
+          onPointerDown={comecarTopo}
+          title="Arraste para subir ou descer a figura na faixa"
+          className={`absolute inset-0 pointer-events-auto ${movendo ? 'cursor-grabbing' : 'cursor-grab'}`}
+        />
+      ) : null}
+
       {/* Puxa sempre a alça de DENTRO — a que aponta para o texto —, porque a
           de fora fica na borda presa e arrastá-la não teria para onde crescer.
           No fluxo normal e em `margemEsq` a de dentro é a direita, que é a de
@@ -352,6 +413,11 @@ export default function AlcasImagem({
       {arrastando ? (
         <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10.5px] tabular-nums px-1.5 py-0.5 rounded bg-[var(--acento)] text-[var(--page)] whitespace-nowrap">
           {Math.round(caixa.larg)} × {Math.round(caixa.alt)}
+        </span>
+      ) : null}
+      {movendo ? (
+        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10.5px] tabular-nums px-1.5 py-0.5 rounded bg-[var(--acento)] text-[var(--page)] whitespace-nowrap">
+          {Math.max(0, Number(atributos.topo) || 0)}px do topo
         </span>
       ) : null}
     </div>
