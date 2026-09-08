@@ -69,3 +69,58 @@ export function estiloDaPagina(esq: number, dir: number) {
     '--margem-dir': `${m.dir}px`,
   } as React.CSSProperties
 }
+
+/* ============================================================
+   A FAIXA LATERAL
+   ============================================================
+   Uma área FORA da folha, no espaço vazio ao lado dela, onde a imagem é posta
+   à mão e não encosta no texto — o pedido foi literalmente "uma área do lado da
+   página do texto para colocar imagens livremente sem nem tocar no texto".
+
+   É outra coisa que os modos `margemEsq`/`margemDir`, e a diferença não é de
+   grau: aqueles moram DENTRO da folha, tiram largura da margem do texto e são
+   ancorados ao parágrafo em que foram inseridos. A faixa não tira nada do
+   texto (a coluna continua exatamente a de hoje) e não é ancorada a nada — a
+   posição vertical é um número que o autor arrasta.
+
+   **A grade reserva a coluna; a figura se posiciona dentro dela.** As duas
+   coisas são separadas de propósito: o HTML do resumo é uma lista plana de
+   blocos e não tem como pôr filhos numa segunda coluna, então quem garante que
+   a faixa não invade nada é a grade do `.leitura`, e quem põe a figura no lugar
+   é `position: absolute` contra a coluna de texto. Sem a reserva da grade, a
+   figura sairia da tela e criaria rolagem horizontal.
+*/
+
+/** A faixa cheia. Só cabe quando sobra tela; ver `globals.css`. */
+export const FAIXA_LARGURA = 280
+
+/** O respiro entre a borda da folha e a faixa. É o `column-gap` da grade. */
+export const FAIXA_VAO = 24
+
+/**
+ * Abaixo desta largura de tela a faixa não existe e a figura volta ao fluxo.
+ *
+ * A conta: a barra lateral come 262px, a folha tem 920, o vão 28 e a faixa
+ * ainda precisa de ~230 para não virar selo — e o par folha+faixa é
+ * centralizado, não encostado. Abaixo disso não há onde pôr a faixa sem
+ * espremer a folha ou criar rolagem horizontal, e as duas saídas são piores do
+ * que a figura virar um bloco no meio do texto.
+ */
+export const TELA_MINIMA_FAIXA = 1620
+
+/**
+ * Qual lado da faixa este resumo usa — lido do HTML já gravado.
+ *
+ * Sai do HTML, e não de uma coluna no banco, porque a faixa existe exatamente
+ * quando há uma figura nela: uma coluna separada poderia dizer "tem faixa" com
+ * a faixa vazia (reservando espaço à toa) ou o contrário (a figura saindo da
+ * tela). Ler o corpo não pode divergir dele.
+ */
+export function ladoDaFaixa(html: string): 'esq' | 'dir' | 'ambos' | null {
+  const esq = html.includes('faixaEsq')
+  const dir = html.includes('faixaDir')
+  if (esq && dir) return 'ambos'
+  if (esq) return 'esq'
+  if (dir) return 'dir'
+  return null
+}

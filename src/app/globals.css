@@ -1124,6 +1124,11 @@ h3 {
   /* escrito também em `VAO_LATERAL`, no `admin/editor/imagem.ts` — o painel
      precisa da conta e o CSS não importa de TypeScript */
   --vao-lateral: 16px;
+  /* A âncora da FAIXA lateral, mais abaixo: é contra esta caixa — que é
+     exatamente a coluna de texto — que o `calc(100% + ...)` da figura mede.
+     Não afeta o modo `margem*`, que é `float` e ignora contexto de
+     posicionamento. */
+  position: relative;
 }
 
 /* **O `float` é o que impede colisão, e é por isso que ele voltou.**
@@ -1188,6 +1193,132 @@ h3 {
   .conteudo-resumo .figura[data-quebra='margemEsq'],
   .conteudo-resumo .figura[data-quebra='margemDir'] {
     float: none;
+    width: auto;
+    max-width: 100%;
+    margin: 1.2em auto;
+  }
+}
+
+/* ---- a FAIXA lateral: uma área fora da folha ----
+   Pedido do autor, textual: *"faz uma área do lado da página do texto para eu
+   colocar imagens livremente sem nem tocar no texto"*.
+
+   Não é o modo `margem*` acima com outro nome. Aquele mora DENTRO da folha,
+   come a margem do texto e nasce ancorado ao parágrafo. Este fica FORA da
+   folha, não tira um pixel da coluna, e a altura é um número que o autor
+   arrasta — daí "livremente".
+
+   ============================================================
+   Duas peças, e elas precisam ser duas
+   ============================================================
+   1. **A grade reserva a coluna.** `.leitura` ganha uma faixa de cada lado
+      quando `data-faixa` diz que há figura lá. É isso que impede a figura de
+      sair da tela e criar rolagem horizontal, e o que empurra a folha para o
+      lado até o par folha+faixa ficar centralizado.
+   2. **A figura se posiciona dentro dela**, com `position: absolute` contra a
+      coluna de texto.
+
+   Por que não a grade sozinha? Porque o corpo do resumo é uma lista PLANA de
+   blocos (`dangerouslySetInnerHTML`), e não há como pôr um filho numa segunda
+   coluna da grade sem quebrar a ordem do texto. Por que não o absolute
+   sozinho? Porque sem a coluna reservada a figura desenharia por cima do que
+   estivesse ali, ou empurraria a janela.
+
+   O `--faixa` é zero por padrão e só acende com tela larga o bastante. Abaixo
+   disso a figura volta a ser um bloco no meio do texto: espremer a folha ou
+   criar rolagem horizontal seriam os dois piores desfechos possíveis. */
+.leitura {
+  --faixa: 0px;
+  /* o mesmo valor do `column-gap` da grade, e não por acaso — ver a nota nas
+     colunas da faixa, mais abaixo */
+  --faixa-vao: var(--trilho-gap);
+}
+/* **Os cortes saem de uma conta, não de um número redondo.** A faixa só pode
+   existir quando sobra tela DEPOIS de tudo o que já está lá: a barra lateral do
+   site (262px), o trilho e seu vão (128+24), a folha (920) e o vão da faixa
+   (24). Com faixa de 230 isso dá 1588, com 280 dá 1638 — e os cortes abaixo
+   levam uma folga porque `minmax(0, var(--pagina))` prefere ESPREMER A FOLHA a
+   deixar a conta estourar, que foi exatamente o que aconteceu na primeira
+   medição: a 1920 a folha saiu com 883px em vez de 920, e o texto com 583. */
+@media (min-width: 1620px) {
+  .leitura {
+    --faixa: 230px;
+  }
+}
+@media (min-width: 1700px) {
+  .leitura {
+    --faixa: 280px;
+  }
+}
+
+/* A coluna reservada. Vem de `grid-template-columns` e não de `padding` porque
+   o trilho já é coluna da mesma grade, e o `justify-content: center` precisa
+   contar a faixa para centralizar o conjunto. */
+/* A coluna reservada mede exatamente `--faixa`: **o respiro sai do
+   `column-gap` da própria grade**, que já vale 24px entre todas as colunas.
+   Somar o vão à largura da coluna daria 24px a mais do que o
+   `calc(100% + margem + vão)` da figura calcula, e a figura ficaria deslocada
+   da coluna que existe para ela. Por isso `--faixa-vao` É o `--trilho-gap`. */
+.leitura[data-faixa='dir'],
+.leitura[data-faixa='ambos'] {
+  grid-template-columns: [folha] minmax(0, var(--pagina)) var(--faixa);
+}
+.leitura[data-faixa='esq'] {
+  grid-template-columns: var(--faixa) [folha] minmax(0, var(--pagina));
+}
+@media (min-width: 1340px) {
+  .leitura[data-faixa='dir'],
+  .leitura[data-faixa='ambos'] {
+    grid-template-columns: var(--trilho-largura) [folha] minmax(0, var(--pagina)) var(--faixa);
+  }
+  .leitura[data-faixa='esq'] {
+    grid-template-columns: var(--trilho-largura) var(--faixa) [folha] minmax(0, var(--pagina));
+  }
+}
+/* `ambos` só ganha a segunda coluna quando ela cabe de verdade; abaixo disso a
+   faixa da esquerda cede e as figuras dela voltam ao fluxo. */
+/* As DUAS faixas ao mesmo tempo pedem 1942px de largura de tela. É raro, e é
+   por isso que a segunda coluna tem corte próprio: até lá, `ambos` desenha só a
+   da direita e as figuras da esquerda voltam ao fluxo do texto. */
+@media (min-width: 1960px) {
+  .leitura[data-faixa='ambos'] {
+    grid-template-columns:
+      var(--trilho-largura) var(--faixa) [folha] minmax(0, var(--pagina)) var(--faixa);
+  }
+}
+
+/* A figura, posicionada à mão dentro da coluna reservada. `top` sai de `--topo`,
+   que o `renderHTML` embute — é o número que o autor arrastou. */
+.conteudo-resumo .figura[data-quebra='faixaEsq'],
+.conteudo-resumo .figura[data-quebra='faixaDir'] {
+  position: absolute;
+  top: var(--topo, 0px);
+  width: var(--faixa);
+  margin: 0;
+}
+.conteudo-resumo .figura[data-quebra='faixaDir'] {
+  /* 100% é a coluna de texto; some a margem direita para chegar à borda da
+     folha, e o vão para entrar na faixa */
+  left: calc(100% + var(--margem-dir, 0px) + var(--faixa-vao));
+}
+.conteudo-resumo .figura[data-quebra='faixaEsq'] {
+  right: calc(100% + var(--margem-esq, 0px) + var(--faixa-vao));
+}
+
+/* Sem faixa reservada não há onde a figura morar: ela volta a ser um bloco do
+   texto. Vale nas telas estreitas E no caso `esq` de `ambos` que não coube. */
+@media (max-width: 1619px) {
+  .conteudo-resumo .figura[data-quebra='faixaEsq'],
+  .conteudo-resumo .figura[data-quebra='faixaDir'] {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    margin: 1.2em auto;
+  }
+}
+@media (max-width: 1959px) {
+  .leitura[data-faixa='ambos'] .figura[data-quebra='faixaEsq'] {
+    position: static;
     width: auto;
     max-width: 100%;
     margin: 1.2em auto;
@@ -1520,13 +1651,18 @@ h3 {
    mexe no `@media` junto. */
 .leitura {
   display: grid;
-  grid-template-columns: minmax(0, var(--pagina));
+  /* **A linha `[folha]` tem nome porque `-2` deixou de bastar.** Enquanto a
+     folha era a última coluna, `grid-column: -2` a encontrava. Com a faixa
+     lateral à direita ela deixou de ser a última, e `-2` passou a apontar para
+     a coluna da faixa — a folha ia parar dentro dela e saía com 396px em vez de
+     920. Nome não depende de quantas colunas existem. */
+  grid-template-columns: [folha] minmax(0, var(--pagina));
   justify-content: center;
   column-gap: var(--trilho-gap);
 }
 @media (min-width: 1340px) {
   .leitura {
-    grid-template-columns: var(--trilho-largura) minmax(0, var(--pagina));
+    grid-template-columns: var(--trilho-largura) [folha] minmax(0, var(--pagina));
   }
   .trilho {
     display: block;
@@ -1536,8 +1672,9 @@ h3 {
 /* `-2` e não `2`: com uma coluna só (sem trilho) a última linha da grade é a
    primeira, e com duas é a segunda. Contando do fim, o artigo cai no lugar
    certo nos dois casos sem uma segunda regra dentro do `@media`. */
-.leitura > article {
-  grid-column: -2;
+.leitura > article,
+.leitura > .folha {
+  grid-column: folha;
 }
 
 .trilho {

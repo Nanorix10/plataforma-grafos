@@ -11,7 +11,7 @@ import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
 import { getSessao } from '@/lib/sessao'
-import { estiloDaPagina } from '@/lib/pagina'
+import { estiloDaPagina, ladoDaFaixa } from '@/lib/pagina'
 import { PROCESSOS } from '@/lib/processos'
 import { periodoDosEventos } from '@/lib/tempo'
 import Trilho from './Trilho'
@@ -156,6 +156,10 @@ export default async function ResumoPage({
           property herda, então o artigo continua lendo as mesmas. */}
       <div
         className="leitura"
+        /* Reserva a coluna da faixa quando o corpo tem figura nela. Lido do
+           HTML e não de uma coluna do banco: assim não há como o site reservar
+           espaço para uma faixa vazia nem deixar a figura sem lugar. */
+        data-faixa={ladoDaFaixa(corpoHtml) ?? undefined}
         style={
           {
             ...estiloDaPagina(resumo.margem_esq ?? 150, resumo.margem_dir ?? 150),

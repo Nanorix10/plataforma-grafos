@@ -40,6 +40,23 @@ type Quebra =
   | 'aoRedorDir'
   | 'margemEsq'
   | 'margemDir'
+  | 'faixaEsq'
+  | 'faixaDir'
+
+/**
+ * A figura mora na FAIXA, fora da folha, na altura que o autor arrastou.
+ *
+ * Não confundir com `margem*`, que é o vizinho de cima: aquele mora DENTRO da
+ * folha, tira largura da margem e nasce ancorado ao parágrafo em que foi
+ * inserido. A faixa fica fora da folha, não tira nada do texto e não é ancorada
+ * a nada — `topo` é um número livre, em pixels do começo do resumo.
+ *
+ * É o que o autor pediu com todas as letras: "uma área do lado da página do
+ * texto para colocar imagens livremente sem nem tocar no texto".
+ */
+export function naFaixa(q: unknown): boolean {
+  return q === 'faixaEsq' || q === 'faixaDir'
+}
 
 /**
  * A figura mora na MARGEM da folha, e não dentro da coluna.
@@ -220,6 +237,19 @@ export const Imagem = Node.create({
       opacidade: { default: 100, parseHTML: (el) => numero(pegar(el, 'data-opacidade'), 100) },
       recolorir: { default: 'nenhum', parseHTML: (el) => pegar(el, 'data-recolorir') ?? 'nenhum' },
 
+      /**
+       * A altura da figura na FAIXA, em pixels do topo do resumo.
+       *
+       * Só vale com `quebra` de faixa; nos outros modos a posição vertical vem
+       * do fluxo e este número é ignorado. É o que faz a colocação ser LIVRE:
+       * não há âncora a parágrafo nenhum, e o autor arrasta para onde quiser.
+       *
+       * Em pixels, e não em porcentagem da altura do resumo, porque o resumo
+       * muda de altura a cada palavra escrita — em porcentagem, digitar um
+       * parágrafo moveria todas as figuras da faixa.
+       */
+      topo: { default: 0, parseHTML: (el) => numero(pegar(el, 'data-topo'), 0) },
+
       /** `"t r b l"` em % da imagem original; vazio = imagem inteira. */
       recorte: { default: '', parseHTML: (el) => pegar(el, 'data-recorte') ?? '' },
       /**
@@ -296,6 +326,12 @@ export const Imagem = Node.create({
 
     const estiloFigura: string[] = []
     if (a.margem > 0) estiloFigura.push(`--margem-figura:${a.margem}px`)
+    /* A altura na faixa sai como variável e não como `top` direto: assim a
+       regra de tela estreita, no `globals.css`, devolve a figura ao fluxo só
+       trocando `position`, sem ter que desfazer um `top` embutido — `top` num
+       elemento estático seria ignorado, mas a variável deixa a intenção legível
+       no HTML gravado, que é o que alguém vai ler daqui a um ano. */
+    if (naFaixa(a.quebra)) estiloFigura.push(`--topo:${Math.max(0, Number(a.topo) || 0)}px`)
 
     const imagem = [
       'img',
@@ -344,8 +380,9 @@ export const Imagem = Node.create({
            comer as duas margens, o outro a faz morar dentro de uma. O painel já
            impede a combinação, mas HTML antigo pode chegar com `escapa` gravado
            e ser trocado para lateral — então o atributo morre aqui também. */
-        'data-escapa': a.escapa && !naMargem(a.quebra) ? 'sim' : null,
+        'data-escapa': a.escapa && !naMargem(a.quebra) && !naFaixa(a.quebra) ? 'sim' : null,
         'data-margem': a.margem || null,
+        'data-topo': naFaixa(a.quebra) ? Math.max(0, Number(a.topo) || 0) : null,
         style: estiloFigura.join(';'),
       },
       miolo,

@@ -741,6 +741,7 @@ export default function EditorCorpo({
   const [recortePos, setRecortePos] = useState<number | null>(null)
   const [erroImagem, setErroImagem] = useState<string | null>(null)
 
+
   /**
    * Sobe as imagens e insere cada uma onde o cursor está.
    *
@@ -977,6 +978,33 @@ export default function EditorCorpo({
     erro: 'Falha ao salvar — use o botão Salvar',
   }[status]
 
+  /**
+   * Que lados da faixa lateral este resumo usa.
+   *
+   * A grade da folha precisa reservar a coluna — é isso que impede a figura de
+   * desenhar por cima da mesa e o que empurra a folha até o par ficar
+   * centralizado. A página do aluno faz a mesma conta lendo o HTML gravado
+   * (`ladoDaFaixa`); aqui a fonte é o documento vivo, que é o mesmo dado antes
+   * de virar texto.
+   *
+   * Varre os nós em vez de serializar com `getHTML()`: o resultado é igual e
+   * não custa um documento inteiro em string a cada tecla digitada.
+   */
+  const ladoFaixa = (() => {
+    if (!editor) return undefined
+    let esq = false
+    let dir = false
+    editor.state.doc.descendants((no) => {
+      if (no.type.name !== 'image') return
+      if (no.attrs.quebra === 'faixaEsq') esq = true
+      if (no.attrs.quebra === 'faixaDir') dir = true
+    })
+    if (esq && dir) return 'ambos'
+    if (esq) return 'esq'
+    if (dir) return 'dir'
+    return undefined
+  })()
+
   return (
     <div
       className={
@@ -1077,7 +1105,11 @@ export default function EditorCorpo({
             apontaria para uma folha que já saiu de baixo. */}
         <Regua esq={margemEsq} dir={margemDir} aoMudar={aoMudarMargens} />
 
-        <div className="px-4">
+        {/* A mesma grade da página do aluno: é ela que reserva a coluna da
+            faixa lateral e empurra a folha até o par ficar centralizado. Sem
+            isto o editor desenharia a faixa por cima da mesa, e o WYSIWYG
+            cairia justamente no modo que existe para ser posicionado à mão. */}
+        <div className="px-4 leitura" data-faixa={ladoFaixa}>
         <div
           /* As margens vêm da régua, em variáveis de CSS. Abaixo de `md` elas
              são ignoradas e vale um recuo fixo de 24px: 150px de margem numa
@@ -1089,7 +1121,7 @@ export default function EditorCorpo({
              nessa faixa sem ninguém ver. A regra de celular do `[data-escapa]`
              no `globals.css` usa `max-width: 767px`, ou seja, já estava casada
              com a página do aluno e contra o editor. Os três agora concordam. */
-          className={`mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[var(--pagina)] px-6 py-8 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] sm:py-[58px] ${
+          className={`folha mx-auto bg-[var(--paper)] shadow-[0_0_0_1px_var(--line-forte),0_8px_24px_rgba(0,0,0,0.4)] rounded-[3px] max-w-[var(--pagina)] px-6 py-8 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] sm:py-[58px] ${
             telaCheia ? 'min-h-full' : 'min-h-[520px]'
           }`}
           /* A variável fica na folha, não no `.conteudo-resumo` do TipTap:

@@ -8,6 +8,7 @@ import {
   lerNatural,
   lerRecorte,
   MARGEM_LATERAL_CONFORTAVEL,
+  naFaixa,
   naMargem,
   VAO_LATERAL,
 } from './imagem'
@@ -143,6 +144,24 @@ export default function PainelImagem({
     editor.chain().focus().updateAttributes('image', attrs).run()
 
   const lateral = naMargem(a.quebra)
+  const emFaixa = naFaixa(a.quebra)
+
+  /* Mandar para a faixa GRAVA a altura atual da figura, em vez de zerar.
+     Zerando, ela saltaria para o topo do resumo no instante do clique e o autor
+     teria que trazê-la de volta arrastando — o gesto começaria desfazendo um
+     estrago. A medição sai do DOM porque é a única fonte que sabe onde a figura
+     está DESENHADA agora; o documento só sabe a ordem dos blocos. */
+  const irParaFaixa = (lado: 'faixaEsq' | 'faixaDir') => {
+    let topo = Number(a.topo) || 0
+    const pos = editor.state.selection.from
+    const dom = editor.view.nodeDOM(pos)
+    const fig = dom instanceof HTMLElement ? (dom.closest('figure') ?? dom) : null
+    const col = fig?.closest('.conteudo-resumo')
+    if (fig && col) {
+      topo = Math.max(0, Math.round(fig.getBoundingClientRect().top - col.getBoundingClientRect().top))
+    }
+    set({ quebra: lado, escapa: false, topo })
+  }
 
   /** Largura que sobra na margem escolhida, já descontado o vão até o texto. */
   const larguraDaLateral =
@@ -267,6 +286,15 @@ export default function PainelImagem({
         <Opcao ativo={a.quebra === 'margemDir'} onClick={() => irParaMargem('margemDir')} title="A imagem sai da coluna e vai para a margem direita da folha; o texto não muda de largura">
           ◑ Margem direita
         </Opcao>
+        {/* A FAIXA é outro bicho que a margem, e o rótulo diz isso: aqui a
+            figura sai da FOLHA, não da coluna. Ela não tira nada do texto e não
+            fica presa a parágrafo nenhum — a altura é arrastada à mão. */}
+        <Opcao ativo={a.quebra === 'faixaEsq'} onClick={() => irParaFaixa('faixaEsq')} title="A imagem sai da folha e vai para a faixa livre à esquerda. O texto não muda em nada, e você arrasta a figura para a altura que quiser.">
+          ▤ Faixa esquerda
+        </Opcao>
+        <Opcao ativo={a.quebra === 'faixaDir'} onClick={() => irParaFaixa('faixaDir')} title="A imagem sai da folha e vai para a faixa livre à direita. O texto não muda em nada, e você arrasta a figura para a altura que quiser.">
+          ▥ Faixa direita
+        </Opcao>
       </Grupo>
 
       {/* ---- posição ----
@@ -274,7 +302,7 @@ export default function PainelImagem({
           `[data-quebra='bloco']`, e "Sair da margem" é o oposto exato de morar
           dentro dela. Controle inerte na tela é pior que controle ausente —
           quem clica e não vê nada acontecer conclui que a tela quebrou. */}
-      {lateral ? null : (
+      {lateral || emFaixa ? null : (
         <Grupo>
           <Opcao ativo={a.alinhamento === 'esquerda'} onClick={() => set({ alinhamento: 'esquerda' })} title="Alinhar à esquerda">⇤</Opcao>
           <Opcao ativo={a.alinhamento === 'centro'} onClick={() => set({ alinhamento: 'centro' })} title="Centralizar">⇔</Opcao>
@@ -333,6 +361,18 @@ export default function PainelImagem({
             className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px]"
           />
         </Campo>
+        {emFaixa ? (
+          <Campo rotulo="altura na faixa">
+            <Numerico
+              valor={Math.max(0, Number(a.topo) || 0)}
+              aoMudar={(n) => set({ topo: n })}
+              min={0}
+              max={20000}
+              sufixo="px"
+              largura={64}
+            />
+          </Campo>
+        ) : null}
         <Campo rotulo="alt.">
           <input
             value={a.altura ?? ''}
