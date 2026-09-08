@@ -1402,12 +1402,44 @@ da coluna e o parágrafo se deforma em volta dela. Nos modos novos ela sai da
 coluna e vai para a margem da folha, que estava vazia — 150px de cada lado no
 padrão, e ajustáveis pela régua.
 
-O mecanismo é o **espelho do `[data-escapa]`**: `float` mais margem negativa do
+O mecanismo era o **espelho do `[data-escapa]`**: `float` mais margem negativa do
 tamanho exato da régua, lendo as mesmas `--margem-esq`/`--margem-dir`. Com a
-margem negativa, o que a caixa do float reserva dentro da coluna é negativo — e
-é por isso que o texto não encurta uma letra (medido: coluna 620, parágrafo 620,
-figura 134 começando 16px depois do fim da coluna). O `float` ainda dá a âncora
-vertical de graça, sem `position: absolute`.
+margem negativa, o que a caixa do float reservava dentro da coluna era negativo —
+e era por isso que o texto não encurtava uma letra (medido: coluna 620, parágrafo
+620, figura 134 começando 16px depois do fim da coluna).
+
+> [!important] O `float` virou `position: absolute` — a faixa saiu do fluxo (08/09)
+> Pedido do autor, textual: *"quero que a área lateral seja algo fora do corpo do
+> resumo, que caminhe junto com ele mas não tenha contato com o conteúdo"*.
+>
+> O `float` cumpria a parte visível — o texto não se mexia —, mas a figura
+> continuava **dentro do fluxo**, e fluxo é contato: ela empilhava com outros
+> `float`, obedecia ao `clear` e disputava lugar com tabela larga.
+>
+> `position: absolute` com **`top: auto`** entrega as duas coisas de uma vez.
+> `top: auto` fora de fluxo significa *posição estática*: onde a caixa estaria se
+> estivesse no fluxo. A âncora vertical continua saindo de graça — sem JS e sem
+> conta —, e agora a figura não ocupa, não empurra e não é empurrada. O eixo
+> horizontal vem de `left`/`right: calc(100% + var(--vao-lateral))`, onde 100% é a
+> coluna: a figura começa um vão depois dela e termina na borda da folha.
+>
+> Medido, régua 150/300, tela 1440 — e **igual no editor e na leitura**: coluna
+> 470, todos os parágrafos 470 (nenhum encurtou), figura direita de 964 a 1248
+> (borda da folha), figura esquerda de 328 a 462, cada uma nascendo exatamente na
+> base do parágrafo anterior à sua posição no HTML. Abaixo de 767px volta a
+> `position: static` — sem margem onde morar, fora de fluxo ela desenharia por
+> cima do texto.
+>
+> **Os dois preços, medidos e declarados:**
+> 1. Duas laterais próximas se **sobrepõem** (medido: duas no mesmo ponto, topo
+>    1000 e base 1237 nas duas). É a definição de "sem contato", não defeito. O
+>    editor mostra igual ao aluno, então o autor vê ao escrever.
+> 2. Uma lateral no fim do resumo **vaza** (medido: base 1237 contra fim do
+>    resumo em 1159 e backlinks em 1223 — 78px além, 14px dentro). O
+>    `.conteudo-resumo::after { clear: both }` continua valendo para os `float`,
+>    mas `clear` não alcança quem está fora de fluxo. **Este é o único dos dois
+>    que o WYSIWYG não mostra** — no editor não há backlinks embaixo —, e por
+>    isso é o único que ganhou aviso no painel.
 
 **Três travas que o desenho precisou:**
 
