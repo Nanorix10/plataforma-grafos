@@ -17,6 +17,17 @@ import type { ItemTrilho } from '@/lib/titulos'
  * deixa de existir. Apertar a coluna para caber o trilho seria trocar a tela de
  * leitura pelo enfeite que a acompanha.
  *
+ * **O nível do grafo é dito pelo RECUO, nunca por tamanho.** É a decisão 12
+ * aplicada ao sumário: Grafo 1, 2 e 3 são h2/h3/h4, e um grafo não é *maior*
+ * que o outro — ele CONTÉM o outro. O `data-nivel` no `<li>` é o que o CSS lê
+ * para escalonar o recuo; a aresta entra um degrau abaixo do grafo em que
+ * aparece, que é o que faz o trilho dizer de onde cada saída sai.
+ *
+ * A lista continua PLANA, sem `<ol>` aninhado: as arestas se intercalam com as
+ * seções em ordem de leitura, e aninhar de verdade obrigaria a escolher entre a
+ * ordem do documento e a estrutura — o trilho existe para acompanhar a leitura,
+ * então a ordem ganha.
+ *
  * Por que um ouvinte de `scroll` e não `IntersectionObserver`: a pergunta aqui
  * não é "este título está visível", é "qual foi o ÚLTIMO título que passou pela
  * linha do olho". Com títulos curtos e seções de um parágrafo — o formato de
@@ -87,7 +98,7 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
         <ol>
           {itens.map((item) =>
             item.tipo === 'secao' ? (
-              <li key={`s-${item.ancora}`} className="trilho-secao">
+              <li key={`s-${item.ancora}`} className="trilho-secao" data-nivel={item.nivel}>
                 <a
                   href={`#${item.ancora}`}
                   aria-current={ativa === item.ancora ? 'true' : undefined}
@@ -96,7 +107,7 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
                 </a>
               </li>
             ) : (
-              <li key={`l-${item.slug}`} className="trilho-liga">
+              <li key={`l-${item.slug}`} className="trilho-liga" data-nivel={item.nivel}>
                 <Link
                   href={`/resumos/${item.slug}`}
                   onMouseEnter={() => acender(item.indice, true)}

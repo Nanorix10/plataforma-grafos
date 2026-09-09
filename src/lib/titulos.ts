@@ -167,10 +167,16 @@ export function ancorarTitulos(html: string | null | undefined): string {
  * `extrairTitulos` e `ancorarTitulos` a andarem juntas: a âncora de cada seção
  * tem que sair do MESMO `percorrer`, senão o trilho leva a um destino que a
  * página não gravou.
+ *
+ * `nivel` é o mesmo dos dois lados, e é o do EDITOR: 2, 3 ou 4 — o Grafo 1, 2
+ * ou 3 da decisão 12. Na seção é o nível dela; na aresta é o da seção em que o
+ * `[[wikilink]]` aparece, que é o que permite ao trilho recuar a saída sob o
+ * grafo de onde ela sai. Antes de qualquer título, vale 2: o texto de abertura
+ * mora no patamar do resumo.
  */
 export type ItemTrilho =
   | { tipo: 'secao'; nivel: number; texto: string; ancora: string }
-  | { tipo: 'liga'; texto: string; slug: string; indice: number }
+  | { tipo: 'liga'; nivel: number; texto: string; slug: string; indice: number }
 
 /** Casa um título inteiro OU um wikilink solto, em ordem de documento. */
 const TITULO_OU_LINK = /<h([234])\b[^>]*>([\s\S]*?)<\/h\1>|\[\[(.+?)\]\]/gi
@@ -202,6 +208,9 @@ export function extrairTrilho(
   const jaVistos = new Set<string>()
   let iTitulo = 0
   let iLiga = 0
+  // o grafo aberto no momento — os wikilinks encontrados daqui em diante saem
+  // de dentro dele
+  let nivelCorrente = 2
 
   for (const m of html.matchAll(new RegExp(TITULO_OU_LINK))) {
     // wikilink solto no corpo
@@ -211,7 +220,7 @@ export function extrairTrilho(
       const indice = iLiga++
       if (jaVistos.has(slug)) continue
       jaVistos.add(slug)
-      itens.push({ tipo: 'liga', texto: m[3], slug, indice })
+      itens.push({ tipo: 'liga', nivel: nivelCorrente, texto: m[3], slug, indice })
       continue
     }
 
@@ -221,6 +230,10 @@ export function extrairTrilho(
     }
 
     const a = achados[iTitulo++]
+    // O nível corrente muda mesmo quando o título fica de fora do trilho (um
+    // que só tenha fórmula dentro, sem texto): o que veio depois dele continua
+    // estando lá dentro, e herdar o nível do título anterior mentiria o recuo.
+    if (a) nivelCorrente = a.nivel
     if (a?.ancora) itens.push({ tipo: 'secao', nivel: a.nivel, texto: a.texto, ancora: a.ancora })
   }
 
