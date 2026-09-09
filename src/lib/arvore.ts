@@ -63,3 +63,40 @@ export function montarArvore(resumos: ResumoItem[]): NoResumo[] {
 export function descendentes(no: NoResumo): NoResumo[] {
   return no.filhos.flatMap((f) => [f, ...descendentes(f)])
 }
+
+/** Um degrau do caminho: o bastante para escrever um link com a cor certa. */
+export type Elo = { slug: string; titulo: string; materia_slug: string }
+
+/**
+ * O caminho da raiz até o PAI de um resumo — vazio quando ele é raiz.
+ *
+ * Serve ao indicador de patamar da página de leitura: quem cai em "Movimento
+ * circular" pela busca ou pelo mapa não tem como saber que está dentro de
+ * "Mecânica > Forças da Mecânica", e a árvore da barra lateral fica fora do
+ * campo de visão de quem já rolou a página.
+ *
+ * Sobe pelo `pai_id` em vez de descer pela árvore montada porque a página de
+ * leitura só tem a lista crua, e montar `montarArvore` inteira para achar um
+ * ramo seria pagar o percurso de todos os resumos por uma cadeia de dois.
+ *
+ * O `vistos` é a mesma proteção de `montarArvore`: o trigger do banco barra
+ * ciclos, mas quem desenha não pode travar num laço se algum dado escapar.
+ */
+export function caminhoAteRaiz(
+  paiId: string | null,
+  porId: Map<string, { id: string; pai_id: string | null } & Elo>
+): Elo[] {
+  const caminho: Elo[] = []
+  const vistos = new Set<string>()
+
+  let atual = paiId
+  while (atual && !vistos.has(atual)) {
+    vistos.add(atual)
+    const no = porId.get(atual)
+    if (!no) break
+    caminho.unshift({ slug: no.slug, titulo: no.titulo, materia_slug: no.materia_slug })
+    atual = no.pai_id
+  }
+
+  return caminho
+}
