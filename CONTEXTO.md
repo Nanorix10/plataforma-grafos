@@ -1926,6 +1926,34 @@ que obriga `extrairTitulos` e `ancorarTitulos` a andarem juntas) trata as duas.
 Quem mexer em `renderizarWikilinks` tem que conferir se a contagem ainda bate —
 o sintoma é o link errado acendendo no texto, e nada avisa.
 
+**12d-bis. O sumário "Nesta página" diz o nível do grafo pelo RECUO.**
+O trilho listava Grafo 1, 2 e 3 numa fileira plana: "Fase M" e "Mitose" saíam do
+mesmo ponto, e o índice mostrava a ordem das seções sem mostrar quais estão
+DENTRO de quais — que é metade do que um sumário serve para dizer. Vale para
+**40 dos 248 resumos** (os que têm `h3`; 4 chegam ao `h4`).
+
+O nível vira recuo, em degraus de 0,625rem: 13px, 23px, 33px. **Nunca tamanho**
+— é a mesma regra do corpo do texto, e pela mesma razão: grafo não é maior,
+grafo contém. A segunda pista é um tom a mais de tinta no Grafo 1 (`--ink-dim`
+contra `--ink-faint`); **peso ficou de fora de propósito**, porque peso já
+responde outra pergunta nesta coluna — a seção ATIVA vai a 500, e usar a mesma
+marca para duas coisas apagaria as duas.
+
+**A aresta passou a ser recuada sob o grafo onde ela aparece.** O comentário do
+código já dizia isso desde que o trilho nasceu; era falso — o recuo era fixo.
+Para valer, `ItemTrilho` do tipo `liga` carrega o `nivel` da seção corrente, que
+`extrairTrilho` atualiza **mesmo nos títulos que ficam de fora do trilho** (um
+título só com fórmula, sem texto): o que vem depois dele continua estando lá
+dentro, e herdar o nível anterior mentiria o recuo.
+
+A lista continua PLANA, sem `<ol>` aninhado. As arestas se intercalam com as
+seções em ordem de leitura, e aninhar de verdade obrigaria a escolher entre a
+ordem do documento e a estrutura — o trilho existe para acompanhar quem lê, e a
+ordem ganha.
+
+`overflow-wrap: break-word` entrou junto: com o recuo do Grafo 3 sobram ~76px na
+coluna de 128, e uma palavra longa sairia por cima da folha em vez de quebrar.
+
 **12e. "Cai em" põe a decisão 9i na página do resumo.**
 `edital_topicos` sabe desde 24/08 em que provas cada resumo é cobrado, e a
 página nunca mostrou. As etiquetas vão no CABEÇALHO: quem estuda para uma prova

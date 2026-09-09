@@ -1752,13 +1752,36 @@ h3 {
   list-style: none;
   border-left: 1px solid var(--line);
 }
+/* O recuo é o que diz o NÍVEL do grafo — 1, 2 ou 3 (h2/h3/h4, decisão 12).
+   Nunca o tamanho: um grafo não é maior que o outro, ele contém o outro, e
+   escala tipográfica diria a primeira coisa. É a mesma regra que já vale no
+   corpo do texto, onde a hierarquia é a margem acima e não o `font-size`.
+   O degrau é de 0,625rem — em 128px de coluna, três degraus ainda deixam
+   ~76px de texto, que o `line-height: 1.35` acomoda quebrando. */
 .trilho a {
   display: block;
   position: relative;
-  padding: 0.3125rem 0 0.3125rem 0.8125rem;
+  padding: 0.3125rem 0 0.3125rem var(--recuo, 0.8125rem);
   font-size: var(--t-mini);
   line-height: 1.35;
+  /* com o recuo do Grafo 3 sobram ~76px, e "eletromagnetismo" não cabe numa
+     linha: sem isto, a palavra sairia por cima da folha em vez de quebrar. */
+  overflow-wrap: break-word;
   color: var(--ink-faint);
+}
+.trilho li[data-nivel='3'] {
+  --recuo: 1.4375rem;
+}
+.trilho li[data-nivel='4'] {
+  --recuo: 2.0625rem;
+}
+
+/* O Grafo 1 puxa um tom a mais de tinta. É a segunda pista do nível, e a única
+   que sobra depois de descartar tamanho e peso: peso já responde outra
+   pergunta (a seção ATIVA vai a 500), então usá-lo aqui faria duas coisas
+   diferentes com a mesma marca. */
+.trilho-secao[data-nivel='2'] a {
+  color: var(--ink-dim);
 }
 .trilho a:hover {
   color: var(--ink);
@@ -1788,13 +1811,17 @@ h3 {
 /* As arestas ficam um grau abaixo das seções, recuadas e com marca redonda —
    seção é lugar DESTA página, link é saída para outra. Lilás no hover porque é
    a cor de link do site inteiro, inclusive a do wikilink que ele acende. */
+/* A aresta entra um degrau abaixo do grafo em que aparece — o `--recuo` que ela
+   herda do `data-nivel` é o da seção onde o `[[wikilink]]` está escrita. Antes
+   era um recuo fixo, e o comentário acima já dizia "recuadas sob a seção":
+   passou a ser verdade. */
 .trilho-liga a {
-  padding-left: 1.5rem;
+  padding-left: calc(var(--recuo, 0.8125rem) + 0.6875rem);
 }
 .trilho-liga a::before {
   content: '';
   position: absolute;
-  left: 0.875rem;
+  left: calc(var(--recuo, 0.8125rem) + 0.0625rem);
   top: 0.75rem;
   width: 4px;
   height: 4px;
