@@ -10,6 +10,7 @@ import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
+import { caminhoAteRaiz } from '@/lib/arvore'
 import { getSessao } from '@/lib/sessao'
 import { estiloDaPagina, ladoDaFaixa } from '@/lib/pagina'
 import { PROCESSOS } from '@/lib/processos'
@@ -53,7 +54,10 @@ export default async function ResumoPage({
   // que cobram este resumo e os eventos que ele explica, em paralelo
   const [{ data: todosResumos }, { data: backlinksRaw }, { data: cobrancas }, { data: datas }] =
     await Promise.all([
-      supabase.from('resumos').select('slug, titulo'),
+      // `pai_id` e `materia_slug` vêm de carona na lista que já era buscada
+      // para os wikilinks: o caminho até a raiz (decisão 9j) sobe por ela em
+      // memória, sem uma segunda ida ao banco por degrau.
+      supabase.from('resumos').select('id, slug, titulo, materia_slug, pai_id'),
       supabase
         .from('conexoes')
         // `materia_slug` vem junto porque cada backlink é pintado na cor da
@@ -75,6 +79,13 @@ export default async function ResumoPage({
         .eq('resumo_id', resumo.id),
     ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
+
+  // Onde este resumo mora na árvore — a raiz primeiro, o pai por último. Some
+  // sozinho quando o resumo é raiz, que é o caso de 209 dos 248 do acervo.
+  const caminho = caminhoAteRaiz(
+    resumo.pai_id,
+    new Map((todosResumos ?? []).map((r) => [r.id, r]))
+  )
 
   // Um resumo pode explicar muitos eventos — `o-conceito-de-idade-media`
   // sozinho carrega mais de dez. O cabeçalho mostra o PERÍODO e a contagem, e
@@ -126,6 +137,22 @@ export default async function ResumoPage({
           <span aria-hidden="true" className="text-[var(--ink-faint)]">
             /
           </span>
+          {/* Só o PAI direto entra aqui, e só a partir de `md`: a barra tem 12px
+              de altura e o título do resumo é o que ela não pode perder. A
+              cadeia inteira fica na ficha, logo abaixo do título. */}
+          {caminho.length > 0 ? (
+            <>
+              <Link
+                href={`/resumos/${caminho[caminho.length - 1].slug}`}
+                className="hidden md:inline-block max-w-[22ch] truncate text-[length:var(--t-peq)] text-[var(--ink-dim)] hover:text-[var(--ink)]"
+              >
+                {caminho[caminho.length - 1].titulo}
+              </Link>
+              <span aria-hidden="true" className="hidden md:inline text-[var(--ink-faint)]">
+                /
+              </span>
+            </>
+          ) : null}
           {/* o título no caminho também vai na cor da matéria, pra a barra
               fixa não desmentir o título grande logo abaixo dela */}
           <span
@@ -202,8 +229,37 @@ export default async function ResumoPage({
             inteira some quando nenhuma das duas tem — é ela que carrega o
             traço de cima e o respiro de baixo, para duas linhas presentes não
             desenharem dois traços. */}
-        {provas.length > 0 || periodo ? (
+        {caminho.length > 0 || provas.length > 0 || periodo ? (
           <div className="ficha">
+            {/* O patamar: onde este resumo mora na árvore (decisão 9j). Vem
+                PRIMEIRO porque é a pergunta que se responde antes de ler — um
+                resumo que é pedaço de um assunto maior se lê diferente de um
+                assunto inteiro, e quem chega pela busca, pelo mapa ou por um
+                [[wikilink]] não passou pela barra lateral para saber disso.
+                Cada degrau vai na cor da MATÉRIA DELE: a árvore atravessa
+                disciplinas (decisão 9), e é aqui que o salto aparece. */}
+            {caminho.length > 0 ? (
+              <div className="cai-em dentro-de">
+                <h2>Dentro de</h2>
+                <ol>
+                  {caminho.map((elo) => (
+                    <li key={elo.slug}>
+                      <Link
+                        href={`/resumos/${elo.slug}`}
+                        style={{
+                          color:
+                            MATERIAS[elo.materia_slug as keyof typeof MATERIAS]?.cor ??
+                            'var(--ink-dim)',
+                        }}
+                      >
+                        {elo.titulo}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+
             {/* Em que provas isto cai (decisão 9i). Some quando o resumo não é
                 cobrado por edital nenhum — a maior parte do acervo de `comum`
                 é assim, e uma linha "Cai em —" só ocuparia o lugar sem

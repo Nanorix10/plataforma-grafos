@@ -1124,6 +1124,42 @@ Física e Química ficaram de fora por serem conteúdo, a Geografia porque a se�
 dela traz a lista da Filosofia colada por engano, e a Redação porque tem um
 tópico só, a letra "R". Ver o cabeçalho de `20260824120000`.
 
+**9j. O leitor vê em que patamar da árvore está, na ficha do resumo.**
+A hierarquia da decisão 9 existia só para quem olhava a barra lateral. Quem
+chega por busca, pelo mapa ou por um `[[wikilink]]` — que é como se chega na
+maior parte das vezes — abria "Movimento circular" sem nenhuma pista de que
+aquilo é um pedaço de "Mecânica › Forças da Mecânica", e a árvore da lateral
+sai do campo de visão no primeiro rolar. São **39 dos 248 resumos** com pai (36
+no segundo patamar, 3 no terceiro): pouco para justificar tela nova, demais para
+seguir invisível, já que é justamente o resumo-pedaço que se lê diferente do
+resumo-assunto-inteiro.
+
+**A cadeia inteira, e não um número de nível.** "Nível 2" informa a profundidade
+e esconde o que importa — de que assunto isto é pedaço. A linha "Dentro de"
+mostra `Mecânica › Forças da Mecânica`, com cada degrau clicável: responde as
+duas perguntas de uma vez e ainda leva para cima.
+
+**Mora na ficha, como terceira linha, e vem primeiro.** A ficha já era o cartão
+do resumo ("Cai em", "Quando"), e o patamar é da mesma espécie: contexto que se
+lê antes do texto, não depois. Consequência medida: `Dentro de` tem 73,6px e o
+piso do rótulo era 3,75rem — as três linhas só alinham porque o piso subiu para
+4,625rem.
+
+**Cada degrau na cor da matéria DELE.** A árvore atravessa disciplinas de
+propósito (decisão 9), e é aqui que o salto fica visível. A primeira coisa que a
+linha revelou foi um erro de cadastro que ninguém tinha visto: **"Leis de
+Newton" está pendurado em "Interação gênica"** — Física dentro de Biologia,
+verde no meio do azul-petróleo.
+
+O caminho sobe pelo `pai_id` em memória (`caminhoAteRaiz`, em `lib/arvore.ts`),
+usando a lista de resumos que a página **já buscava** para resolver os
+wikilinks: nenhuma consulta nova, um `pai_id, materia_slug` a mais no `select`.
+Carrega `vistos` pelo mesmo motivo que `montarArvore` — o trigger barra ciclos,
+mas quem desenha não pode travar num laço.
+
+Na barra fixa do topo entra só o **pai direto**, e só a partir de `md`: são 12px
+de altura, e o que ela não pode perder é o título do resumo aberto.
+
 **10. O grafo importa `d3-selection` e `d3-force`, não `d3`.**
 `import * as d3 from 'd3'` arrasta os 30 submódulos (geo, chord, brush, scale…)
 pra usar cinco funções. O pacote `d3` foi removido do `package.json` de propósito
