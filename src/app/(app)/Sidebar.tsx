@@ -233,7 +233,21 @@ export default function Sidebar({
 }) {
   const pathname = usePathname()
   const [busca, setBusca] = useState('')
-  const [fechados, setFechados] = useState<Set<string>>(new Set())
+  /**
+   * O conjunto guarda quem está ABERTO, e nasce vazio: as gavetas de matéria
+   * começam todas fechadas. Antes o estado era o inverso — `fechados`, também
+   * vazio —, e a barra abria com as oito matérias escancaradas.
+   *
+   * Guardar o lado aberto não é só gosto: o lado que o estado guarda tem que
+   * ser o lado que o usuário escolheu. Com `fechados` vazio significando "tudo
+   * aberto", uma matéria nova entra aberta sem ninguém pedir; com `abertos`
+   * vazio, ela entra fechada, que é o padrão declarado aqui.
+   *
+   * A busca continua abrindo tudo, e não mexe neste conjunto: quem procura quer
+   * ver o resultado, não caçar a gaveta onde ele mora. Ao limpar a busca, as
+   * gavetas voltam exatamente ao que o aluno tinha aberto na mão.
+   */
+  const [abertos, setAbertos] = useState<Set<string>>(new Set())
 
   /**
    * No celular a barra vira gaveta. Ela tem 262px fixos: numa tela de 390px
@@ -318,7 +332,7 @@ export default function Sidebar({
   }, [grupos, busca])
 
   function alternarGrupo(materia: string) {
-    setFechados((atual) => {
+    setAbertos((atual) => {
       const novo = new Set(atual)
       if (novo.has(materia)) novo.delete(materia)
       else novo.add(materia)
@@ -537,7 +551,7 @@ export default function Sidebar({
 
         {filtrados.map(({ materia, itens, arvore }) => {
           const info = MATERIAS[materia as keyof typeof MATERIAS]
-          const aberto = !fechados.has(materia) || !!busca
+          const aberto = abertos.has(materia) || !!busca
 
           return (
             <div key={materia} className="mb-0.5">
