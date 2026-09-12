@@ -2157,3 +2157,130 @@ h3 {
   width: min(100% - 2 * var(--margem-lateral), var(--largura-site));
   margin-inline: auto;
 }
+
+/* ---------------------------------------------------------------------------
+   Lupa: a figura do resumo ampliada num diálogo.
+
+   `<dialog>` nativo e não um `div` com `position:fixed`: `showModal()` já traz
+   Esc, prisão de foco, fundo inerte e `::backdrop`. Reescrever isso à mão é
+   trabalho para chegar pior.
+
+   O recorte é preservado sem nenhuma conta aqui porque ele é escrito em
+   PORCENTAGEM (`imagem.ts`): a `.moldura` manda na largura e a `<img>` dentro
+   dela guarda o seu `width:%` e o `translate:%`. Por isso o `!important`
+   abaixo mira SÓ o filho direto da figura — tocar na imagem de dentro da
+   moldura desfaria o recorte.
+   --------------------------------------------------------------------------- */
+.lupa {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: hidden;
+}
+/* Preto com alfa, e não um token do tema: lupa escurece o mundo em volta nos
+   dois temas — é o que faz a figura ser a única coisa na tela. */
+.lupa::backdrop {
+  background: rgb(0 0 0 / 0.82);
+}
+.lupa[open] {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.lupa-barra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  justify-self: end;
+}
+.lupa-barra button {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--line-forte);
+  border-radius: 0.5rem;
+  background: var(--raised);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.lupa-barra button:hover:not(:disabled) {
+  background: var(--raised-hover);
+}
+.lupa-barra button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.lupa-barra button:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.lupa-nivel {
+  font-size: var(--t-mini);
+  color: var(--ink-dim);
+  min-width: 4.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* O arrasto da figura ampliada é a ROLAGEM deste contêiner: o navegador já
+   sabe fazer isso com o dedo, com as barras e com as setas do teclado. */
+.lupa-palco {
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.figura-ampliada {
+  margin: 0;
+  float: none;
+  position: static;
+  flex: none;
+  width: calc(100% * var(--z, 1));
+  max-width: none;
+}
+.figura-ampliada > img,
+.figura-ampliada > a > img,
+.figura-ampliada > .moldura {
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+}
+/* "Ajustada" é o estado de entrada: a figura inteira cabe na tela sem rolar.
+
+   Só a ALTURA é limitada aqui — a largura continua sendo os 100% da regra
+   acima, de propósito. Com `width:auto` a figura voltaria ao tamanho natural do
+   arquivo, e uma imagem de 400px continuaria com 400px na lupa: exatamente a
+   queixa que ampliar existe para resolver.
+
+   Com `max-height` violado, o navegador reduz a largura na mesma proporção —
+   vale para a `<img>`, que é elemento substituído, e para a `.moldura`, que
+   carrega `aspect-ratio`. Por isso o recorte não se deforma. */
+.lupa-palco[data-ajustada='sim'] > .figura-ampliada {
+  width: min(100%, calc((100dvh - 9rem) * var(--proporcao, 1.4)));
+}
+
+.lupa-legenda {
+  margin: 0;
+  padding: 0.75rem 1.25rem 1.1rem;
+  text-align: center;
+  font-size: var(--t-peq);
+  color: var(--ink-dim);
+}
+
+/* A figura do resumo se anuncia como clicável — mas só onde há ponteiro, e
+   nunca quando ela já é um link (ali o dono do clique é outro). */
+@media (hover: hover) {
+  .conteudo-resumo figure.figura img:not(a img) {
+    cursor: zoom-in;
+  }
+}
