@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { MATERIAS } from '@/lib/materias'
 // de `lib/arvore` e não de `lib/resumos`: este é um componente de cliente, e
 // `resumos.ts` importa `getSessao`, que depende de `next/headers`
@@ -12,6 +12,63 @@ import { BotaoTema } from '@/components/BotaoTema'
 import Marca from '@/components/Marca'
 
 type Grupo = { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }
+
+/**
+ * As matérias abertas moram no `localStorage`, e o React as LÊ de lá.
+ *
+ * Mesmo desenho do `BotaoTema`, e pelo mesmo motivo: o valor vive fora do React
+ * e o servidor não tem como saber qual é. `useSyncExternalStore` devolve o
+ * padrão na renderização do servidor e o valor real no cliente, sem o
+ * `setState` dentro de efeito que dispara render em cascata — que aqui não é só
+ * estilo, é a regra do React Compiler que o `next lint` cobra.
+ *
+ * O que se guarda é a STRING crua, não o `Set`: `getSnapshot` tem que devolver
+ * o mesmo valor enquanto nada muda, e um `Set` novo a cada leitura seria
+ * sempre diferente de si mesmo — laço infinito de render.
+ */
+const CHAVE_ABERTOS = 'grafos:materias-abertas'
+const VAZIO = '[]'
+
+const ouvintes = new Set<() => void>()
+
+function assinarAbertos(aoMudar: () => void) {
+  ouvintes.add(aoMudar)
+  return () => {
+    ouvintes.delete(aoMudar)
+  }
+}
+
+/* Modo privado, cota estourada, JSON corrompido: a barra volta ao padrão
+   fechado. Nada aqui vale quebrar a navegação inteira. */
+function lerAbertosCru(): string {
+  try {
+    return localStorage.getItem(CHAVE_ABERTOS) ?? VAZIO
+  } catch {
+    return VAZIO
+  }
+}
+
+function lerAbertosNoServidor(): string {
+  return VAZIO
+}
+
+function decodificar(cru: string): string[] {
+  try {
+    const lista = JSON.parse(cru)
+    return Array.isArray(lista) ? lista.filter((m): m is string => typeof m === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function gravarAbertos(lista: string[]) {
+  try {
+    localStorage.setItem(CHAVE_ABERTOS, JSON.stringify(lista))
+  } catch {
+    /* ver acima: sem storage a gaveta ainda abre, só não sobrevive ao recarregar */
+  }
+  ouvintes.forEach((f) => f())
+}
 
 function Chevron({ aberto }: { aberto: boolean }) {
   return (
@@ -247,7 +304,35 @@ export default function Sidebar({
    * ver o resultado, não caçar a gaveta onde ele mora. Ao limpar a busca, as
    * gavetas voltam exatamente ao que o aluno tinha aberto na mão.
    */
-  const [abertos, setAbertos] = useState<Set<string>>(new Set())
+  const cruAbertos = useSyncExternalStore(assinarAbertos, lerAbertosCru, lerAbertosNoServidor)
+  const abertos = useMemo(() => new Set(decodificar(cruAbertos)), [cruAbertos])
+
+  /**
+   * A matéria do resumo aberto abre sozinha.
+   *
+   * Sem isto, o padrão fechado esconde justamente onde o aluno está: ele chega
+   * por busca, pelo mapa ou por um [[wikilink]] e a barra não mostra a árvore em
+   * volta dele. Roda a cada mudança de rota, e não uma vez só, porque a barra
+   * vive no layout do grupo e não remonta ao navegar.
+   *
+   * É um empurrão, não uma trava: depois de aberta, fechar na mão funciona, e
+   * ela fica fechada até a próxima navegação para outro resumo daquela matéria.
+   */
+  const materiaAtual = useMemo(() => {
+    const casa = /^\/resumos\/(.+)$/.exec(pathname)
+    if (!casa) return null
+    const slug = decodeURIComponent(casa[1])
+    return grupos.find((g) => g.itens.some((i) => i.slug === slug))?.materia ?? null
+  }, [pathname, grupos])
+
+  useEffect(() => {
+    if (!materiaAtual) return
+    /* lê do storage, e não de `abertos`: assim o efeito não depende do valor
+       renderizado e não precisa rodar de novo a cada abrir e fechar */
+    const atual = decodificar(lerAbertosCru())
+    if (atual.includes(materiaAtual)) return
+    gravarAbertos([...atual, materiaAtual])
+  }, [materiaAtual])
 
   /**
    * No celular a barra vira gaveta. Ela tem 262px fixos: numa tela de 390px
@@ -332,12 +417,10 @@ export default function Sidebar({
   }, [grupos, busca])
 
   function alternarGrupo(materia: string) {
-    setAbertos((atual) => {
-      const novo = new Set(atual)
-      if (novo.has(materia)) novo.delete(materia)
-      else novo.add(materia)
-      return novo
-    })
+    const novo = new Set(abertos)
+    if (novo.has(materia)) novo.delete(materia)
+    else novo.add(materia)
+    gravarAbertos([...novo])
   }
 
   // conta MATÉRIAS, que é o que o rótulo promete. Antes somava os resumos de
