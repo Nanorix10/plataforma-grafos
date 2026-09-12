@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { AvisoAcesso } from '@/components/AvisoAcesso'
 import { MATERIAS } from '@/lib/materias'
 import { agruparPorMateria, getResumos, type ResumoItem } from '@/lib/resumos'
 
@@ -74,6 +75,18 @@ export default async function ResumosPage() {
               grupos.length === 1 ? 'matéria' : 'matérias'
             }`}
       </p>
+
+      {/* O aluno novo cai AQUI, não em `/conta` — o cadastro manda para esta
+          tela. Sem este bloco ele encontra a parede de cadeados, o seco "0
+          liberados de N" e nenhuma saída, e o recado que explica tudo fica numa
+          tela que ele não tem motivo para abrir.
+
+          Só no caso de zero: com plano parcial a lista já funciona, e um
+          chamariz de plano em cima dos resumos que ele PAGOU seria cobrar duas
+          vezes pela mesma tela. */}
+      {resumos.length > 0 && liberados === 0 ? (
+        <AvisoAcesso caso="nenhum" className="bg-[var(--raised)] rounded-lg p-5 mb-9" />
+      ) : null}
 
       {grupos.map(({ materia, itens }) => {
         const info = MATERIAS[materia as keyof typeof MATERIAS]
