@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { MATERIAS } from '@/lib/materias'
+import LupaFigura from './LupaFigura'
 import { renderizarWikilinks } from '@/lib/wikilinks'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
@@ -309,6 +310,11 @@ export default async function ResumoPage({
           style={{ '--cor-materia': materia?.cor } as CSSProperties}
           dangerouslySetInnerHTML={{ __html: corpoHtml }}
         />
+
+        {/* Precisa vir DEPOIS do corpo: o ouvinte procura o contêiner por
+            seletor, e antes dele o `.conteudo-resumo` ainda não existe no DOM
+            do cliente na primeira passada. */}
+        <LupaFigura seletor=".conteudo-resumo" />
 
         <section className="mt-16 pt-7 border-t border-[var(--line)]">
           <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
