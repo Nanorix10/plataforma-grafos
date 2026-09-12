@@ -17,6 +17,7 @@ import { estiloDaPagina, ladoDaFaixa } from '@/lib/pagina'
 import { PROCESSOS } from '@/lib/processos'
 import { periodoDosEventos } from '@/lib/tempo'
 import Trilho from './Trilho'
+import SumarioMovel from './SumarioMovel'
 
 export default async function ResumoPage({
   params,
@@ -128,7 +129,7 @@ export default async function ResumoPage({
       {/* Barra fina só com o caminho e a ação. Antes era em fonte de código,
           o que fazia a página parecer console de desenvolvedor. */}
       <header className="sticky top-12 lg:top-0 z-10 bg-[var(--paper)]/85 backdrop-blur border-b border-[var(--line)] px-6 md:px-10 h-12 flex items-center gap-2">
-        <nav aria-label="Caminho" className="min-w-0 flex items-center gap-2">
+        <nav aria-label="Caminho" className="flex-1 min-w-0 flex items-center gap-2">
           <Link
             href="/resumos"
             className="text-[length:var(--t-peq)] text-[var(--ink-dim)] hover:text-[var(--ink)] shrink-0"
@@ -164,10 +165,16 @@ export default async function ResumoPage({
           </span>
         </nav>
 
+        {/* O sumário só existe abaixo de 1340px, onde a coluna do trilho não
+            cabe — e some sozinho quando o resumo não tem subtítulo. Quem empurra os
+            botões para a direita é o próprio caminho, que cresce — assim a
+            barra não depende de qual dos dois existe nesta página. */}
+        <SumarioMovel itens={trilho} />
+
         {isAdmin ? (
           <Link
             href={`/admin/editor/${resumo.slug}`}
-            className="botao botao-neutro ml-auto shrink-0 !text-[length:var(--t-peq)] !py-1.5 !px-3"
+            className="botao botao-neutro shrink-0 !text-[length:var(--t-peq)] !py-1.5 !px-3"
           >
             Editar
           </Link>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { ItemTrilho } from '@/lib/titulos'
+import { secaoAtual } from './secaoAtual'
 
 /**
  * O trilho de leitura — a coluna estreita à esquerda da folha.
@@ -39,23 +40,13 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
   const nav = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    const ancoras = itens.filter((i) => i.tipo === 'secao').map((i) => i.ancora)
-    if (ancoras.length === 0) return
+    if (!itens.some((i) => i.tipo === 'secao')) return
 
     let agendado = false
 
     function medir() {
       agendado = false
-      // a linha do olho: um terço da janela abaixo do topo. Mais alto e o
-      // título ativo troca antes de o aluno chegar nele; mais baixo e a
-      // primeira seção nunca acende.
-      const linha = window.innerHeight * 0.35
-      let atual: string | null = null
-      for (const ancora of ancoras) {
-        const el = document.getElementById(ancora)
-        if (el && el.getBoundingClientRect().top <= linha) atual = ancora
-      }
-      setAtiva(atual)
+      setAtiva(secaoAtual(itens))
     }
 
     function aoRolar() {
