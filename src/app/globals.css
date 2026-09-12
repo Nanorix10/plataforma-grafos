@@ -1728,7 +1728,11 @@ h3 {
   padding-top: 2.5rem;
 }
 @media (max-width: 1339px) {
-  .trilho {
+  /* `:not(.trilho-folha)`: a folha do celular empresta a classe `.trilho` para
+     herdar o recuo por nível e as cores, e é justamente abaixo de 1340px que
+     ela precisa APARECER. Sem a exceção, a regra que esconde a coluna esconde
+     também o substituto dela. */
+  .trilho:not(.trilho-folha) {
     display: none;
   }
 }
@@ -2283,4 +2287,98 @@ h3 {
   .conteudo-resumo figure.figura img:not(a img) {
     cursor: zoom-in;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Sumário na tela estreita.
+
+   O trilho da coluna some abaixo de 1340px porque o vão à esquerda da folha
+   deixa de existir — mas o sumário vale MAIS aí, não menos. Aqui ele volta
+   como folha, chamada por um botão na barra do caminho.
+   --------------------------------------------------------------------------- */
+.sumario-botao {
+  flex-shrink: 0;
+  border: 1px solid var(--line-forte);
+  border-radius: var(--raio-peq);
+  background: var(--raised);
+  color: var(--ink-dim);
+  font-size: var(--t-peq);
+  padding: 0.3rem 0.7rem;
+  /* 24px é o mínimo da WCAG 2.2 §2.5.8, e a barra tem 3rem de altura */
+  min-height: 1.75rem;
+  cursor: pointer;
+}
+.sumario-botao:hover {
+  background: var(--raised-hover);
+  color: var(--ink);
+}
+.sumario-botao:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+/* Onde a coluna cabe, o botão não tem razão de existir: seriam dois caminhos
+   para a mesma lista, um deles escondendo o outro atrás de um toque. */
+@media (min-width: 1340px) {
+  .sumario-botao {
+    display: none;
+  }
+}
+
+.sumario-folha {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 34rem;
+  max-height: 72dvh;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--raio) var(--raio) 0 0;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0;
+  overflow: auto;
+  /* Vem de baixo, que é de onde o polegar alcança. */
+  overscroll-behavior: contain;
+}
+.sumario-folha::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.sumario-cabeca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem 0.2rem;
+}
+.sumario-cabeca h2 {
+  margin: 0;
+  flex: 1;
+}
+.sumario-cabeca button {
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--line-forte);
+  border-radius: var(--raio-peq);
+  background: var(--raised);
+  color: var(--ink);
+  line-height: 1;
+  cursor: pointer;
+}
+.sumario-cabeca button:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+/* A folha empresta `.trilho` inteiro para herdar o recuo por nível, as cores e
+   os tamanhos. `trilho-folha` desfaz só o que é de COLUNA. */
+.trilho-folha {
+  grid-column: auto;
+  padding: 0 1.1rem 1.4rem;
+}
+.trilho-folha ol {
+  position: static;
+}
+/* O alvo de toque cresce na folha: no trilho da coluna o ponteiro é o mouse. */
+.trilho-folha a {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
