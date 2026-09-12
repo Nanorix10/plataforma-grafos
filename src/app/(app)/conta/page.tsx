@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { AvisoAcesso } from '@/components/AvisoAcesso'
 import { redirect } from 'next/navigation'
 import { getSessao } from '@/lib/sessao'
 import { PLANO_PROCESSOS, PLANOS } from '@/lib/planos'
@@ -155,19 +156,10 @@ export default async function ContaPage({
         </ul>
 
         {liberados.length < todos.length ? (
-          <div className="mt-5 pt-4 border-t border-[var(--line)]">
-            <p className="text-[12.5px] text-[var(--ink-dim)] mb-3">
-              {liberados.length === 0
-                ? 'Sua conta ainda não tem acesso liberado. A liberação é feita à mão depois do pagamento.'
-                : 'Quer os outros vestibulares? O Acesso Completo libera os três.'}
-            </p>
-            <Link
-              href="/#planos"
-              className="botao botao-primario !rounded-lg px-4 py-2 text-[13px]"
-            >
-              Ver planos
-            </Link>
-          </div>
+          <AvisoAcesso
+            caso={liberados.length === 0 ? 'nenhum' : 'parcial'}
+            className="mt-5 pt-4 border-t border-[var(--line)]"
+          />
         ) : null}
       </section>
 
