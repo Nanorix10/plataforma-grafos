@@ -18,6 +18,9 @@ import { PROCESSOS } from '@/lib/processos'
 import { periodoDosEventos } from '@/lib/tempo'
 import Trilho from './Trilho'
 import SumarioMovel from './SumarioMovel'
+import RegistraVisita from './RegistraVisita'
+import BotaoFavorito from './BotaoFavorito'
+import { getMarcas } from '@/lib/leituras'
 
 export default async function ResumoPage({
   params,
@@ -69,8 +72,13 @@ export default async function ResumoPage({
 
   // todos os títulos (pra resolver os [[wikilinks]]), os backlinks, as provas
   // que cobram este resumo e os eventos que ele explica, em paralelo
-  const [{ data: todosResumos }, { data: backlinksRaw }, { data: cobrancas }, { data: datas }] =
-    await Promise.all([
+  const [
+    { data: todosResumos },
+    { data: backlinksRaw },
+    { data: cobrancas },
+    { data: datas },
+    marcas,
+  ] = await Promise.all([
       // `pai_id` e `materia_slug` vêm de carona na lista que já era buscada
       // para os wikilinks: o caminho até a raiz (decisão 9j) sobe por ela em
       // memória, sem uma segunda ida ao banco por degrau.
@@ -101,6 +109,10 @@ export default async function ResumoPage({
         .from('eventos')
         .select('titulo, ano_inicio, ano_fim, rotulo_data')
         .eq('resumo_id', resumo.id),
+      // As marcas do aluno, para a estrela já nascer no estado certo. Entra
+      // aqui e não antes do bloqueio: num resumo fora do plano não há estrela
+      // para acender, e a consulta seria trabalho jogado fora.
+      getMarcas(),
     ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
 
@@ -192,6 +204,11 @@ export default async function ResumoPage({
             botões para a direita é o próprio caminho, que cresce — assim a
             barra não depende de qual dos dois existe nesta página. */}
         <SumarioMovel itens={trilho} />
+
+        <BotaoFavorito
+          resumoId={resumo.id}
+          inicial={marcas.some((m) => m.resumo_id === resumo.id && m.favorito)}
+        />
 
         {isAdmin ? (
           <Link
@@ -385,6 +402,10 @@ export default async function ResumoPage({
         </section>
       </article>
       </div>
+
+      {/* Não desenha nada — só anota que esta página foi aberta. Fica por
+          último porque é o único componente daqui sem lugar na tela. */}
+      <RegistraVisita resumoId={resumo.id} />
     </>
   )
 }
