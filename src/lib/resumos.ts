@@ -16,8 +16,18 @@ export const getResumos = cache(async (): Promise<ResumoItem[]> => {
   const { supabase, plano } = await getSessao()
   const liberados = PLANO_PROCESSOS[plano] ?? []
 
+  /**
+   * `resumos_catalogo`, e não `resumos`: desde a migration de 13/09 a tabela só
+   * devolve o que o plano cobre, porque `corpo` mora nela e o acervo é pago. O
+   * catálogo é a vista sem o corpo, e é ela que continua listando os 249 —
+   * inclusive os bloqueados, que aparecem com cadeado e são o que prova ao
+   * visitante que existe acervo.
+   *
+   * `liberado` continua sendo conta da aplicação: o banco agora decide quem lê
+   * o TEXTO, e esta linha decide quem vê o cadeado. São perguntas diferentes.
+   */
   const { data } = await supabase
-    .from('resumos')
+    .from('resumos_catalogo')
     .select('id, slug, titulo, materia_slug, processo_slug, pai_id')
     .order('titulo')
 

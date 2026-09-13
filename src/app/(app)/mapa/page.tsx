@@ -23,14 +23,23 @@ export default async function MapaPage({
   const { supabase, userId, plano } = await getSessao()
   if (!userId) redirect('/login')
 
-  const [{ data: resumos }, { data: conexoesRaw }] = await Promise.all([
+  const [{ data: resumos }, { data: corpos }, { data: conexoesRaw }] = await Promise.all([
+    /* Duas consultas desde a migration de 13/09, e a divisão é a mesma que o
+       banco passou a fazer:
+
+       - o CATÁLOGO traz os 249, inclusive os bloqueados — o mapa mostra o
+         acervo inteiro, com cadeado no que o plano não cobre;
+       - `resumos` traz o `corpo`, e agora só devolve o que o plano cobre. Ele
+         é lido AQUI, no servidor, e só a lista de títulos desce para o
+         navegador — o texto nunca vai junto.
+
+       A consequência, decidida com o autor: quem não tem o plano deixa de ver
+       as SEÇÕES dentro de um resumo bloqueado. Vê que o resumo existe, não vê
+       o índice do que tem dentro. */
     supabase
-      .from('resumos')
-      // `corpo` entra por causa dos nós de título (decisão 12). Ele é lido AQUI,
-      // no servidor, e só a lista de títulos desce para o navegador — o texto
-      // dos resumos nunca vai junto. Fosse o contrário, o mapa entregaria o
-      // conteúdo inteiro do site a quem só queria ver o desenho.
-      .select('id, slug, titulo, materia_slug, processo_slug, definicao, pai_id, corpo'),
+      .from('resumos_catalogo')
+      .select('id, slug, titulo, materia_slug, processo_slug, definicao, pai_id'),
+    supabase.from('resumos').select('id, corpo'),
     supabase
       .from('conexoes')
       .select('origem_id, destino_id, resumos!conexoes_origem_id_fkey(slug), destino:resumos!conexoes_destino_id_fkey(slug)'),
@@ -41,6 +50,7 @@ export default async function MapaPage({
   // o grafo trabalha por slug (é o que vai na URL do resumo), mas a hierarquia
   // é gravada por id — este mapa traduz um no outro
   const slugPorId = new Map((resumos ?? []).map((r) => [r.id, r.slug]))
+  const corpoPorId = new Map((corpos ?? []).map((c) => [c.id, c.corpo as string]))
 
   const nos: NoMapa[] = []
 
@@ -78,7 +88,9 @@ export default async function MapaPage({
        nível acontece em texto real e não é erro do autor. */
     const abertos: { nivel: number; id: string }[] = []
 
-    for (const t of extrairTitulos(r.corpo)) {
+    /* Sem corpo — resumo fora do plano — não há seção a desenhar, e o `?? ''`
+       faz o laço simplesmente não rodar. */
+    for (const t of extrairTitulos(corpoPorId.get(r.id) ?? '')) {
       while (abertos.length > 0 && abertos[abertos.length - 1].nivel >= t.nivel) {
         abertos.pop()
       }
