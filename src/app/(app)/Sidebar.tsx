@@ -10,6 +10,7 @@ import { montarArvore, type NoResumo, type ResumoItem } from '@/lib/arvore'
 import { alternarVisao } from './acoes'
 import { BotaoTema } from '@/components/BotaoTema'
 import Marca from '@/components/Marca'
+import BuscaNoTexto from './BuscaNoTexto'
 
 type Grupo = { materia: string; itens: ResumoItem[]; arvore: NoResumo[] }
 
@@ -425,6 +426,13 @@ export default function Sidebar({
 
   // conta MATÉRIAS, que é o que o rótulo promete. Antes somava os resumos de
   // todos os grupos: a barra dizia "Matérias (3)" com duas matérias na tela.
+  /* O que a árvore filtrada está mostrando agora, para a busca no texto não
+     repetir o mesmo resumo numa segunda lista. */
+  const slugsFiltrados = useMemo(
+    () => new Set(filtrados.flatMap((g) => g.itens.map((i) => i.slug))),
+    [filtrados]
+  )
+
   const totalMaterias = grupos.length
 
   return (
@@ -626,7 +634,11 @@ export default function Sidebar({
           Matérias ({totalMaterias})
         </div>
 
-        {filtrados.length === 0 && (
+        {/* "Nada encontrado" agora só vale para quem procurou menos de três
+            letras — acima disso a busca no texto ainda pode responder, e
+            declarar derrota antes dela voltar era o defeito que a #8 veio
+            consertar. */}
+        {filtrados.length === 0 && (busca.trim().length < 3 || !busca) && (
           <p className="text-[12px] text-[var(--ink-dim)] px-2.5 py-2">
             {busca ? 'Nada encontrado.' : 'Nenhum resumo ainda.'}
           </p>
@@ -681,6 +693,10 @@ export default function Sidebar({
             </div>
           )
         })}
+
+        {/* O que a busca por título não alcança. Só aparece quando há termo, e
+            só lista o que a árvore acima já não mostrou. */}
+        {busca ? <BuscaNoTexto termo={busca} jaNoTitulo={slugsFiltrados} /> : null}
       </div>
 
       {/* rodapé */}

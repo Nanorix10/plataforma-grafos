@@ -420,3 +420,20 @@ grant select on resumos_catalogo to authenticated;
 
 -- policy "resumo legivel so com o plano que o cobre": admin le^ tudo; os demais
 -- so' o processo que o plano ativo cobre. Ver a migration para o texto exato.
+
+-- ---------------------------------------------------------------------------
+-- Busca no texto (migration de 2026-09-13)
+-- ---------------------------------------------------------------------------
+create extension unaccent;
+create text search configuration portugues_sem_acento (copy = portuguese);
+-- mapping de word/hword com unaccent + portuguese_stem: sem unaccent,
+-- `mitocondria` nao acha `mitocôndria`, medido.
+
+-- coluna gerada (nao trigger: nao tem como dessincronizar), titulo peso A,
+-- corpo peso B. O parser do Postgres descarta as tags HTML sozinho.
+alter table resumos add column busca tsvector generated always as (...) stored;
+create index resumos_busca_idx on resumos using gin (busca);
+
+-- `buscar_no_texto(termo, limite)`: SECURITY INVOKER de proposito, para o RLS
+-- de `resumos` valer dentro dela. EXECUTE revogado de PUBLIC (nao so' de anon:
+-- funcao nasce com EXECUTE para PUBLIC e anon herda). Ver a migration.
