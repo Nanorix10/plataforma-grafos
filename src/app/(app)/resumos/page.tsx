@@ -2,14 +2,20 @@ import Link from 'next/link'
 import { AvisoAcesso } from '@/components/AvisoAcesso'
 import { MATERIAS } from '@/lib/materias'
 import { agruparPorMateria, getResumos, type ResumoItem } from '@/lib/resumos'
+import { getMarcas, quandoFoi, QUANTOS_RECENTES } from '@/lib/leituras'
 
 /**
  * Um resumo na grade.
  *
- * Sem o rótulo da matéria: o cabeçalho da seção logo acima já diz qual é, e
- * repetir em cada cartão só rouba a linha que o título usa para respirar.
+ * Sem o rótulo da matéria **nas seções por matéria**: o cabeçalho logo acima já
+ * diz qual é, e repetir em cada cartão só rouba a linha que o título usa para
+ * respirar.
+ *
+ * Nas duas faixas do topo — recentes e favoritos — o cabeçalho não diz matéria
+ * nenhuma, porque elas misturam as dez. Daí o `rodape`: é lá que entram a
+ * matéria e o "há 2 dias", e é a única diferença entre um cartão e o outro.
  */
-function Cartao({ resumo }: { resumo: ResumoItem }) {
+function Cartao({ resumo, rodape }: { resumo: ResumoItem; rodape?: React.ReactNode }) {
   const conteudo = (
     <div
       className={`rounded-lg p-4 h-full flex flex-col gap-1.5 ${
@@ -36,6 +42,7 @@ function Cartao({ resumo }: { resumo: ResumoItem }) {
           fora do seu plano
         </span>
       )}
+      {rodape}
     </div>
   )
 
@@ -51,9 +58,67 @@ function Cartao({ resumo }: { resumo: ResumoItem }) {
   )
 }
 
+/**
+ * Uma das duas faixas do topo. Só existe quando tem o que mostrar.
+ *
+ * As duas respondem à pergunta que a barra lateral não responde. A barra é uma
+ * árvore de 249 itens, igual para todo mundo, e serve para **procurar**. Estas
+ * faixas são só do aluno que está logado e servem para **voltar** — uma com o
+ * que ele abriu, outra com o que ele escolheu guardar. É o trabalho próprio
+ * desta tela, que antes repetia o da barra e perdia.
+ */
+function Faixa({
+  titulo,
+  descricao,
+  children,
+}: {
+  titulo: string
+  descricao: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="mb-9">
+      <div className="flex items-baseline gap-2.5 mb-3">
+        <h2 className="text-[15px] font-medium">{titulo}</h2>
+        <span className="text-[11.5px] text-[var(--ink-faint)]">{descricao}</span>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2.5">{children}</div>
+    </section>
+  )
+}
+
 export default async function ResumosPage() {
   // a guarda de login e a barra lateral ficam no layout do grupo (app)
-  const resumos = await getResumos()
+  //
+  // As duas em paralelo: uma não depende da outra, e são consultas a bancos
+  // diferentes da mesma conexão. Em série, a página esperaria duas idas.
+  const [resumos, marcas] = await Promise.all([getResumos(), getMarcas()])
+
+  /**
+   * O cruzamento marca → resumo acontece AQUI, em memória, e não numa junção
+   * no banco. `getResumos()` já trouxe os 249 com id, e `getMarcas()` trouxe as
+   * marcas deste aluno; juntar as duas listas é percorrer um `Map`.
+   *
+   * O filtro por `liberado` não é detalhe. Um resumo marcado enquanto o plano o
+   * cobria continua marcado depois que o plano muda — e um cadeado na faixa
+   * "Continuar de onde parou" seria o site oferecendo de volta o que acabou de
+   * tirar. Nas faixas, só o que ele pode abrir agora.
+   */
+  const porId = new Map(resumos.map((r) => [r.id, r]))
+
+  const recentes = marcas
+    .map((m) => ({ resumo: porId.get(m.resumo_id), visto_em: m.visto_em }))
+    .filter((x): x is { resumo: ResumoItem; visto_em: string } => !!x.resumo && x.resumo.liberado)
+    .slice(0, QUANTOS_RECENTES)
+
+  const favoritos = marcas
+    .filter((m) => m.favorito)
+    // Por quando foi favoritado, o mais novo primeiro — a estrela que o aluno
+    // acabou de acender aparece no topo, onde ele vai procurá-la. `getMarcas`
+    // devolve ordenado por `visto_em`, que é outra coisa.
+    .sort((a, b) => (b.favoritado_em ?? '').localeCompare(a.favoritado_em ?? ''))
+    .map((m) => porId.get(m.resumo_id))
+    .filter((r): r is ResumoItem => !!r && r.liberado)
 
   /**
    * A mesma função que monta a barra lateral, então as duas listas ficam na
@@ -86,6 +151,55 @@ export default async function ResumosPage() {
           vezes pela mesma tela. */}
       {resumos.length > 0 && liberados === 0 ? (
         <AvisoAcesso caso="nenhum" className="bg-[var(--raised)] rounded-lg p-5 mb-9" />
+      ) : null}
+
+      {/* As duas faixas vêm ANTES do acervo por matéria, e somem sozinhas para
+          quem ainda não abriu nem guardou nada — o aluno novo vê a página que
+          sempre existiu, sem duas seções vazias explicando o que ele ainda não
+          fez. */}
+      {recentes.length > 0 ? (
+        <Faixa titulo="Continuar de onde parou" descricao="os últimos que você abriu">
+          {recentes.map(({ resumo, visto_em }) => (
+            <Cartao
+              key={resumo.slug}
+              resumo={resumo}
+              rodape={
+                <span className="mt-auto pt-1 text-[11px] text-[var(--ink-faint)]">
+                  {MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]?.nome ??
+                    resumo.materia_slug}
+                  {' · '}
+                  {quandoFoi(visto_em)}
+                </span>
+              }
+            />
+          ))}
+        </Faixa>
+      ) : null}
+
+      {favoritos.length > 0 ? (
+        <Faixa
+          titulo="Favoritos"
+          descricao={`${favoritos.length} ${favoritos.length === 1 ? 'resumo' : 'resumos'}`}
+        >
+          {favoritos.map((resumo) => (
+            <Cartao
+              key={resumo.slug}
+              resumo={resumo}
+              rodape={
+                <span className="mt-auto pt-1 text-[11px] text-[var(--ink-faint)]">
+                  {MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]?.nome ??
+                    resumo.materia_slug}
+                </span>
+              }
+            />
+          ))}
+        </Faixa>
+      ) : null}
+
+      {/* A linha que separa "o que é seu" do acervo inteiro. Sem ela as faixas
+          e as matérias leriam como uma lista só de dezenas de seções. */}
+      {recentes.length > 0 || favoritos.length > 0 ? (
+        <hr className="border-0 border-t border-[var(--line)] mb-9" />
       ) : null}
 
       {grupos.map(({ materia, itens }) => {
