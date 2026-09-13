@@ -394,3 +394,29 @@ create policy "admin edita as proprias formulas"
 create policy "admin exclui as proprias formulas"
   on formulas_salvas for delete to authenticated
   using (user_id = auth.uid() and eh_admin());
+
+-- ---------------------------------------------------------------------------
+-- Acesso ao corpo dos resumos (migrations de 2026-09-13)
+-- ---------------------------------------------------------------------------
+-- `resumos` deixou de ser legivel por qualquer autenticado. A policy antiga era
+-- `using (true)`, e como `corpo` e' coluna dessa tabela, qualquer conta gratis
+-- levava os 249 resumos com um select. O bloqueio por plano existia so' na
+-- aplicacao: protegia a tela, nao o dado.
+create table plano_processos (
+  plano         text not null,
+  processo_slug text not null references processos_seletivos(slug) on delete cascade,
+  primary key (plano, processo_slug)
+);
+-- espelha `PLANOS[].processos` de `src/lib/planos.ts`. Mudou la'? Migration aqui.
+-- `nenhum` nao entra: lista vazia e' o estado de quem so' criou conta.
+
+-- O catalogo: os 249 titulos sem o corpo, para a barra lateral, a lista e o
+-- mapa continuarem mostrando o acervo inteiro com cadeado no que e' pago.
+-- Roda com os privilegios do dono de proposito -- e' o que a torna catalogo.
+create view resumos_catalogo as
+  select id, slug, titulo, materia_slug, processo_slug, definicao, pai_id
+  from resumos;
+grant select on resumos_catalogo to authenticated;
+
+-- policy "resumo legivel so com o plano que o cobre": admin le^ tudo; os demais
+-- so' o processo que o plano ativo cobre. Ver a migration para o texto exato.

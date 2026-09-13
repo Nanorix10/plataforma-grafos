@@ -28,6 +28,17 @@ export type Plano = {
    * só (ver `lib/processos.ts`). `nenhum` continua com a lista vazia de
    * propósito: cadastro é aberto (decisão 1b), então pôr `comum` ali daria
    * acervo de graça a quem só criou conta.
+   *
+   * > [!important] Esta lista também existe no BANCO, em `plano_processos`.
+   * > Mudou aqui? **Gere uma migration junto**, senão as duas discordam.
+   * >
+   * > A duplicação não é descuido: desde 13/09 é o Postgres que decide quem lê
+   * > o `corpo` de um resumo, e uma policy não consegue ler um arquivo
+   * > TypeScript. O que fica aqui é a vitrine (nome, preço, para quem); o que
+   * > desce para lá é só o que a regra de acesso precisa saber.
+   * >
+   * > Se as duas divergirem, o banco nega e o aluno vê a tela de bloqueio —
+   * > falha para o lado seguro, mas continua sendo falha.
    */
   processos: string[]
   /** Preço mensal em reais. `null` enquanto o Leandro não decidir. */

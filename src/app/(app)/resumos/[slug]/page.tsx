@@ -28,22 +28,37 @@ export default async function ResumoPage({
   const { supabase, userId, plano, isAdmin } = await getSessao()
   if (!userId) redirect('/login')
 
-  const { data: resumo } = await supabase
-    .from('resumos')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  /**
+   * As duas leituras, e a ordem importa.
+   *
+   * Desde a migration de 13/09 a tabela `resumos` só devolve o que o plano
+   * cobre — antes ela devolvia tudo e quem barrava era a linha de baixo, o que
+   * protegia a TELA e não o DADO. Agora, para um resumo fora do plano, `resumo`
+   * volta **nulo**, indistinguível de um slug que não existe.
+   *
+   * É o catálogo que desfaz a ambiguidade: ele lista os 249 sem o corpo. Existe
+   * no catálogo e não veio da tabela = existe, mas não é seu. Não existe em
+   * lugar nenhum = 404 de verdade.
+   *
+   * Sem isto, todo resumo fora do plano viraria "página não encontrada", e o
+   * aluno perderia a tela que explica o que houve e vende o plano.
+   */
+  const [{ data: resumo }, { data: naVitrine }] = await Promise.all([
+    supabase.from('resumos').select('*').eq('slug', slug).maybeSingle(),
+    supabase.from('resumos_catalogo').select('titulo, processo_slug').eq('slug', slug).maybeSingle(),
+  ])
 
-  if (!resumo) notFound()
+  if (!resumo && !naVitrine) notFound()
 
-  const liberado = (PLANO_PROCESSOS[plano] ?? []).includes(resumo.processo_slug)
+  const liberado =
+    resumo !== null && (PLANO_PROCESSOS[plano] ?? []).includes(resumo.processo_slug)
 
   if (!liberado) {
     return (
       <div className="max-w-[640px] mx-auto px-7 py-24 text-center">
         <h1 className="text-2xl font-medium mb-3">Esse resumo faz parte de outro plano</h1>
         <p className="text-[var(--ink-dim)] mb-8">
-          &quot;{resumo.titulo}&quot; está disponível no Acesso Completo.
+          &quot;{naVitrine?.titulo ?? resumo?.titulo}&quot; está disponível no Acesso Completo.
         </p>
         <Link href="/#planos" className="botao botao-primario !rounded-lg px-6 py-2.5 text-sm">
           Ver planos
@@ -59,7 +74,14 @@ export default async function ResumoPage({
       // `pai_id` e `materia_slug` vêm de carona na lista que já era buscada
       // para os wikilinks: o caminho até a raiz (decisão 9j) sobe por ela em
       // memória, sem uma segunda ida ao banco por degrau.
-      supabase.from('resumos').select('id, slug, titulo, materia_slug, pai_id'),
+      //
+      // Do CATÁLOGO, e não da tabela: desde a migration de 13/09 `resumos` só
+      // devolve o que o plano cobre, e esta lista existe para resolver TÍTULOS.
+      // Vinda de lá, um `[[wikilink]]` para um resumo de outro vestibular
+      // deixaria de virar link, e a cadeia "Dentro de" se partiria no primeiro
+      // ancestral fora do plano — o aluno perderia a orientação por causa de
+      // uma regra que existe para proteger o texto, não os nomes.
+      supabase.from('resumos_catalogo').select('id, slug, titulo, materia_slug, pai_id'),
       supabase
         .from('conexoes')
         // `materia_slug` vem junto porque cada backlink é pintado na cor da
