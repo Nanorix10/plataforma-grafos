@@ -22,7 +22,9 @@ Stack: **Next.js 16** (App Router + Turbopack), React 19, Tailwind CSS v4,
 ```
 src/lib/
   sessao.ts       getSessao() — auth + plano + admin, memoizado com cache() por request
-  resumos.ts      getResumos() + agruparPorMateria()
+  resumos.ts      getResumos() + agruparPorMateria() — lê `resumos_catalogo` (decisão 14)
+  leituras.ts     getMarcas() — histórico e favoritos do aluno (decisão 16)
+  planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
   wikilinks.ts    converte [[Título]] em <a href="/resumos/slug">
@@ -35,7 +37,14 @@ src/app/
     layout.tsx                guard de auth + Sidebar
     Sidebar.tsx               menu estilo Obsidian
     acoes.ts                  alternarVisao() — server action do cookie `visao`
+    BuscaNoTexto.tsx          resultados da RPC `buscar_no_texto` (decisão 15)
     resumos/                  lista e página do resumo (com backlinks)
+      page.tsx                as três abas do recorte, em `?ver=` (decisão 17)
+      acoes.ts                registrarVisita / alternarFavorito (decisão 16)
+      [slug]/RegistraVisita.tsx   anota a abertura; não desenha nada
+      [slug]/BotaoFavorito.tsx    a estrela da barra do caminho
+      [slug]/LupaFigura.tsx       clicar na figura abre ela grande (decisão 19)
+      [slug]/SumarioMovel.tsx     "Nesta página" no celular (decisão 19)
     mapa/                     grafo d3 das conexões
     admin/editor/             CRUD de resumos (só admin)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
@@ -2215,3 +2224,299 @@ significavam — o `stagger` é que cuida do tempo agora.
 impede que qualquer tween chegue a existir. Sem o segundo, o GSAP escreveria
 `opacity: 0` embutido por cima da regra e a página sumiria justo para quem
 pediu menos movimento.
+
+## 14. O banco decide quem lê o corpo do resumo — não a tela
+
+**13/09/2026.** A decisão mais importante desde que o projeto existe, e ela
+nasceu de um buraco que estava aberto desde o começo.
+
+A policy de select de `resumos` era `create policy … using (true) to
+authenticated`. Qualquer conta autenticada lia qualquer linha — e **`corpo` é
+uma coluna dessa tabela**. Como o cadastro é aberto (decisão 1b) e a chave
+anônima vai dentro do JavaScript público, bastava criar conta de graça e fazer
+um select para levar os **249 resumos, 500 kB de texto**. O bloqueio por plano
+existia só em `PLANO_PROCESSOS`, no servidor da aplicação: ele protegia a
+**tela**, não o **dado**.
+
+O `PRODUCT.md` afirmava "RLS é a única proteção real". Para escrita era verdade.
+Para leitura, não era — e é exatamente o tipo de defeito que sobrevive anos,
+porque está documentado como resolvido.
+
+**A postura passou a ser fechado por padrão**, e isso é o que importa daqui para
+frente: a tabela inteira exige plano, e o que é catálogo sai por uma **vista
+explícita**. Coluna nova em `resumos` nasce protegida, sem ninguém precisar
+lembrar — o avesso do desenho anterior, em que cada coluna nova nascia pública.
+
+| | o que é | quem lê |
+|---|---|---|
+| `resumos` | tudo, inclusive `corpo` | só quem tem plano que cobre o processo |
+| `resumos_catalogo` | id, slug, título, matéria, processo, definição, pai | qualquer autenticado |
+
+**Duas migrations, e a divisão é de propósito.** A primeira só ACRESCENTA
+(`plano_processos` + a vista): nada deixa de funcionar se ela rodar sozinha. A
+segunda fecha a porta, e só foi aplicada depois de a primeira ser conferida em
+produção. Reverter é apagar a policy nova e recriar a `using (true)` — que está
+escrita por extenso no cabeçalho da migration, porque quem precisa reverter às
+pressas não pode estar reconstruindo SQL de cabeça.
+
+**Quais processos cada plano abre agora vive TAMBÉM no banco**, em
+`plano_processos`. Uma policy não consegue ler um arquivo TypeScript. Sim, a
+lista existe nos dois lugares, e `lib/planos.ts` carrega o aviso: mudou lá,
+**gere uma migration junto**. Se os dois discordarem o banco nega e o aluno vê a
+tela de bloqueio — falha para o lado seguro, mas continua sendo falha.
+
+**A consequência que quebra páginas, e que é a parte não óbvia.** Para um resumo
+fora do plano, `supabase.from('resumos')…` passa a devolver **nulo** —
+indistinguível de um slug que não existe. Sem desfazer essa ambiguidade, todo
+resumo de outro vestibular viraria "página não encontrada", e o aluno perderia a
+tela que explica o que houve e vende o plano. Quem desempata é o catálogo:
+
+- está no catálogo e não veio da tabela = **existe, mas não é seu**;
+- não está em lugar nenhum = **404 de verdade**.
+
+`resumos/[slug]/page.tsx` faz as duas leituras em paralelo por causa disto.
+
+**Três telas tiveram de trocar de fonte**, e o critério é sempre o mesmo —
+quem precisa de NOME usa o catálogo, quem precisa de TEXTO usa a tabela:
+
+- `getResumos()` (a lista e a barra lateral) lê o catálogo, senão o acervo
+  encolheria para o tamanho do plano e sumiriam os cadeados, que são o que prova
+  ao aluno que existe conteúdo a comprar;
+- `/mapa` lê as duas — o catálogo para os 249 nós, a tabela para o `corpo` de
+  onde saem os nós de título (decisão 12);
+- a lista de wikilinks da página do resumo lê o catálogo, senão um `[[link]]`
+  para outro vestibular deixaria de virar link e a cadeia "Dentro de" se
+  partiria no primeiro ancestral fora do plano.
+
+**Conferido em produção com JWT simulado** (`set local role authenticated` mais
+`request.jwt.claims`), porque afirmar que uma policy funciona sem exercitá-la é
+o que produziu o buraco original:
+
+| conta | lê `resumos` | lê o catálogo |
+|---|---|---|
+| cadastrada e sem acesso | **0** | 249 |
+| aluno com plano completo | 249 | 249 |
+| admin | 249 | 249 |
+
+## 15. A busca alcança o texto dos resumos, e quem responde é o Postgres
+
+**13/09/2026.** A busca da barra lateral filtrava os 249 **títulos** já em
+memória: instantânea, e cega para a palavra no meio do texto. Não é assim que se
+estuda — o professor cita um termo e o aluno vai atrás DELE, não do nome do
+capítulo. Digitar "mitocôndria" sem um resumo com esse título devolvia "nada
+encontrado", com a palavra escrita dentro de dois deles.
+
+**O navegador não podia responder isso**, e a decisão 14 é o motivo: seriam
+500 kB de corpo por sessão, e desde 13/09 o banco só entrega o texto que o plano
+cobre. Busca no cliente precisaria exatamente daquilo que a proteção existe para
+impedir. Então quem responde é a função `buscar_no_texto`.
+
+Três coisas que a medição decidiu, e que não se adivinham:
+
+- **`unaccent` é obrigatório, não enfeite.** Medido neste banco: sem ele
+  `mitocondria` NÃO acha `mitocôndria` e `celulas` não acha nada. Ninguém digita
+  acento no celular procurando coisa. A configuração `portugues_sem_acento` é
+  própria porque `to_tsvector` com config literal é `IMMUTABLE`, que é o que
+  permite a coluna gerada.
+- **O HTML não precisa ser limpo antes de indexar.** O parser do Postgres
+  reconhece tag e a descarta sozinho — conferido num resumo real de Física, que
+  indexou `aceler`, `centripet`, `trajetor` e nenhum `div` ou `class`.
+- **`revoke … from anon` NÃO basta.** Toda função nasce com EXECUTE para
+  `PUBLIC`, e `anon` herda dali: `has_function_privilege('anon', …)` continuava
+  `true` depois do revoke do papel. Quem perde o privilégio é **PUBLIC**. Só
+  isso transformou "lista vazia" em 401.
+
+**Coluna GERADA, não trigger:** não tem como ficar dessincronizada do corpo, nem
+por um update que esqueça de atualizá-la. Título com peso A e corpo com B —
+quem procura "Mitose" quer o resumo CHAMADO Mitose antes dos que só o mencionam.
+
+**`SECURITY INVOKER`, que é o padrão, e trocar para `DEFINER` furaria a decisão
+14 inteira:** rodando com as permissões de quem chama, a policy de `resumos` se
+aplica dentro da função, e a busca nunca devolve resumo fora do plano.
+
+**O trecho volta com marcadores `«»`, não com `<mark>`.** Devolver HTML para ser
+injetado seria abrir uma porta de script por causa de um grifo; o cliente PARTE
+a string nos marcadores e monta os `<mark>` como elementos React.
+
+## 16. O site lembra o que o aluno abriu e o que ele guardou
+
+**13–14/09/2026.** Até aqui o site não lembrava de nada. O aluno fechava a aba
+no meio de um resumo e, no dia seguinte, tinha de reencontrá-lo na árvore de
+249. E a lista `/resumos` não tinha trabalho próprio: repetia o que a barra
+lateral já faz melhor, com cartão maior.
+
+São **duas marcas**, e a diferença entre elas é o ponto:
+
+| | quem escreve | o que significa |
+|---|---|---|
+| `visto_em` | o site, sozinho | esta página foi aberta, nesta hora |
+| `favorito` | o aluno | volto aqui |
+
+**Um "lido" foi considerado e descartado.** Ou depende de o aluno clicar um
+botão — e ele esquece, e o número passa a mentir —, ou é adivinhado por rolagem,
+e adivinha errado. Histórico responde a mesma pergunta ("onde eu estava?") sem
+afirmar nada que possa ser falso. É a mesma régua do `preco: null` da
+`lib/planos.ts`: não inventar número que pareça decidido.
+
+**Uma linha por par `(aluno, resumo)`**, na tabela `leituras`, com a chave
+primária composta: a linha É a relação entre os dois, e as duas marcas são
+atributos dela. Duas tabelas dariam a mesma chave duas vezes, quatro policies
+onde bastam duas, e duas consultas onde basta uma.
+
+**A policy de insert não repete a regra de plano — ela a CONSULTA:**
+
+```sql
+with check (
+  user_id = auth.uid()
+  and exists (select 1 from resumos r where r.id = leituras.resumo_id)
+)
+```
+
+Aquela subconsulta também passa pelas policies de `resumos`, que desde a decisão
+14 só devolvem o que o plano cobre. Então "este resumo é meu de direito" sai de
+graça e **continua certo no dia em que a regra de plano mudar** — há um lugar só
+que a define. Sem isto, uma chamada forjada com a chave pública encheria o
+próprio histórico de resumos bloqueados: não vazaria texto, mas sujaria a tela
+com títulos que o aluno não comprou.
+
+**A visita é escrita pelo CLIENTE, não pela página.** A página é componente de
+servidor e pode ser renderizada de novo sem o aluno fazer nada — prefetch,
+revalidação, recarga. Escrever ali contaria visitas que não aconteceram. Quem
+dispara é `RegistraVisita`, que não desenha nada e existe só para isso.
+
+**As duas escritas não se atropelam**, e isso foi conferido no banco antes de ir
+ao ar, porque é onde um `upsert` malfeito estragaria dado de gente:
+
+| passo | `visto_em` | `favorito` |
+|---|---|---|
+| depois de favoritar | intacto | true |
+| depois de reabrir | atualizado | **true**, intacto |
+| depois de tirar a estrela | intacto | false |
+
+O PostgREST só atualiza as colunas que vão no corpo, e cada ação manda as suas.
+
+**"há 2 dias", nunca "hoje" ou "ontem".** A página é montada no servidor, que
+roda em UTC, e o aluno estuda no fuso de Campo Grande: um resumo aberto às 22h
+de terça viraria "hoje" na madrugada de quarta. Tempo decorrido é a mesma
+verdade em qualquer fuso, porque não depende de onde a meia-noite cai.
+
+## 17. A lista de resumos recorta pelo que é do aluno, e o recorte vive na URL
+
+**14/09/2026.** Com a decisão 16 no ar, a `/resumos` finalmente tinha por onde
+filtrar. São três abas — **Tudo**, **Não abertos**, **Favoritos** — e duas
+faixas no topo, "Continuar de onde parou" e "Favoritos".
+
+**As duas que o boletim pediu e que os números derrubaram:**
+
+- **Por vestibular.** 199 dos 249 resumos são `comum`, que entra em todo plano
+  (decisão 1c). No plano PASSE, filtrar por vestibular mostraria **10 cartões**.
+- **Por matéria.** A página já tem cabeçalho de matéria, e a barra lateral já
+  tem a árvore. Um seletor seria a terceira cópia da mesma navegação.
+- **Por etapa do edital** foi descartado antes: só 44 dos 249 resumos têm tópico
+  vinculado (decisão 9i), então o filtro esconderia 205.
+- **Ordenar por recentes** também: 238 dos 249 mudaram nos últimos 30 dias
+  porque foram importados em lote. A data existe e não significa o que o aluno
+  leria nela.
+
+**"Não abertos" conta só o que o plano cobre.** Um resumo bloqueado nunca foi
+aberto e caberia no recorte, mas ele existe para responder "o que falta eu ler",
+e encher a resposta de cadeado remontaria a parede de que a tela sofria. A conta
+do cabeçalho usa o mesmo denominador, senão o número diria uma coisa e a tela
+outra — e é `liberados − não abertos`, nunca `marcas.length`: a marca de um
+resumo que saiu do plano continua no banco, e contá-la daria "abertos" maior que
+"liberados" na mesma linha.
+
+**O recorte vive na URL**, como o `?visao=` do mapa, e aqui ganha um motivo a
+mais: `/resumos?ver=novos` pode ser favoritado, o botão Voltar funciona, e **a
+página continua sendo componente de servidor** — cada aba é um `<Link>`, sem uma
+linha de JavaScript nova indo para o navegador. `?ver=qualquercoisa` cai em
+"Tudo", em silêncio, pela regra do `lerEnquadramento` (decisão 12f).
+
+**Abas e faixas só aparecem para quem tem marca.** Sem nenhuma, "Não abertos
+(209)" é a lista inteira com outro nome e "Favoritos (0)" é um beco sem saída. O
+aluno novo vê a página que sempre existiu.
+
+## 18. A barra lateral lembra o que ficou aberto, e abre onde o aluno está
+
+**13/09/2026.** As gavetas de matéria passaram a nascer **fechadas** — o estado
+guarda quem está ABERTO, e não quem está fechado. Não é detalhe de gosto: com
+`fechados` vazio significando "tudo aberto", uma matéria nova entraria expandida
+sem ninguém ter pedido.
+
+Duas queixas que o padrão fechado expôs, e que vieram junto:
+
+- a barra esquecia tudo a cada recarga, então toda visita começava fechada;
+- chegando a um resumo pela busca, pelo mapa ou por um `[[wikilink]]`, a barra
+  não dizia nada sobre onde o aluno caiu.
+
+O que está aberto mora no `localStorage`, e o React **lê de lá** por
+`useSyncExternalStore` — o mesmo formato do `BotaoTema` (decisão 4b) e pela
+mesma razão: o valor vive fora do React e o servidor não sabe qual é. Ler num
+inicializador de `useState` faria servidor e cliente discordarem; restaurar num
+efeito é `setState` dentro de efeito, que as regras do React Compiler do Next 16
+recusam.
+
+**O que se guarda é a STRING crua, não o `Set`.** `getSnapshot` tem de devolver
+o mesmo valor enquanto nada muda, e um `Set` novo a cada leitura nunca é igual a
+si mesmo — laço infinito de render. O `Set` é derivado com `useMemo`.
+
+A busca continua expandindo tudo sem tocar no conjunto: limpar o campo devolve
+as gavetas exatamente ao que o aluno tinha aberto à mão.
+
+## 19. Três telas que o aluno comum cobrou, e o que cada uma escolheu pagar
+
+**13/09/2026.** Saíram de uma crítica ao produto escrita na voz de um aluno de
+ensino médio. As três são pequenas e nenhuma é óbvia.
+
+**Clicar na figura abre ela grande** (`LupaFigura.tsx`). Um ouvinte só, no
+contêiner, porque o corpo é HTML cru injetado e não há componente React onde
+pendurar `onClick`. A figura é **CLONADA**, não remontada a partir do `src`: o
+recorte deste projeto é CSS (decisão 11c-quater), então montar do `src`
+mostraria de volta o pedaço que o autor cortou. Clonando, vêm junto recorte,
+giro, borda e filtros — e escala sozinho, porque o recorte é escrito em
+porcentagem.
+
+Duas armadilhas medidas: `width: auto` no estado ajustado deixava uma imagem de
+400px com 400px (o ampliador não ampliava); e `width: 100%` com `max-height`
+**corta** em vez de reescalar quando a caixa tem `aspect-ratio` — uma figura de
+proporção 1,333 saiu em 1,722, achatada. A saída é medir a proporção ANTES de
+clonar e usar `min(100%, altura disponível × proporção)`. O zoom mora no
+elemento que o React controla e desce por variável CSS: escrever no clone seria
+mutar um nó que o React não possui, e é o que o Compiler recusa.
+
+**O sumário "Nesta página" no celular** (`SumarioMovel.tsx`). O trilho some
+abaixo de 1340px, e é justamente no celular que o sumário vale mais — é onde se
+revisa, que é pular, não ler do começo. O botão mora na barra do caminho, que já
+é fixa; uma terceira barra comeria a leitura. Calcula a seção ativa **uma vez,
+no toque**, e não a cada quadro como o trilho da coluna. A folha empresta a
+classe `.trilho` para herdar o desenho, e por isso o esconder virou
+`.trilho:not(.trilho-folha)` — sem o `:not`, ela herdaria o `display: none`.
+
+**O aviso de acesso na lista** (`AvisoAcesso.tsx`). O cadastro manda o aluno
+para `/resumos`, não para `/conta` — e lá ele encontrava 249 cartões com
+cadeado, o seco "0 liberados de 249" e nenhuma saída. A explicação existia, em
+`/conta`, uma tela que ele não tem motivo para abrir. O texto virou componente
+usado pelas duas: liberação manual é estado declarado, não desenho, e quando o
+checkout automatizar uma frase duplicada deixaria metade do site ainda dizendo
+que a liberação é à mão. **Só no caso de zero** — com plano parcial a lista já
+funciona, e um chamariz de plano em cima dos resumos que o aluno PAGOU cobraria
+duas vezes pela mesma tela.
+
+## O que a lista do boletim ainda deve
+
+A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
+histórico e favoritos (16), recorte da lista (17), barra que lembra (18), lupa,
+sumário no celular e aviso de acesso (19), busca no texto (15). Fora delas saiu
+a correção de segurança (14), que não estava no boletim.
+
+Continuam abertas, e nenhuma é de código sozinho:
+
+- **Preço na tela e checkout automático.** Decisão do dono. Trava tudo — sem
+  isso o site não ganha aluno.
+- **Encher os `[[links]]` e os `pai_id`.** Conteúdo, não código: o mapa, os
+  backlinks e a árvore estão prontos esperando dado. É a mesma conclusão a que
+  a física do grafo chegou por outro caminho (decisão 10b-bis).
+- Marcar edital com progresso, grifar e anotar, questão clicável, PWA offline,
+  revisão espaçada, canal de dúvida, resumo de amostra sem login.
+- **Imprimir / salvar em PDF** está adiado por decisão de produto: depende de
+  resolver se o acervo pode sair do site.

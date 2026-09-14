@@ -75,6 +75,14 @@ que falta é trabalho corrente, não um evento único.
   não-admin de escrever são as policies no Postgres. O cookie `visao`
   (alternador "ver como aluno") é conveniência de interface e **não** é
   segurança — `isAdmin` é a visão efetiva, `isAdminReal` é a permissão.
+
+  > **Esta linha era verdade só metade, e a metade que faltava vazava o acervo.**
+  > Até 13/09/2026 ela valia para ESCRITA e não para LEITURA: a policy de select
+  > de `resumos` era `using (true)`, então qualquer conta criada de graça baixava
+  > os 249 resumos com um select. O bloqueio por plano existia só em
+  > `PLANO_PROCESSOS`, no servidor da aplicação — protegia a TELA, não o DADO.
+  > Fechado na decisão 14 do `CONTEXTO.md`. Hoje a frase vale inteira, e é ela
+  > que decide onde toda regra de acesso NOVA tem de morar: no banco.
 - **Cadastro é aberto**, e quem se cadastra cai no plano `nenhum`, com lista de
   processos vazia: conta criada, nenhum resumo liberado. Existe portanto um
   estado de "cadastrado e sem acesso" que é rotina, não erro.
