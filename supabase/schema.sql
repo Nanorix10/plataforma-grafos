@@ -75,13 +75,23 @@ alter table resumos enable row level security;
 alter table conexoes enable row level security;
 alter table planos_usuarios enable row level security;
 
--- Qualquer usuário autenticado pode LER resumos
--- (o controle real de "pode ver o conteúdo completo" fica na aplicação,
---  comparando plano_usuario.plano com resumo.processo_slug)
-create policy "usuarios autenticados podem ler resumos"
-  on resumos for select
-  to authenticated
-  using (true);
+-- ⚠️ SUPERADA EM 2026-09-13, E ESTA POLICY NAO EXISTE MAIS.
+--
+-- Fica aqui porque este arquivo e' a foto do estado INICIAL, e apagar a linha
+-- esconderia por que a de hoje precisou existir. Mas ela estava escrita como se
+-- fosse a vigente, e o comentario abaixo afirma o que o projeto descobriu ser
+-- falso: "o controle real fica na aplicacao" protegia a TELA, nao o DADO --
+-- `corpo` e' coluna desta tabela, e `using (true)` entregava os 249 resumos a
+-- qualquer conta criada de graca.
+--
+-- A policy em vigor e' "resumo legivel so com o plano que o cobre". Ver a secao
+-- "Acesso ao corpo dos resumos" no fim deste arquivo, e a decisao 14 do
+-- CONTEXTO.md.
+--
+-- create policy "usuarios autenticados podem ler resumos"
+--   on resumos for select
+--   to authenticated
+--   using (true);
 
 create policy "usuarios autenticados podem ler conexoes"
   on conexoes for select
@@ -437,3 +447,26 @@ create index resumos_busca_idx on resumos using gin (busca);
 -- `buscar_no_texto(termo, limite)`: SECURITY INVOKER de proposito, para o RLS
 -- de `resumos` valer dentro dela. EXECUTE revogado de PUBLIC (nao so' de anon:
 -- funcao nasce com EXECUTE para PUBLIC e anon herda). Ver a migration.
+
+-- ---------------------------------------------------------------------------
+-- Historico e favoritos do aluno (migration de 2026-09-13)
+-- ---------------------------------------------------------------------------
+-- Uma linha por par (aluno, resumo): a linha E' a relacao entre os dois. Duas
+-- marcas com origens diferentes -- `visto_em` o site anota sozinho, `favorito`
+-- o aluno escolhe. Ver a decisao 16 do CONTEXTO.md.
+create table leituras (
+  user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  resumo_id     uuid not null references resumos (id) on delete cascade,
+  visto_em      timestamptz not null default now(),
+  favorito      boolean not null default false,
+  favoritado_em timestamptz,
+  primary key (user_id, resumo_id),
+  constraint leituras_favorito_datado check (favorito = false or favoritado_em is not null)
+);
+create index leituras_recentes_idx on leituras (user_id, visto_em desc);
+
+-- As quatro policies recortam por `user_id = auth.uid()`. As de escrita ainda
+-- exigem `exists (select 1 from resumos r where r.id = leituras.resumo_id)`:
+-- aquela subconsulta passa pelas policies de `resumos`, entao "este resumo e'
+-- meu de direito" sai de graca e continua certo quando a regra de plano mudar.
+-- Ver a migration para o texto exato.
