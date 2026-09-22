@@ -26,6 +26,8 @@ src/lib/
   leituras.ts     getMarcas() — histórico e favoritos do aluno (decisão 16)
   edital-progresso.ts  getProgresso() — tópicos do edital que o aluno marcou (decisão 20)
   grifos.ts       getGrifos() — grifos e notas do aluno num resumo (decisão 21)
+  respostas.ts    respostas às questões e a lista "Para refazer" (decisão 22)
+  questoes.ts     gavetas da resolução e prepararQuestoes (decisões 9b e 22)
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
@@ -48,6 +50,7 @@ src/app/
       [slug]/LupaFigura.tsx       clicar na figura abre ela grande (decisão 19)
       [slug]/SumarioMovel.tsx     "Nesta página" no celular (decisão 19)
       [slug]/Grifos.tsx           grifar e anotar, sem tocar no HTML (decisão 21)
+      [slug]/Questoes.tsx         responder as questões no clique (decisão 22)
     mapa/                     grafo d3 das conexões
     admin/editor/             CRUD de resumos (só admin)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
@@ -2636,12 +2639,92 @@ batem.
 O build avisa três vezes que `::highlight` não é pseudo-elemento válido. É o
 minificador; a regra sai intacta no CSS final.
 
+## 22. A questão se responde na página, e o site lembra das que o aluno errou
+
+**23/09/2026.** Toda questão resolvida passou a ser respondível, de três jeitos:
+
+| tipo | quando | o que o aluno faz |
+|---|---|---|
+| objetiva | gabarito é uma letra, e as alternativas A), B)… estão uma por linha | clica numa alternativa; a tela mostra a dele e o gabarito |
+| somatória | gabarito é um número, e os itens 01, 02, 04… estão um por linha | marca os itens, clica "Conferir soma"; a tela corrige item a item |
+| aberta | sem gabarito, ou com um gabarito que não bate com o texto | abre a resolução e diz "Acertei" ou "Errei" |
+
+E a `/resumos` ganhou a aba **Para refazer**: as questões cujo último resultado
+foi erro, uma linha por questão, com link direto para ela (`#q-…`).
+
+**O acervo é pequeno, e isso decidiu o desenho.** São 25 questões em 22 dos 254
+resumos: ~15 discursivas, 4 objetivas, 3 somatórias. "Alternativa clicável"
+sozinha serviria a 4. O "Acertei / Errei" serve a todas, e é por isso que ele
+existe.
+
+**Nada adivinha gabarito.** A resposta costuma estar escrita na resolução ("…pela
+1ª lei de Newton. D)"), e ler dali seria fácil. Seria também o jeito de o site
+dizer a um aluno que ele errou quando acertou. Quem marca o gabarito é o autor,
+na faixa **Questão** do editor, que aparece com o cursor dentro de uma questão.
+A faixa roda a MESMA análise da página (`analisarQuestao`) e avisa na hora
+quando o gabarito não vai funcionar — o caso típico é alternativa escrita toda
+numa linha só, como em Mendel e Codominância.
+
+**Cada questão tem identidade: `data-id`**, um uuid gravado na própria `<aside>`.
+A questão mora dentro do HTML, não numa tabela, e sem o id "a questão que o aluno
+errou" deixaria de ser a mesma depois de uma edição. O editor dá o id a toda
+questão nova, e um plugin conserta, a cada mudança do documento, questão colada
+sem id e questão duplicada com o id da original — duas questões com o mesmo id
+dividiriam as respostas de todos os alunos. As 25 que existiam foram numeradas
+pela migration, que roda DEPOIS do deploy: o editor antigo descartaria o atributo.
+
+**O HTML gravado não muda, fora os dois atributos.** Quem transforma é
+`prepararQuestoes`, na leitura, no mesmo passo das gavetas: acrescenta
+`role="button"` às linhas de alternativa, um painel e o "E aí, acertou?" dentro
+da última gaveta. **Nem um caractere do texto muda** — os grifos (decisão 21) se
+ancoram no texto, e ele precisa ser o mesmo a cada visita. Pela mesma razão, os
+selos "gabarito" e "sua resposta" são `::after`, e não texto.
+
+Quatro coisas que não se adivinham:
+
+- **As alternativas são `<p role="button">`, e não `<button>`.** Trocar a tag
+  mudaria o HTML que os grifos e o trilho contam. O teclado (Enter e espaço) é
+  tratado à mão, e a linha corrigida deixa de ser botão (`aria-disabled`).
+- **Só os parágrafos do primeiro nível contam**, e só antes da primeira
+  resolução. Uma célula de tabela que começa com "A)" não é alternativa. E as
+  letras têm de vir em ordem, A, B, C…, com o gabarito entre elas; a soma só
+  pode usar itens que existem. Qualquer coisa fora disso vira "aberta" — nunca
+  uma questão interativa que corrige errado.
+- **Refazer começa do zero.** A última tentativa aparece numa linha ("Da última
+  vez você errou — marcou B"), mas as alternativas voltam limpas. Abrir a
+  questão já corrigida entregaria a resposta a quem veio justamente refazer.
+- **Quem corrige é o navegador, e o banco aceita o `acertou` que chega.** A
+  resposta é do aluno sobre o próprio estudo; forjar "acertei" só enganaria a ele
+  mesmo. Conferir no servidor exigiria reler o `corpo` a cada clique.
+
+**Tabela `respostas`, uma linha por aluno e questão, e vale a última tentativa**
+— "Para refazer" pergunta o último resultado, e acertar depois de errar tira a
+questão da lista. `questao_id` não é FK, porque a questão não é linha de tabela;
+`resumo_id` é, e é por ele que a policy consulta o plano, como em `leituras`. A
+linha guarda o começo do enunciado (`trecho`) para a lista dizer QUAL questão
+sem abrir o resumo — é rótulo, e envelhece se o enunciado for reescrito.
+
+**Conferido antes do ar:** a análise rodou em 14 casos com o texto real do
+acervo (objetiva com `\r\n`, somatória com tabela no enunciado e com fórmula nos
+itens, gabarito inexistente, soma com item que não existe, alternativas numa
+linha só, "A)" dentro de tabela, atributos na ordem que o editor grava, questão
+em partes com duas gavetas, duas questões no mesmo resumo) — os 14 batem, e o
+texto de cada questão sai idêntico. O `Questoes.tsx` rodou numa página de teste
+com o HTML que o servidor gera: erro e acerto na objetiva, "Tentar de novo",
+Enter pelo teclado, somatória corrigida item a item (02 certo, 04 faltou, 08
+errado), "Acertei" dentro da gaveta, e as quatro gravações com o que devia.
+
+**O preço declarado:** o conteúdo. A tela funciona, mas com 25 questões a aba
+"Para refazer" fica quase sempre vazia. Ela passa a valer quando o acervo tiver
+questão em quantidade — e 4 das 7 objetivas/somatórias só viram clicáveis depois
+de o autor marcar o gabarito (e, em duas, quebrar as alternativas em linhas).
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
 histórico e favoritos (16), recorte da lista (17), barra que lembra (18), lupa,
 sumário no celular e aviso de acesso (19), busca no texto (15), edital com
-caixinha e progresso (20), grifar e anotar (21). Fora delas saiu
+caixinha e progresso (20), grifar e anotar (21), questão respondível e lista para refazer (22). Fora delas saiu
 a correção de segurança (14), que não estava no boletim.
 
 Continuam abertas, e nenhuma é de código sozinho:
@@ -2651,7 +2734,7 @@ Continuam abertas, e nenhuma é de código sozinho:
 - **Encher os `[[links]]` e os `pai_id`.** Conteúdo, não código: o mapa, os
   backlinks e a árvore estão prontos esperando dado. É a mesma conclusão a que
   a física do grafo chegou por outro caminho (decisão 10b-bis).
-- Questão clicável, PWA offline,
+- PWA offline,
   revisão espaçada, canal de dúvida, resumo de amostra sem login.
 - **Imprimir / salvar em PDF** está adiado por decisão de produto: depende de
   resolver se o acervo pode sair do site.

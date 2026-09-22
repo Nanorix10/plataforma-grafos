@@ -504,3 +504,21 @@ create index grifos_do_aluno_no_resumo on grifos (user_id, resumo_id);
 
 -- Quatro policies por `user_id = auth.uid()`; insert e update exigem que o
 -- resumo seja legivel (consulta `resumos`, como `leituras`).
+
+-- ---------------------------------------------------------------------------
+-- Respostas do aluno as questoes. `questao_id` e' o `data-id` da <aside> dentro
+-- do corpo (nao e' FK: a questao mora no HTML). Vale a ultima tentativa.
+-- Decisao 22.
+create table respostas (
+  user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  questao_id    uuid not null,
+  resumo_id     uuid not null references resumos (id) on delete cascade,
+  acertou       boolean not null,
+  resposta      text check (length(resposta) <= 8),
+  trecho        text not null default '' check (length(trecho) <= 200),
+  respondido_em timestamptz not null default now(),
+  primary key (user_id, questao_id)
+);
+create index respostas_erradas_do_aluno on respostas (user_id) where not acertou;
+
+-- Quatro policies por `user_id = auth.uid()`; insert e update consultam `resumos`.

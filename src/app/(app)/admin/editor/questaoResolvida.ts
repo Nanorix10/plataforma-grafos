@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state'
 
 /**
  * Questão resolvida com a resolução escondida até o aluno pedir.
@@ -31,6 +32,8 @@ declare module '@tiptap/core' {
     questaoResolvida: {
       /** Insere o esqueleto de uma questão com a gaveta de resolução. */
       inserirQuestao: () => ReturnType
+      /** Letra (objetiva), número (somatória) ou `null` para tirar. */
+      definirGabarito: (gabarito: string | null) => ReturnType
     }
   }
 }
@@ -54,12 +57,71 @@ export const Resolucao = Node.create({
   },
 })
 
-/** A moldura: enunciado, alternativas e, no fim, a gaveta. */
+/**
+ * A moldura: enunciado, alternativas e, no fim, a gaveta.
+ *
+ * Dois atributos, os dois para a página do aluno (decisão 22):
+ *
+ * - `id` (`data-id`) é a identidade da questão. É com ele que a resposta do
+ *   aluno continua apontando para a MESMA questão depois que o autor edita o
+ *   resumo. Nasce com a questão e nunca é mostrado; o plugin abaixo garante
+ *   que toda questão tenha um e que dois não se repitam.
+ * - `gabarito` (`data-gabarito`) é o que torna a questão respondível: uma
+ *   letra para a objetiva, um número para a somatória. Sem ele, o aluno se
+ *   avalia com "Acertei / Errei".
+ */
 export const Questao = Node.create({
   name: 'questao',
   group: 'block',
   content: 'block+',
   defining: true,
+
+  addAttributes() {
+    return {
+      id: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('data-id'),
+        renderHTML: (a) => (a.id ? { 'data-id': a.id } : {}),
+      },
+      gabarito: {
+        default: null,
+        parseHTML: (el) => el.getAttribute('data-gabarito'),
+        renderHTML: (a) => (a.gabarito ? { 'data-gabarito': a.gabarito } : {}),
+      },
+    }
+  },
+
+  /* Toda questão sai do editor com um id, e com um id só dela.
+
+     Não basta dar o id em `inserirQuestao`: questão também entra COLADA — de
+     outro resumo, ou duplicada com Ctrl+C/Ctrl+V dentro do mesmo —, e aí ou
+     vem sem id, ou vem com o id da original. Duas questões com o mesmo id
+     dividiriam as respostas de todos os alunos. Este plugin olha o documento
+     depois de cada mudança e conserta os dois casos numa transação só. */
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('idDaQuestao'),
+        appendTransaction: (transacoes, _antes, estado) => {
+          if (!transacoes.some((t) => t.docChanged)) return null
+          const vistos = new Set<string>()
+          let tr: Transaction | null = null
+          estado.doc.descendants((no, pos) => {
+            if (no.type.name !== this.name) return
+            const id = no.attrs.id as string | null
+            if (id && !vistos.has(id)) {
+              vistos.add(id)
+              return
+            }
+            const novo = crypto.randomUUID()
+            vistos.add(novo)
+            tr = (tr ?? estado.tr).setNodeAttribute(pos, 'id', novo)
+          })
+          return tr
+        },
+      }),
+    ]
+  },
 
   parseHTML() {
     return [{ tag: 'aside.questao' }]
@@ -71,11 +133,16 @@ export const Questao = Node.create({
 
   addCommands() {
     return {
+      definirGabarito:
+        (gabarito) =>
+        ({ commands }) =>
+          commands.updateAttributes(this.name, { gabarito }),
       inserirQuestao:
         () =>
         ({ commands }) =>
           commands.insertContent({
             type: this.name,
+            attrs: { id: crypto.randomUUID() },
             content: [
               {
                 type: 'paragraph',
