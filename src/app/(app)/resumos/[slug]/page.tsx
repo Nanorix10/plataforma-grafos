@@ -21,6 +21,8 @@ import SumarioMovel from './SumarioMovel'
 import RegistraVisita from './RegistraVisita'
 import BotaoFavorito from './BotaoFavorito'
 import { getMarcas } from '@/lib/leituras'
+import { getGrifos } from '@/lib/grifos'
+import Grifos from './Grifos'
 
 export default async function ResumoPage({
   params,
@@ -78,6 +80,7 @@ export default async function ResumoPage({
     { data: cobrancas },
     { data: datas },
     marcas,
+    grifos,
   ] = await Promise.all([
       // `pai_id` e `materia_slug` vêm de carona na lista que já era buscada
       // para os wikilinks: o caminho até a raiz (decisão 9j) sobe por ela em
@@ -113,6 +116,9 @@ export default async function ResumoPage({
       // aqui e não antes do bloqueio: num resumo fora do plano não há estrela
       // para acender, e a consulta seria trabalho jogado fora.
       getMarcas(),
+      // Os grifos do aluno neste resumo (decisão 21). Pelo mesmo motivo da
+      // estrela, depois do bloqueio: resumo fora do plano não se grifa.
+      getGrifos(resumo.id),
     ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
 
@@ -361,6 +367,11 @@ export default async function ResumoPage({
             seletor, e antes dele o `.conteudo-resumo` ainda não existe no DOM
             do cliente na primeira passada. */}
         <LupaFigura seletor=".conteudo-resumo" />
+
+        {/* Depois do corpo pelo mesmo motivo da lupa. A `key` é obrigatória:
+            navegar de um resumo para outro reaproveita a página, e sem ela o
+            estado inicial dos grifos seria o do resumo anterior. */}
+        <Grifos key={resumo.id} resumoId={resumo.id} iniciais={grifos} seletor=".conteudo-resumo" />
 
         <section className="mt-16 pt-7 border-t border-[var(--line)]">
           <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
