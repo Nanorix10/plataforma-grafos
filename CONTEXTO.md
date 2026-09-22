@@ -24,6 +24,7 @@ src/lib/
   sessao.ts       getSessao() — auth + plano + admin, memoizado com cache() por request
   resumos.ts      getResumos() + agruparPorMateria() — lê `resumos_catalogo` (decisão 14)
   leituras.ts     getMarcas() — histórico e favoritos do aluno (decisão 16)
+  edital-progresso.ts  getProgresso() — tópicos do edital que o aluno marcou (decisão 20)
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
@@ -2502,11 +2503,71 @@ que a liberação é à mão. **Só no caso de zero** — com plano parcial a li
 funciona, e um chamariz de plano em cima dos resumos que o aluno PAGOU cobraria
 duas vezes pela mesma tela.
 
+
+## 20. O edital virou lista de estudo do aluno, e a conta do autor saiu da tela dele
+
+**22/09/2026.** Cada tópico do `/edital` ganhou uma caixinha, e o cabeçalho e
+cada etapa passaram a contar **o que o aluno marcou**, com barra. A tabela é
+`edital_progresso`, uma linha por `(aluno, tópico)`.
+
+**O que a tela mostrava antes era a lista de afazeres do autor.** "70 de 1114
+tópicos com resumo escrito" — 6% — na tela de quem paga. E o número piorou
+sozinho: o edital cresceu de 326 para 1114 tópicos sem ninguém olhar para essa
+frase. Agora a conta "com resumo" aparece só para `isAdmin`, em lilás. **A
+informação não sumiu**: a bolinha cheia/vazada de cada tópico continua dizendo,
+item a item, onde ainda não há resumo. O que saiu foi o agregado.
+
+**Duas marcas por linha, com donos diferentes**, e é por isso que as duas ficam:
+
+| | quem escreve | significa |
+|---|---|---|
+| caixinha | o aluno | estudei isto |
+| bolinha | o autor | há resumo para isto |
+
+**A caixinha é declaração, nunca dedução.** Nada é preenchido a partir de
+`leituras`: abrir um resumo não é ter estudado o tópico, e o aluno pode ter
+estudado pelo caderno — tópico sem resumo também se marca. Mesma régua que
+recusou o "lido" na decisão 16.
+
+**Por tópico, não por resumo**, porque os dois não se correspondem: 1114
+tópicos apontam para só **44** resumos, e "Gêneros literários" responde a três
+itens do PASSE. Marcar o resumo marcaria os três.
+
+**Desmarcar APAGA a linha.** Em `leituras` a linha carrega duas marcas e
+sobrevive a qualquer uma; aqui a linha É a marca. Por isso há três policies, e
+não quatro — sem update, porque não há nada que mude. A de insert consulta
+`edital_topicos` em vez de repetir regra, como a de `leituras`. Conferido em
+produção com JWT simulado: marcar em nome de outro aluno e marcar tópico
+inexistente são recusados; um aluno não vê nem apaga a marca do outro; o duplo
+clique não duplica.
+
+**O cabeçalho conta o que está NA TELA.** Com o chip do PASSE ligado, o
+denominador é o do PASSE; "4 de 1114" misturaria tópicos de uma prova que o
+aluno nem vai fazer.
+
+Três escolhas do desenho, aprovadas a partir de um protótipo com 57 tópicos
+reais:
+
+- **A caixinha pinta na cor da matéria**, não no lilás: o acento é escasso por
+  regra, e mil caixinhas lilases o gastariam numa tela só. O visto é uma
+  MÁSCARA pintada com `--paper`, e não um SVG com traço branco — no escuro as
+  cores de matéria clareiam e branco sobre elas some.
+- **Marcado, o texto esmaece em vez de ser riscado**: há tópicos de três linhas,
+  e texto riscado não se relê.
+- **A linha inteira é alvo do clique**, porque mirar um quadrado de 14px numa
+  lista de mil cansa. O link do resumo, por ser conteúdo interativo dentro do
+  `<label>`, continua navegando.
+
+**O valor desta tela depende da decisão 9i ser preenchida.** Com 44 resumos
+amarrados a 1114 tópicos, o aluno vai marcar muito tópico sem resumo para abrir.
+A caixinha funciona igual; o que falta é vínculo, não código.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
 histórico e favoritos (16), recorte da lista (17), barra que lembra (18), lupa,
-sumário no celular e aviso de acesso (19), busca no texto (15). Fora delas saiu
+sumário no celular e aviso de acesso (19), busca no texto (15), edital com
+caixinha e progresso (20). Fora delas saiu
 a correção de segurança (14), que não estava no boletim.
 
 Continuam abertas, e nenhuma é de código sozinho:
@@ -2516,7 +2577,7 @@ Continuam abertas, e nenhuma é de código sozinho:
 - **Encher os `[[links]]` e os `pai_id`.** Conteúdo, não código: o mapa, os
   backlinks e a árvore estão prontos esperando dado. É a mesma conclusão a que
   a física do grafo chegou por outro caminho (decisão 10b-bis).
-- Marcar edital com progresso, grifar e anotar, questão clicável, PWA offline,
+- Grifar e anotar, questão clicável, PWA offline,
   revisão espaçada, canal de dúvida, resumo de amostra sem login.
 - **Imprimir / salvar em PDF** está adiado por decisão de produto: depende de
   resolver se o acervo pode sair do site.
