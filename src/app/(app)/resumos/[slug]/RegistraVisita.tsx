@@ -22,7 +22,9 @@ import { registrarVisita } from '../acoes'
  */
 export default function RegistraVisita({ resumoId }: { resumoId: string }) {
   useEffect(() => {
-    registrarVisita(resumoId)
+    // `en-CA` escreve AAAA-MM-DD no fuso do APARELHO — o dia que o aluno vê
+    // no relógio, e não o do servidor, que roda em UTC (decisão 23).
+    registrarVisita(resumoId, new Date().toLocaleDateString('en-CA'))
   }, [resumoId])
 
   return null
