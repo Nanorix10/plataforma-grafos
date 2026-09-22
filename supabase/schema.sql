@@ -470,3 +470,17 @@ create index leituras_recentes_idx on leituras (user_id, visto_em desc);
 -- aquela subconsulta passa pelas policies de `resumos`, entao "este resumo e'
 -- meu de direito" sai de graca e continua certo quando a regra de plano mudar.
 -- Ver a migration para o texto exato.
+
+-- ---------------------------------------------------------------------------
+-- O aluno marca, no edital, o que ja estudou. A linha E' a marca: desmarcar
+-- apaga. Por topico, e nao por resumo -- 1114 topicos apontam para 44 resumos.
+-- Ver migrations/20260922120000_edital_progresso.sql.
+create table edital_progresso (
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  topico_id  uuid not null references edital_topicos (id) on delete cascade,
+  marcado_em timestamptz not null default now(),
+  primary key (user_id, topico_id)
+);
+
+-- Tres policies (select, insert, delete; sem update) por `user_id = auth.uid()`;
+-- o insert ainda exige que o topico exista em `edital_topicos`.
