@@ -3,6 +3,7 @@ import { AvisoAcesso } from '@/components/AvisoAcesso'
 import { MATERIAS } from '@/lib/materias'
 import { agruparPorMateria, getResumos, type ResumoItem } from '@/lib/resumos'
 import { getMarcas, quandoFoi, QUANTOS_RECENTES } from '@/lib/leituras'
+import { getParaRefazer } from '@/lib/respostas'
 
 /**
  * Um resumo na grade.
@@ -66,7 +67,7 @@ function Cartao({ resumo, rodape }: { resumo: ResumoItem; rodape?: React.ReactNo
  * funciona, e a página continua sendo componente de SERVIDOR — o recorte é um
  * `<Link>`, sem uma linha de JavaScript indo para o navegador.
  */
-type Ver = 'tudo' | 'novos' | 'favoritos'
+type Ver = 'tudo' | 'novos' | 'favoritos' | 'refazer'
 
 function Aba({ para, ativa, children }: { para: string; ativa: boolean; children: React.ReactNode }) {
   return (
@@ -122,17 +123,19 @@ export default async function ResumosPage({
   //
   // As três em paralelo: nenhuma depende da outra, e em série a página
   // esperaria três idas.
-  const [{ ver: verParam }, resumos, marcas] = await Promise.all([
+  const [{ ver: verParam }, resumos, marcas, erradas] = await Promise.all([
     searchParams,
     getResumos(),
     getMarcas(),
+    getParaRefazer(),
   ])
 
   /* Recorte desconhecido cai em `tudo`, em silêncio. Quem chega com
      `?ver=qualquercoisa` colou uma URL torta, e uma tela de erro puniria
      alguém que só queria ver a lista — a mesma regra do `lerEnquadramento` da
      linha do tempo. */
-  const ver: Ver = verParam === 'novos' || verParam === 'favoritos' ? verParam : 'tudo'
+  const ver: Ver =
+    verParam === 'novos' || verParam === 'favoritos' || verParam === 'refazer' ? verParam : 'tudo'
 
   /**
    * O cruzamento marca → resumo acontece AQUI, em memória, e não numa junção
@@ -185,8 +188,24 @@ export default async function ResumosPage({
   const abertos = new Set(marcas.map((m) => m.resumo_id))
   const naoAbertos = resumos.filter((r) => r.liberado && !abertos.has(r.id))
 
+  /* As questões que o aluno errou da última vez (decisão 22), no mesmo
+     cruzamento em memória das marcas: o id vira resumo pelo `porId`. Questão
+     de resumo que saiu do plano some da lista — o link levaria à tela de
+     bloqueio, e "refazer" o que não se pode abrir não é tarefa. */
+  const paraRefazer = erradas
+    .map((r) => ({ resposta: r, resumo: porId.get(r.resumo_id) }))
+    .filter((x): x is { resposta: (typeof erradas)[number]; resumo: ResumoItem } =>
+      !!x.resumo && x.resumo.liberado
+    )
+
   const visiveis =
-    ver === 'novos' ? naoAbertos : ver === 'favoritos' ? favoritos : resumos
+    ver === 'novos'
+      ? naoAbertos
+      : ver === 'favoritos'
+        ? favoritos
+        : ver === 'refazer'
+          ? []
+          : resumos
 
   /**
    * A mesma função que monta a barra lateral, então as duas listas ficam na
@@ -204,14 +223,16 @@ export default async function ResumosPage({
    * "Favoritos (0)" é um beco sem saída. O aluno novo continua vendo a página
    * que sempre existiu — a mesma regra das duas faixas do topo.
    */
-  const temRecorte = marcas.length > 0
+  const temRecorte = marcas.length > 0 || paraRefazer.length > 0
 
   const legenda =
     ver === 'novos'
       ? `${naoAbertos.length} que você ainda não abriu`
       : ver === 'favoritos'
         ? `${favoritos.length} ${favoritos.length === 1 ? 'favorito' : 'favoritos'}`
-        : `${liberados} liberados de ${resumos.length}${
+        : ver === 'refazer'
+          ? `${paraRefazer.length} ${paraRefazer.length === 1 ? 'questão' : 'questões'} que você errou da última vez`
+          : `${liberados} liberados de ${resumos.length}${
             /* `liberados − não abertos`, e não `marcas.length`: a marca de um
                resumo que saiu do plano continua no banco, e contá-la daria um
                "abertos" maior que o "liberados" ao lado. */
@@ -244,6 +265,11 @@ export default async function ResumosPage({
           {favoritos.length > 0 ? (
             <Aba para="/resumos?ver=favoritos" ativa={ver === 'favoritos'}>
               Favoritos <span className="tabular-nums opacity-60">{favoritos.length}</span>
+            </Aba>
+          ) : null}
+          {paraRefazer.length > 0 ? (
+            <Aba para="/resumos?ver=refazer" ativa={ver === 'refazer'}>
+              Para refazer <span className="tabular-nums opacity-60">{paraRefazer.length}</span>
             </Aba>
           ) : null}
         </nav>
@@ -313,12 +339,52 @@ export default async function ResumosPage({
       {/* Alcançável só por URL colada à mão — as abas de zero não aparecem. Mas
           "Não abertos" fica vazio de verdade no dia em que o aluno abrir tudo,
           e ali a frase é a melhor notícia que a tela tem a dar. */}
-      {resumos.length > 0 && grupos.length === 0 ? (
+      {resumos.length > 0 && grupos.length === 0 && !(ver === 'refazer' && paraRefazer.length > 0) ? (
         <p className="text-[13px] text-[var(--ink-dim)]">
           {ver === 'novos'
             ? 'Você já abriu todos os resumos do seu plano.'
-            : 'Nada aqui ainda. A estrela na barra do resumo guarda o que você quiser rever.'}
+            : ver === 'refazer'
+              ? 'Nenhuma questão para refazer. As que você errar nos resumos aparecem aqui.'
+              : 'Nada aqui ainda. A estrela na barra do resumo guarda o que você quiser rever.'}
         </p>
+      ) : null}
+
+      {/* Uma linha por QUESTÃO, e não por resumo: dois erros no mesmo resumo
+          são duas coisas a refazer. O link vai direto à questão (`#q-…`), e
+          ela abre limpa — ver `Questoes.tsx`. */}
+      {ver === 'refazer' && paraRefazer.length > 0 ? (
+        <ul className="flex flex-col gap-2.5">
+          {paraRefazer.map(({ resposta, resumo }) => {
+            const cor = MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]?.cor
+            return (
+              <li key={resposta.questao_id}>
+                <Link
+                  href={`/resumos/${resumo.slug}#q-${resposta.questao_id}`}
+                  className="block rounded-lg bg-[var(--raised)] px-4 py-3 shadow-[0_0_0_1px_var(--line-forte)] hover:bg-[var(--raised-hover)] focus-visible:outline-2 focus-visible:outline-[var(--acento)]"
+                >
+                  <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className="text-sm font-medium" style={{ color: cor ?? 'var(--ink)' }}>
+                      {resumo.titulo}
+                    </span>
+                    <span className="ml-auto text-[11px] text-[var(--ink-faint)]">
+                      {resposta.resposta
+                        ? /^\d+$/.test(resposta.resposta)
+                          ? `você somou ${resposta.resposta} · `
+                          : `você marcou ${resposta.resposta} · `
+                        : 'você marcou que errou · '}
+                      {quandoFoi(resposta.respondido_em)}
+                    </span>
+                  </span>
+                  {resposta.trecho ? (
+                    <span className="block mt-1 text-[12.5px] text-[var(--ink-dim)] line-clamp-2">
+                      {resposta.trecho}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
       ) : null}
 
       {grupos.map(({ materia, itens }) => {

@@ -23,6 +23,8 @@ import BotaoFavorito from './BotaoFavorito'
 import { getMarcas } from '@/lib/leituras'
 import { getGrifos } from '@/lib/grifos'
 import Grifos from './Grifos'
+import { getRespostasDoResumo } from '@/lib/respostas'
+import Questoes from './Questoes'
 
 export default async function ResumoPage({
   params,
@@ -81,6 +83,7 @@ export default async function ResumoPage({
     { data: datas },
     marcas,
     grifos,
+    respostas,
   ] = await Promise.all([
       // `pai_id` e `materia_slug` vêm de carona na lista que já era buscada
       // para os wikilinks: o caminho até a raiz (decisão 9j) sobe por ela em
@@ -119,6 +122,8 @@ export default async function ResumoPage({
       // Os grifos do aluno neste resumo (decisão 21). Pelo mesmo motivo da
       // estrela, depois do bloqueio: resumo fora do plano não se grifa.
       getGrifos(resumo.id),
+      // A última tentativa em cada questão deste resumo (decisão 22).
+      getRespostasDoResumo(resumo.id),
     ])
   const tituloParaSlug = Object.fromEntries((todosResumos ?? []).map((r) => [r.titulo, r.slug]))
 
@@ -371,6 +376,10 @@ export default async function ResumoPage({
         {/* Depois do corpo pelo mesmo motivo da lupa. A `key` é obrigatória:
             navegar de um resumo para outro reaproveita a página, e sem ela o
             estado inicial dos grifos seria o do resumo anterior. */}
+        {/* ANTES dos grifos: ela escreve o "Da última vez…" no painel das
+            questões, e os grifos se ancoram no texto já com essa linha. */}
+        <Questoes key={`q-${resumo.id}`} resumoId={resumo.id} respostas={respostas} seletor=".conteudo-resumo" />
+
         <Grifos key={resumo.id} resumoId={resumo.id} iniciais={grifos} seletor=".conteudo-resumo" />
 
         <section className="mt-16 pt-7 border-t border-[var(--line)]">

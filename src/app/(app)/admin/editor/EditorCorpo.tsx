@@ -21,6 +21,8 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
+import { DOMSerializer, type Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { analisarQuestao } from '@/lib/questoes'
 import BarraFormula, { type Alvo } from './BarraFormula'
 import { salvarFormula, excluirFormula } from './actions'
 // `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
@@ -297,6 +299,104 @@ function BarraTabela({ editor }: { editor: Editor }) {
       </Bt>
     </div>
   )
+}
+
+/**
+ * A faixa da questão: o gabarito, que é o que torna a questão respondível na
+ * página do aluno (decisão 22). Aparece só com o cursor dentro de uma questão,
+ * pelo mesmo motivo da faixa da tabela.
+ *
+ * O aviso da direita roda a MESMA análise da página (`analisarQuestao`), e
+ * não uma parecida: é ele que diz ao autor, na hora, que o gabarito marcado
+ * não vai funcionar porque as alternativas estão todas numa linha só — em vez
+ * de ele descobrir abrindo a página do aluno e vendo "Acertei / Errei".
+ */
+function BarraQuestao({ editor }: { editor: Editor }) {
+  const no = questaoNoCursor(editor)
+  if (!no) return null
+
+  const gabarito = (no.attrs.gabarito as string | null) ?? null
+  const ehSoma = gabarito !== null && /^\d+$/.test(gabarito)
+  const { tipo } = analisarQuestao(htmlDoConteudo(editor, no), gabarito)
+
+  const aviso = !gabarito
+    ? 'Sem gabarito: na página, o aluno responde com Acertei / Errei.'
+    : tipo === 'objetiva'
+      ? 'Na página: alternativas clicáveis.'
+      : tipo === 'somatoria'
+        ? 'Na página: somatória clicável.'
+        : ehSoma
+          ? 'Não achei itens 01, 02, 04… um por linha que formem essa soma. Na página fica Acertei / Errei.'
+          : 'Não achei as alternativas A), B), C)… uma por linha, com o gabarito entre elas. Na página fica Acertei / Errei.'
+
+  return (
+    <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 bg-[var(--surface-2,var(--panel))] border-b border-[var(--line)]">
+      <span className="rotulo-secao text-[10px] mr-1.5">Questão</span>
+      <span className="text-[12px] text-[var(--ink-dim)] mr-1">Gabarito</span>
+      {['A', 'B', 'C', 'D', 'E'].map((letra) => (
+        <Bt
+          key={letra}
+          title={`Gabarito ${letra}`}
+          ativo={gabarito?.toUpperCase() === letra}
+          onClick={() =>
+            editor
+              .chain()
+              .focus()
+              .definirGabarito(gabarito?.toUpperCase() === letra ? null : letra)
+              .run()
+          }
+        >
+          {letra}
+        </Bt>
+      ))}
+      <Sep />
+      <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-dim)]">
+        Soma
+        <input
+          type="number"
+          min={0}
+          max={127}
+          inputMode="numeric"
+          value={ehSoma ? gabarito : ''}
+          placeholder="—"
+          onChange={(e) =>
+            editor.commands.definirGabarito(
+              e.target.value === '' ? null : String(Math.max(0, Math.trunc(Number(e.target.value))))
+            )
+          }
+          className="w-[58px] h-[26px] rounded border border-[var(--line-forte)] bg-[var(--raised)] px-1.5 text-[12.5px] text-[var(--ink)]"
+        />
+      </label>
+      {gabarito ? (
+        <Bt title="Tirar o gabarito" largo onClick={() => editor.chain().focus().definirGabarito(null).run()}>
+          Tirar
+        </Bt>
+      ) : null}
+      <Sep />
+      <span
+        className={`text-[12px] ${
+          gabarito && tipo === 'aberta' ? 'text-[var(--erro)]' : 'text-[var(--ink-faint)]'
+        }`}
+      >
+        {aviso}
+      </span>
+    </div>
+  )
+}
+
+function questaoNoCursor(editor: Editor): ProseMirrorNode | null {
+  const { $from } = editor.state.selection
+  for (let d = $from.depth; d > 0; d--) {
+    const no = $from.node(d)
+    if (no.type.name === 'questao') return no
+  }
+  return null
+}
+
+function htmlDoConteudo(editor: Editor, no: ProseMirrorNode) {
+  const caixa = document.createElement('div')
+  caixa.append(DOMSerializer.fromSchema(editor.schema).serializeFragment(no.content))
+  return caixa.innerHTML
 }
 
 function Barra({
@@ -1026,6 +1126,7 @@ export default function EditorCorpo({
             aoPedirImagem={() => entradaImagemRef.current?.click()}
           />
           <BarraTabela editor={editor} />
+          <BarraQuestao editor={editor} />
           {/* O painel só existe com uma imagem escolhida — fora disso seriam
               trinta controles sem alvo, ocupando a altura que a folha usa. */}
           {editor.isActive('image') ? (

@@ -108,8 +108,8 @@ export default function Grifos({
 
     function aoClicar(e: Event) {
       const { clientX, clientY, target } = e as MouseEvent
-      // Link, figura e a gaveta da resolução têm clique próprio.
-      if ((target as Element).closest('a, summary, figure, button')) return
+      // Link, figura, a gaveta da resolução e as questões têm clique próprio.
+      if ((target as Element).closest('a, summary, figure, button, [role="button"]')) return
       if (!window.getSelection()?.isCollapsed) return
       const mapa = loja.ler()
       if (!mapa) return

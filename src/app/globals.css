@@ -2559,3 +2559,162 @@ h3 {
   color: var(--acento);
   font-weight: 500;
 }
+
+/* Questão que se responde na página (decisão 22). O HTML sai de
+   `prepararQuestoes` (lib/questoes.ts) e o estado muda por atributo em
+   `resumos/[slug]/Questoes.tsx` — este CSS é quem desenha cada estado.
+
+   Os selos ("gabarito", "sua resposta", "faltou marcar") são `::after`, e não
+   texto: texto novo dentro da alternativa mudaria o que os grifos (decisão 21)
+   usam como âncora. */
+.conteudo-resumo .questao {
+  /* a barra do caminho é fixa no topo; sem isto, o link da lista "Para
+     refazer" pararia com o enunciado escondido embaixo dela */
+  scroll-margin-top: 4.5rem;
+}
+.conteudo-resumo .questao .alternativa {
+  position: relative;
+  padding: 0.45em 0.7em;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.conteudo-resumo .questao > .alternativa + .alternativa {
+  margin-top: 0.4em;
+}
+.conteudo-resumo .questao .alternativa:not([aria-disabled]):hover {
+  border-color: var(--acento);
+  background: var(--acento-fraco);
+}
+.conteudo-resumo .questao .alternativa:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.conteudo-resumo .questao .alternativa[aria-pressed='true'] {
+  border-color: var(--acento);
+  background: var(--acento-fraco);
+}
+.conteudo-resumo .questao .alternativa[aria-disabled] {
+  cursor: default;
+}
+.conteudo-resumo .questao .alternativa[data-estado]::after {
+  float: right;
+  margin-left: 0.8em;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-mini);
+  font-weight: 600;
+}
+.conteudo-resumo .questao .alternativa[data-estado='certa'] {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.conteudo-resumo .questao .alternativa[data-estado='certa']::after {
+  content: 'gabarito';
+  color: var(--ok);
+}
+.conteudo-resumo .questao[data-tipo='somatoria'] .alternativa[data-estado='certa']::after {
+  content: 'correto, e você marcou';
+}
+.conteudo-resumo .questao .alternativa[data-estado='errada'] {
+  border-color: var(--erro);
+  background: color-mix(in srgb, var(--erro) 8%, transparent);
+}
+.conteudo-resumo .questao .alternativa[data-estado='errada']::after {
+  content: 'sua resposta';
+  color: var(--erro);
+}
+.conteudo-resumo .questao[data-tipo='somatoria'] .alternativa[data-estado='errada']::after {
+  content: 'incorreto, e você marcou';
+}
+.conteudo-resumo .questao .alternativa[data-estado='faltou'] {
+  border-color: var(--ok);
+  border-style: dashed;
+}
+.conteudo-resumo .questao .alternativa[data-estado='faltou']::after {
+  content: 'correto, faltou marcar';
+  color: var(--ok);
+}
+.conteudo-resumo .questao .alternativa[data-estado='apagada'] {
+  opacity: 0.55;
+}
+
+.conteudo-resumo .questao-painel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 0.8em;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+}
+.conteudo-resumo .questao-painel:has(.questao-veredito:empty):not(:has(button)) {
+  display: none;
+}
+.conteudo-resumo .questao-veredito {
+  color: var(--ink-dim);
+}
+.conteudo-resumo .questao-painel .conferir-soma,
+.conteudo-resumo .como-foi button {
+  min-height: 30px;
+  padding: 0 0.9em;
+  border-radius: 99px;
+  border: 1px solid var(--line-forte);
+  background: var(--paper);
+  color: var(--ink-dim);
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+}
+.conteudo-resumo .questao-painel .conferir-soma {
+  border-color: var(--acento);
+  color: var(--acento);
+  font-weight: 500;
+}
+.conteudo-resumo .questao[data-respondida] .conferir-soma {
+  display: none;
+}
+.conteudo-resumo .questao-painel button:hover,
+.conteudo-resumo .como-foi button:hover {
+  color: var(--ink);
+}
+.conteudo-resumo .questao-painel button:focus-visible,
+.conteudo-resumo .como-foi button:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.conteudo-resumo .questao-veredito .de-novo {
+  color: var(--acento);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.conteudo-resumo .como-foi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 1em;
+  padding-top: 0.9em;
+  border-top: 1px dashed var(--line-forte);
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  color: var(--ink-dim);
+}
+.conteudo-resumo .como-foi button[data-como-foi='acertei'][aria-pressed='true'] {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.conteudo-resumo .como-foi button[data-como-foi='errei'][aria-pressed='true'] {
+  border-color: var(--erro);
+  color: var(--erro);
+  background: color-mix(in srgb, var(--erro) 8%, transparent);
+}
+
+/* No editor a questão não é respondível; ela precisa dizer ao AUTOR qual
+   gabarito está marcado, senão ele só descobre abrindo a página do aluno. O
+   seletor é `.ProseMirror` de propósito: na leitura esta linha não existe. */
+.ProseMirror .questao[data-gabarito]::before {
+  content: 'Questão resolvida · gabarito ' attr(data-gabarito);
+}
