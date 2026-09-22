@@ -43,6 +43,10 @@ export default function Carregando() {
                     <div className="flex flex-col gap-1.5">
                       {Array.from({ length: n }).map((_, ti) => (
                         <div key={ti} className="flex gap-2 items-center">
+                          {/* a caixinha: 14px dentro de uma coluna de 24 */}
+                          <div className="w-[24px] shrink-0 flex justify-center">
+                            <div className="esqueleto w-[14px] h-[14px] !rounded-[4px]" />
+                          </div>
                           <div className="esqueleto w-[7px] h-[7px] !rounded-full shrink-0" />
                           {/* larguras irregulares: linha de tamanho igual não
                               parece texto, parece tabela */}

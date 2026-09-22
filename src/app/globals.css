@@ -2382,3 +2382,53 @@ h3 {
   padding-top: 0.4rem;
   padding-bottom: 0.4rem;
 }
+
+/* A caixinha do edital (`VisaoEdital`).
+
+   É o `<input type="checkbox">` nativo, redesenhado — e não um `<button>` com
+   ícone —, para herdar de graça o teclado, o `:checked` e o anúncio do leitor
+   de tela. O quadrado visível tem 14px; a caixa ocupa 24px de largura para o
+   alvo de toque (WCAG 2.5.8), e o rótulo em volta aumenta o resto.
+
+   Marcada, ela pinta na cor da MATÉRIA (`--cor`, posto no rótulo), e não no
+   acento: o lilás é escasso por regra (docs/identidade-visual.md), e mil
+   caixinhas lilases gastariam ele todo numa tela só. */
+.caixa-edital {
+  appearance: none;
+  margin: 0;
+  width: 24px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.caixa-edital::before,
+.caixa-edital::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 14px;
+  height: 14px;
+}
+.caixa-edital::before {
+  border-radius: 4px;
+  border: 1.5px solid var(--line-forte);
+  background: var(--paper);
+}
+.caixa-edital:checked::before {
+  border-color: var(--cor, var(--acento));
+  background: var(--cor, var(--acento));
+}
+/* O visto é MÁSCARA pintada com `--paper`, e não um SVG com traço branco: no
+   escuro as cores de matéria clareiam (o teal da Física vira #4FB3B8), e
+   branco sobre elas some. `--paper` é escuro no escuro e claro no claro, então
+   o visto contrasta nos dois. */
+.caixa-edital:checked::after {
+  background: var(--paper);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.2 7.3l2.4 2.4 5.2-5.4' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 14px no-repeat;
+}
+.caixa-edital:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+  border-radius: 5px;
+}
