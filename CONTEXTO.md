@@ -27,6 +27,7 @@ src/lib/
   edital-progresso.ts  getProgresso() — tópicos do edital que o aluno marcou (decisão 20)
   grifos.ts       getGrifos() — grifos e notas do aluno num resumo (decisão 21)
   respostas.ts    respostas às questões e a lista "Para refazer" (decisão 22)
+  estudo.ts       getEstudo() (RPC meu_estudo) e getDias() — a página do aluno (decisão 23)
   questoes.ts     gavetas da resolução e prepararQuestoes (decisões 9b e 22)
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
@@ -2719,12 +2720,71 @@ errado), "Acertei" dentro da gaveta, e as quatro gravações com o que devia.
 questão em quantidade — e 4 das 7 objetivas/somatórias só viram clicáveis depois
 de o autor marcar o gabarito (e, em duas, quebrar as alternativas em linhas).
 
+## 23. A `/conta` virou a página do aluno, e o site conta os dias de estudo
+
+**23/09/2026.** A `/conta` passou a se chamar **Sua página** e a abrir pelo
+estudo: o último resumo aberto ("Continuar"), quatro números que levam cada um
+à sua tela (resumos abertos, tópicos marcados no edital, questões certas com as
+para refazer, grifos), os **dias seguidos**, as barras de resumos abertos por
+matéria e de edital por etapa. E-mail, plano, senha e sair continuam iguais,
+depois, sob "Conta" — o aluno vem ver o estudo toda semana e troca a senha uma
+vez por ano.
+
+**Quase tudo vem de tabelas que já existiam** (`leituras`, `edital_progresso`,
+`respostas`, `grifos`). Resumos por matéria saem de `getResumos()` e
+`getMarcas()`, e são a MESMA conta da `/resumos`: só o que o plano cobre, e
+"aberto", nunca "lido" (decisões 16 e 17). Grifos, respostas e edital por etapa
+vêm contados do banco por `meu_estudo()`, uma função `security invoker` — as
+policies de cada tabela valem lá dentro, e cada aluno só conta o que é dele. O
+edital mostra só as provas do plano.
+
+**Os dias seguidos pediram uma tabela, `dias_de_estudo`**, porque nada do que
+existia sabia contar dias: `leituras` guarda só a ÚLTIMA abertura de cada
+resumo, e reabrir Mitose hoje apaga a visita de ontem. A tabela começou a contar
+em 23/09/2026, e a página diz isso. **Nada anterior foi reconstruído** — uma
+sequência inventada a partir das últimas aberturas seria justamente o número
+que parece decidido e não é.
+
+Três coisas que não se adivinham:
+
+- **O dia é o do relógio do aluno, e vem do navegador.** O servidor roda em
+  UTC; às 22h em Campo Grande ele já está no dia seguinte, e a sequência de quem
+  estuda à noite quebraria sem o aluno ter pulado dia nenhum. `RegistraVisita`
+  manda `toLocaleDateString('en-CA')`, e a policy só aceita um dia a menos de
+  36 h do relógio do servidor. Forjar a data dentro dessa janela é possível e só
+  engana quem forja.
+- **Quem calcula a sequência também é o navegador** (`DiasSeguidos.tsx`), pelo
+  mesmo motivo: "hoje" é do aluno. Vem por `useSyncExternalStore`, como o tema;
+  no servidor a caixa sai do tamanho certo e sem número.
+- **Não ter estudado hoje não quebra a sequência** — ela conta até ontem e
+  avisa. Zerar à meia-noite puniria quem estuda à noite. Quebra no dia seguinte
+  a um dia vazio.
+
+O dia conta quando o aluno ABRE UM RESUMO. É o gesto de estudo que o site já
+anotava, e responder e grifar acontecem dentro de um resumo aberto.
+
+> [!warning] `revoke … from public` NÃO bastou aqui — o contrário da decisão 15
+> A decisão 15 mediu que revogar EXECUTE só de `anon` não fechava nada, porque
+> `anon` herda de PUBLIC. Esta mediu o outro lado: revogado só de PUBLIC,
+> `has_function_privilege('anon', 'meu_estudo()', 'execute')` continuou `true`.
+> Os privilégios padrão do Supabase dão EXECUTE ao `anon` **diretamente** em
+> toda função nova. **Função nova revoga das duas**, e confere com
+> `has_function_privilege` depois — a `buscar_no_texto` foi conferida junto e
+> está fechada.
+
+**Conferido:** a policy dos dias e a função com JWT simulado de dois alunos (hoje
+entra uma vez só; 5 dias atrás e daqui a 3 são recusados; `meu_estudo` de um
+aluno conta os próprios grifo, resposta e tópico marcado, e o do outro vê zero);
+a conta da sequência em 8 casos de calendário (virada de mês e de ano, 29 de
+fevereiro, "ainda não estudou hoje", dia pulado, recorde antigo maior que a
+sequência atual).
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
 histórico e favoritos (16), recorte da lista (17), barra que lembra (18), lupa,
 sumário no celular e aviso de acesso (19), busca no texto (15), edital com
-caixinha e progresso (20), grifar e anotar (21), questão respondível e lista para refazer (22). Fora delas saiu
+caixinha e progresso (20), grifar e anotar (21), questão respondível e lista para refazer (22), página do aluno com dias seguidos (23). Fora delas saiu
 a correção de segurança (14), que não estava no boletim.
 
 Continuam abertas, e nenhuma é de código sozinho:

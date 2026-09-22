@@ -31,16 +31,27 @@ import { getSessao } from '@/lib/sessao'
  * seria trabalho puro. A faixa de recentes é montada na próxima vez que
  * `/resumos` for pedida, que é sempre do servidor.
  */
-export async function registrarVisita(resumoId: string) {
+export async function registrarVisita(resumoId: string, dia: string) {
   const { supabase, userId } = await getSessao()
   if (!userId) return
 
-  await supabase
-    .from('leituras')
-    .upsert(
-      { user_id: userId, resumo_id: resumoId, visto_em: new Date().toISOString() },
-      { onConflict: 'user_id,resumo_id' }
-    )
+  await Promise.all([
+    supabase
+      .from('leituras')
+      .upsert(
+        { user_id: userId, resumo_id: resumoId, visto_em: new Date().toISOString() },
+        { onConflict: 'user_id,resumo_id' }
+      ),
+    // O dia de estudo (decisão 23), no relógio do ALUNO — `dia` vem do
+    // navegador. Formato torto não vai ao banco; dia fora da janela de 36 h a
+    // policy recusa. `ignoreDuplicates`: abrir o décimo resumo do dia não é
+    // um segundo dia.
+    /^\d{4}-\d{2}-\d{2}$/.test(dia)
+      ? supabase
+          .from('dias_de_estudo')
+          .upsert({ user_id: userId, dia }, { onConflict: 'user_id,dia', ignoreDuplicates: true })
+      : null,
+  ])
 }
 
 /**

@@ -29,8 +29,27 @@
 export default function Carregando() {
   return (
     <div className="max-w-[680px] mx-auto px-5 py-8 sm:px-8 sm:py-11">
-      <div className="esqueleto h-7 w-[140px] mb-2" />
+      <div className="esqueleto h-7 w-[150px] mb-2" />
       <div className="esqueleto h-4 w-[260px] mb-8" />
+
+      {/* ---- o estudo (decisão 23): o cartão de continuar e os quatro
+          números. As barras por matéria ficam de fora — quantas são depende
+          do plano, e um número inventado de linhas faria a página "pular" ao
+          chegar. ---- */}
+      <div className="esqueleto h-3 w-[70px] mb-2" />
+      <div className="bg-[var(--raised)] rounded-lg px-4 py-3 mb-7">
+        <div className="esqueleto esqueleto-em-cartao h-4 w-[180px]" />
+        <div className="esqueleto esqueleto-em-cartao h-3 w-[120px] mt-2" />
+      </div>
+      <div className="esqueleto h-3 w-[80px] mb-2" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-7">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bg-[var(--raised)] rounded-lg px-3.5 pt-3.5 pb-3 h-[98px]">
+            <div className="esqueleto esqueleto-em-cartao h-6 w-[60px]" />
+            <div className="esqueleto esqueleto-em-cartao h-3 w-[90px] mt-2" />
+          </div>
+        ))}
+      </div>
 
       {/* ---- identidade ---- */}
       <section className="bg-[var(--raised)] rounded-lg p-5 mb-4">

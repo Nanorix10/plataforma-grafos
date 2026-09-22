@@ -522,3 +522,17 @@ create table respostas (
 create index respostas_erradas_do_aluno on respostas (user_id) where not acertou;
 
 -- Quatro policies por `user_id = auth.uid()`; insert e update consultam `resumos`.
+
+-- ---------------------------------------------------------------------------
+-- Os dias em que o aluno abriu algum resumo, no relogio DELE (vem do
+-- navegador; a policy aceita so um dia a menos de 36 h do servidor). Conta
+-- desde 23/09/2026. Decisao 23.
+create table dias_de_estudo (
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  dia     date not null,
+  primary key (user_id, dia)
+);
+
+-- `meu_estudo()` devolve em jsonb as contagens da pagina do aluno (grifos,
+-- respostas, edital por etapa). `security invoker`, EXECUTE revogado de
+-- PUBLIC e de anon. Ver a migration 20260923180000_pagina_do_aluno.sql.
