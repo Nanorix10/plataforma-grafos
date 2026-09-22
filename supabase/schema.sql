@@ -484,3 +484,23 @@ create table edital_progresso (
 
 -- Tres policies (select, insert, delete; sem update) por `user_id = auth.uid()`;
 -- o insert ainda exige que o topico exista em `edital_topicos`.
+
+-- ---------------------------------------------------------------------------
+-- Grifos e notas do aluno. A ancora e' o TRECHO (`exato` + 32 letras de cada
+-- lado), nao a posicao: o autor reescreve o resumo, e posicao apontaria para
+-- outra frase. Trecho que sumiu vira orfao, nao e' apagado. Decisao 21.
+create table grifos (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  resumo_id     uuid not null references resumos (id) on delete cascade,
+  exato         text not null check (length(btrim(exato)) between 1 and 2000),
+  prefixo       text not null default '' check (length(prefixo) <= 64),
+  sufixo        text not null default '' check (length(sufixo) <= 64),
+  nota          text check (length(nota) <= 2000),
+  criado_em     timestamptz not null default now(),
+  atualizado_em timestamptz not null default now()
+);
+create index grifos_do_aluno_no_resumo on grifos (user_id, resumo_id);
+
+-- Quatro policies por `user_id = auth.uid()`; insert e update exigem que o
+-- resumo seja legivel (consulta `resumos`, como `leituras`).

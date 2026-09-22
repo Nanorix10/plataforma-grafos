@@ -25,6 +25,7 @@ src/lib/
   resumos.ts      getResumos() + agruparPorMateria() — lê `resumos_catalogo` (decisão 14)
   leituras.ts     getMarcas() — histórico e favoritos do aluno (decisão 16)
   edital-progresso.ts  getProgresso() — tópicos do edital que o aluno marcou (decisão 20)
+  grifos.ts       getGrifos() — grifos e notas do aluno num resumo (decisão 21)
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
@@ -46,6 +47,7 @@ src/app/
       [slug]/BotaoFavorito.tsx    a estrela da barra do caminho
       [slug]/LupaFigura.tsx       clicar na figura abre ela grande (decisão 19)
       [slug]/SumarioMovel.tsx     "Nesta página" no celular (decisão 19)
+      [slug]/Grifos.tsx           grifar e anotar, sem tocar no HTML (decisão 21)
     mapa/                     grafo d3 das conexões
     admin/editor/             CRUD de resumos (só admin)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
@@ -2562,12 +2564,84 @@ reais:
 amarrados a 1114 tópicos, o aluno vai marcar muito tópico sem resumo para abrir.
 A caixinha funciona igual; o que falta é vínculo, não código.
 
+
+## 21. O aluno grifa e anota o resumo, e o grifo sobrevive à reescrita do autor
+
+**22/09/2026.** Selecionar um trecho do resumo abre **Grifar / Anotar**. Clicar
+num grifo abre a nota. No fim do resumo, "Seus grifos neste resumo" lista trecho
+e nota, e leva de volta ao ponto. Tabela `grifos`, uma linha por grifo.
+
+**A âncora é o TRECHO, não a posição.** O autor reescreve os resumos o tempo
+todo, e um grifo gravado como "caracteres 312 a 350" pintaria outra frase depois
+da primeira edição — com toda a confiança, e sem ninguém perceber. O grifo guarda
+o texto grifado e 32 letras de cada lado (o `TextQuoteSelector` do padrão W3C de
+anotação); ao abrir o resumo, o navegador procura o trecho, e o que vem antes e
+depois desempata quando ele aparece mais de uma vez.
+
+**Trecho reescrito vira ÓRFÃO, não some.** Não pinta nada e aparece na lista com
+"O autor reescreveu este trecho. A sua nota continua aqui." A nota é do aluno;
+perdê-la porque o autor trocou uma vírgula seria pior que mostrar um trecho que
+não existe mais.
+
+**O HTML do resumo nunca é tocado.** A pintura é a CSS Custom Highlight API: o
+navegador recebe `Range`s e pinta por cima, sem um `<mark>` sequer. Embrulhar o
+trecho em elemento novo partiria nós de texto que outros componentes contam — o
+trilho acha os wikilinks pela POSIÇÃO (decisão 12d) — e brigaria com o KaTeX e
+com a lupa. O preço: Safari antes do 17.2 e Firefox antes do 140 não pintam. O
+grifo continua gravado e listado, e a lista avisa.
+
+**Lilás, e não amarelo.** O amarelo é o `mark` do AUTOR, gravado no corpo pelo
+editor (hoje nenhum resumo o usa, mas ele existe). Os dois têm de ser
+distinguíveis na mesma frase. Grifo com nota ganha sublinhado pontilhado, porque
+cor nunca é a única pista.
+
+**Uma cor só.** Paleta de cores pede que o aluno invente um código, e quase
+ninguém o mantém. Acrescentar cores depois é uma coluna, sem mexer no que existe.
+
+Seis coisas que não se adivinham lendo o código:
+
+- **As duas contas de posição têm de contar igual.** `capturar` mede com
+  `Range.toString()`, `ancorar` percorre os nós de texto com `TreeWalker`, e os
+  dois incluem o texto escondido do MathML do KaTeX. É por isso que grifo que
+  atravessa fórmula volta com "F = m aF=ma" no meio — é o preço declarado de não
+  tocar no HTML, e ele não quebra a âncora.
+- **As âncoras são estado de FORA do React** (dependem do DOM injetado), e
+  entram por `useSyncExternalStore`, como o tema e a barra lateral (4b, 18). O
+  estado nulo quer dizer "ainda não procurou" — sem essa distinção, o primeiro
+  quadro mostraria todo grifo como órfão.
+- **A seleção é guardada quando MUDA, não quando o botão é tocado.** No celular,
+  tocar no botão pode desfazer a seleção antes de o clique chegar.
+- **No celular a barra vai para o pé da tela**: em cima da seleção ela disputa
+  lugar com o menu nativo de copiar.
+- **Fechar o balão GUARDA a nota**, inclusive com clique fora. Uma nota perdida
+  por um clique distraído é o pior erro desta tela. "Tirar grifo" é a única saída
+  que apaga.
+- **O componente leva `key={resumo.id}`.** Navegar de um resumo para outro
+  reaproveita a página, e sem a chave o estado inicial seria o do resumo
+  anterior.
+
+**As policies copiam `leituras`**: o insert consulta `resumos`, então só se grifa
+o que o plano cobre. O update existe para a nota; mudar o trecho é tirar e grifar
+de novo. Conferido em produção com JWT simulado: aluno com plano grifa e escreve
+nota; trecho em branco, grifo em nome de outro e grifo de conta sem plano são
+recusados; outro aluno não vê, não edita e não apaga.
+
+**Conferido fora do login**, com as funções de âncora do próprio componente
+rodando no navegador, nove casos: trecho dentro de um nó, atravessando negrito,
+na fronteira de elemento (triplo clique), palavra repetida na 2ª e na 3ª
+ocorrência, atravessando fórmula, com espaço nas pontas, com o autor editando
+ANTES do trecho (acha no lugar certo) e com o trecho reescrito (órfão). Os nove
+batem.
+
+O build avisa três vezes que `::highlight` não é pseudo-elemento válido. É o
+minificador; a regra sai intacta no CSS final.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
 histórico e favoritos (16), recorte da lista (17), barra que lembra (18), lupa,
 sumário no celular e aviso de acesso (19), busca no texto (15), edital com
-caixinha e progresso (20). Fora delas saiu
+caixinha e progresso (20), grifar e anotar (21). Fora delas saiu
 a correção de segurança (14), que não estava no boletim.
 
 Continuam abertas, e nenhuma é de código sozinho:
@@ -2577,7 +2651,7 @@ Continuam abertas, e nenhuma é de código sozinho:
 - **Encher os `[[links]]` e os `pai_id`.** Conteúdo, não código: o mapa, os
   backlinks e a árvore estão prontos esperando dado. É a mesma conclusão a que
   a física do grafo chegou por outro caminho (decisão 10b-bis).
-- Grifar e anotar, questão clicável, PWA offline,
+- Questão clicável, PWA offline,
   revisão espaçada, canal de dúvida, resumo de amostra sem login.
 - **Imprimir / salvar em PDF** está adiado por decisão de produto: depende de
   resolver se o acervo pode sair do site.
