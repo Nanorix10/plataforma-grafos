@@ -81,6 +81,7 @@ export default async function ContaPage({
     })
     .filter((m) => m.liberados > 0)
 
+  const liberados = PLANO_PROCESSOS[plano] ?? []
   const editalDoPlano = estudo.edital.filter((e) => liberados.includes(e.processo))
   const marcadosNoEdital = editalDoPlano.reduce((s, e) => s + e.marcados, 0)
   const etapasComMarca = editalDoPlano.filter((e) => e.marcados > 0).length
@@ -95,7 +96,6 @@ export default async function ContaPage({
     estudo.respondidas > 0 ||
     estudo.grifos > 0
 
-  const liberados = PLANO_PROCESSOS[plano] ?? []
   /* `PROVAS`, e não `PROCESSOS`: a lista abaixo se chama
      "Vestibulares", e `comum` não é um. Ver `lib/processos.ts`. */
   const todos = Object.entries(PROVAS)
