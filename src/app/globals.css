@@ -751,14 +751,28 @@ h3 {
    `.tableWrapper` e `[data-type='block-math']`, que empatariam em (0,2,0) e
    se decidiriam por ordem no arquivo. Note que o alinhamento não depende disso:
    se alguma dessas regras ganhasse, os dois continuariam pousando juntos, só
-   com outro respiro. */
+   com outro respiro.
+
+   **1.7em, e não mais os 0.9em de parágrafo — esta linha foi mudada de
+   propósito em 04/10.** O comentário acima dizia que valia o espaçamento de
+   parágrafo porque "corrido, o grafo É um parágrafo que começa em negrito". O
+   argumento está certo sobre o que o par É e errado sobre o que ele FAZ: medido
+   no acervo, **416 dos 496 subtítulos são corridos**, então em 113 resumos
+   todas as seções nasciam com o respiro de um parágrafo comum e quatro seções
+   irmãs liam como quatro parágrafos seguidos. O trilho sabia que eram seções
+   (decisão 12d); o olho não tinha como saber.
+
+   O alinhamento das duas linhas NÃO depende deste número — depende de as duas
+   margens de cima serem zero, que é a conta da decisão 12c, e ela continua
+   valendo para qualquer `mb`. Aqui só se escolhe quanto respiro o par recebe de
+   quem vem antes. */
 .conteudo-resumo
   *:has(
     + h2[data-corrido='sim'],
     + h3[data-corrido='sim'],
     + h4[data-corrido='sim']
   ) {
-  margin-bottom: 0.9em;
+  margin-bottom: 1.7em;
 }
 
 /* Limpa o float no SEGUNDO vizinho, não no primeiro — o primeiro é justamente
@@ -768,6 +782,129 @@ h3 {
 .conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] + * + * {
   clear: both;
 }
+
+/* ---- a seção se anuncia: o número do Grafo 1 ----
+   Cada `h2` do corpo é um nó do mapa (decisão 12), e até aqui a única marca
+   dele era o peso 800 na cor da matéria. Peso é a pista mais fraca que existe
+   numa tela de celular — metade do uso —, e no modo corrido ele divide a linha
+   com a explicação, então nem a quebra de linha sobra para denunciar que ali
+   começa outra coisa.
+
+   **O número NÃO é tamanho, e essa distinção é a decisão 12 inteira.** Um
+   grafo não é maior que o outro: ele contém o outro. `1.` não gradua nada —
+   diz "aqui começa um nó", que é exatamente o que o `h2` significa. Por isso a
+   numeração entra como contador, e `font-size` continua em `1em` como antes.
+
+   **Só `h2`, e só filho direto.** `h3`/`h4` são Grafo 2 e 3: numerá-los pediria
+   `1.2.`, que é hierarquia por notação — de novo graduar o que não gradua. E
+   filho direto mantém de fora o `h2` que apareça dentro de uma tabela ou de uma
+   gaveta de resolução, onde ele não é seção do resumo.
+
+   Vale no editor também, porque `.conteudo-resumo` é a mesma classe nos dois
+   lados (decisão 4): o autor vê a numeração enquanto escreve, e ela acompanha
+   sozinha quando ele move uma seção de lugar. Nada disso vai para o `corpo` —
+   conteúdo gerado por CSS não entra no HTML gravado, então os grifos (decisão
+   21) continuam se ancorando no mesmo texto de sempre. */
+.conteudo-resumo {
+  counter-reset: secao;
+}
+.conteudo-resumo > h2 {
+  counter-increment: secao;
+}
+.conteudo-resumo > h2::before {
+  content: counter(secao) '.';
+  margin-right: 0.45em;
+  /* Menor e mais leve que o título: ele numera a seção, não compete com o nome
+     dela. Quem recua o número é o TAMANHO e o PESO, nunca a transparência.
+
+     A primeira versão apagava o número com
+     `color-mix(… var(--cor-materia) 62%, transparent)`, e a conta reprovou:
+     medidas as 12 matérias contra o pior fundo de cada tema, **as 24
+     combinações ficam abaixo de 4,5:1** — a pior é Redação no claro, com
+     2,38:1. A 80% ainda reprovam 17 de 24; a 88%, 8 de 24. Só a cor cheia
+     passa em todas (pior caso: Redação no claro, 4,62:1).
+
+     É a armadilha que o `materias.ts` já avisa e que a identidade visual já
+     mediu uma vez: esta paleta nasceu para PONTO marcador, e aqui ela está
+     pintando TEXTO. Numeral é texto, por menor que seja. */
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--cor-materia, currentColor);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- a abertura do resumo é a definição dele ----
+   Quase todo resumo do acervo começa com uma frase que define o título
+   ("forças de natureza elétrica entre moléculas; interferem nas propriedades
+   físico-químicas…") — é o organizador prévio do assunto, escrito sem ninguém
+   ter chamado de organizador prévio. Ele saía com a aparência de um bullet
+   qualquer, indistinguível da terceira subseção.
+
+   **É o único elemento do corpo que ganha tamanho, e ele não é título.** A
+   decisão 12 recusa escala tipográfica nos `h2/h3/h4` porque grafo não tem
+   tamanho; esta frase não é um grafo, é o resumo do resumo, e a regra de lá não
+   a alcança.
+
+   `> p:first-child` e não `> *:first-child`: resumo que abre com figura, tabela
+   ou título não tem definição de abertura, e vestir uma figura de lead seria
+   afirmar o que o texto não diz. O recuo vem de `padding`, nunca de margem
+   negativa — margem negativa jogaria o filete para dentro dos 24px de recuo
+   fixo do celular (decisão 11) e ele sairia cortado na borda da tela. */
+.conteudo-resumo > p:first-child {
+  font-size: 1.06em;
+  color: var(--ink);
+  border-left: 3px solid var(--cor-materia, var(--line-forte));
+  padding-left: 0.85em;
+}
+
+/* ---- a fórmula que é o ponto do item respira ----
+   São 568 fórmulas inline no acervo contra 26 em bloco, e parte das inline é a
+   conclusão da seção — a fórmula que o aluno procura de volta na véspera —
+   espremida dentro de um bullet, no meio de texto telegráfico.
+
+   **A regra é estreita de propósito: só quando a fórmula é a ÚNICA coisa do
+   parágrafo.** `:only-child` é o que garante isso. Fórmula no meio de uma frase
+   continua exatamente como era — ali ela é parte da frase, e centralizar
+   quebraria a leitura em vez de ajudar.
+
+   Nada no HTML gravado muda: quem marca é `lib/formula-solta.ts`, na
+   renderização, como as âncoras de título e as legendas de figura. Por isso
+   também não há risco para os grifos nem para a contagem de links do trilho.
+
+   **Quem decide é o servidor, e não um seletor — ver o cabeçalho daquele
+   arquivo.** Em resumo: `p:has(> .katex:only-child)` parece fazer isto e não
+   faz, porque `:only-child` conta elementos e ignora nós de texto, então
+   "um objeto é arremessado ao solo (`v=0`), a partir de certa altura" também
+   casava. A abertura de um resumo de Física saía centralizada numa caixa.
+
+   `.formula-erro` fica de fora de propósito: fórmula que não compilou tem de
+   parecer o que é, e não ganhar destaque de conclusão da seção. */
+.conteudo-resumo p[data-formula='solta'] {
+  display: block;
+  text-align: center;
+  padding: 0.7em 0;
+  margin-top: 0.9em;
+  background: color-mix(in srgb, var(--cor-materia, var(--ink-faint)) 6%, transparent);
+  border-radius: var(--raio-peq);
+}
+/* Dentro de um item de lista o fundo e o respiro sobrariam: o marcador já diz
+   que aquilo é um item, e a caixa brigaria com o recuo da lista. Fica só a
+   centralização e o ar. */
+.conteudo-resumo li > p[data-formula='solta'] {
+  background: none;
+  padding: 0.25em 0;
+}
+/* E o marcador do item sai quando a fórmula é a única coisa dentro dele.
+   Visto na conferência: com a fórmula centralizada e o disco preso à margem
+   esquerda, o marcador fica órfão a meia linha de distância do conteúdo que
+   deveria estar marcando — pior do que não ter marcador nenhum. Aqui
+   `:only-child` é seguro, ao contrário do caso do parágrafo: o editor sempre
+   embrulha o conteúdo do `<li>` num `<p>`, então não há texto solto para o
+   seletor ignorar. */
+.conteudo-resumo li:has(> p[data-formula='solta']:only-child)::marker {
+  content: '';
+}
+
 /* ---- listas ----
    A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
    são tópicos que se desdobram em subtópicos por 4 ou 5 níveis, no padrão
@@ -851,15 +988,29 @@ h3 {
 .conteudo-resumo .questao > * + * {
   margin-top: 0.7em;
 }
+/* O rótulo convida a tentar, e isso é o oposto do que ele dizia.
+   "Questão resolvida" anuncia que a resposta está ali — e é verdade, mas é a
+   verdade que faz o aluno abrir a gaveta antes de pensar. O bloco inteiro
+   existe para que ele NÃO passe por ela sem tentar (o comentário acima diz
+   isso com todas as letras); o rótulo trabalhava contra o próprio bloco.
+
+   Tentar e falhar antes de ver a resposta grava melhor do que ler a resposta
+   — e é o mesmo motivo pelo qual a resolução é uma gaveta fechada desde a
+   decisão 9b. Aqui o rótulo passa a dizer em voz alta o que a gaveta já fazia
+   em silêncio.
+
+   Em `--acento`, e não no cinza de rótulo: isto é um chamado, não uma
+   etiqueta. O acento é escasso por regra da identidade, e continua sendo —
+   são 25 questões em 22 dos 254 resumos. */
 .conteudo-resumo .questao::before {
-  content: 'Questão resolvida';
+  content: 'Tente antes de abrir';
   display: block;
   font-family: var(--fonte-texto), sans-serif;
   font-size: var(--t-mini);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--acento);
   margin-bottom: 0.7em;
 }
 
@@ -941,31 +1092,49 @@ h3 {
    Não desce a peso normal porque `strong` é a ÚNICA marca que sobra dentro de
    grifo e de wikilink — nos dois a cor da matéria é anulada logo abaixo, de
    propósito. Sem peso e sem cor, o termo destacado ali sumiria por completo. */
+/* ============================================================
+   04/10/2026 — a cor da matéria saiu do `strong`, e o peso subiu para 600.
+   ============================================================
+   **Isto contraria a decisão 4c**, que manda a cor pintar `h2/h3/h4` E
+   `<strong>`. O argumento de lá continua verdadeiro — negrito e título são o
+   que o olho procura ao varrer o resumo. O que ele não previu é a DOSE: numa
+   página com quatro títulos corridos e seis termos em negrito, dez elementos
+   dividem a mesma marca, e uma marca que dez coisas têm não distingue
+   nenhuma. É o princípio da coerência: todo destaque compete com os outros.
+
+   Medido no acervo: **764 termos em negrito** contra 496 títulos. A cor estava
+   mais no termo do que no nó.
+
+   **O 600 é consequência, não gosto.** A decisão 12 fixa o par 800/500 e avisa
+   que mexer num sem o outro fecha a distância — e está certa ENQUANTO os dois
+   têm a mesma cor, que era a premissa dela. Sem cor no `strong`, a distinção
+   deixa de ser peso contra peso e passa a ser (cor + 800) contra (sem cor +
+   600): duas pistas de cada lado, onde antes havia uma. A 500 sem cor o termo
+   quase sumiria do texto de leitura, que é o erro oposto.
+
+   **O argumento do comentário que estava aqui segue intacto**, e é por isso que
+   ele não aparece mais como objeção: ele é sobre o PESO sobreviver dentro de
+   grifo e de wikilink, onde a cor da matéria já era anulada de propósito na
+   regra logo abaixo. Nada mudou lá.
+
+   **Como reverter, se o autor preferir o de antes:** devolver
+   `color: var(--cor-materia, inherit)` e o peso a 500 — e, junto, as três
+   exceções que saíram logo abaixo (`mark strong`, `a strong` e
+   `span[style*='color'] strong`, todas em `color: inherit`). Elas só existiam
+   para anular uma cor que não é mais pintada; sem a regra de cima elas viraram
+   no-op, e código que não faz nada é o que faz a próxima pessoa acreditar que
+   faz. Com a reversão, as três voltam a ser obrigatórias. */
 .conteudo-resumo strong {
-  font-weight: 500;
-  color: var(--cor-materia, inherit);
+  font-weight: 600;
 }
 
-/* Três exceções, onde a cor da matéria atrapalharia em vez de ajudar:
-   o grifo já força texto escuro sobre pastel claro, e o wikilink já é lilás.
-   Sem isto, um termo em negrito dentro de qualquer um dos dois trocaria a cor
-   do fundo/link por baixo e voltaria a ficar ilegível.
-
-   A terceira é a cor que o AUTOR escolheu. A regra `strong` acima vale por
-   herança, e herança sempre perde para uma regra que casa — então, sem esta
-   linha, pintar um trecho de vermelho deixaria de fora justamente as palavras
-   em negrito dentro dele, que são as que o autor mais quer destacar. O mesmo
-   dentro de um título.
-
-   `span[style*="color"]` e não `[style*="color"]` porque a segunda forma casa
-   também com `background-color`, e aí um `<figure>` com estilo embutido
-   entraria na regra sem ter nada a ver. Span com estilo é exatamente o que o
-   TextStyleKit grava quando o autor escolhe uma cor, e mais nada. */
-.conteudo-resumo mark strong,
-.conteudo-resumo a strong,
-.conteudo-resumo span[style*='color'] strong {
-  color: inherit;
-}
+/* As três exceções que moravam aqui (`mark strong`, `a strong` e
+   `span[style*='color'] strong`, em `color: inherit`) saíram junto com a cor
+   do `strong`, em 04/10 — ver o bloco acima, que também diz como trazê-las de
+   volta. Elas anulavam uma cor que o negrito não pinta mais: o termo dentro de
+   grifo, de wikilink ou de um trecho colorido pelo autor agora herda a cor de
+   quem o cerca sem precisar de regra nenhuma, que era exatamente o resultado
+   que elas produziam. */
 .conteudo-resumo code {
   font-family: var(--fonte-mono), monospace;
   font-size: 0.9em;
@@ -1439,6 +1608,24 @@ h3 {
   text-wrap: pretty;
 }
 
+/* A legenda derivada do `alt` (`lib/figuras.ts`) não se parece com a que o
+   autor escreve no painel, e a diferença é de espécie, não de gosto: a dele é
+   um rótulo de poucas palavras, que centralizado fica como nota de rodapé de
+   livro; esta é uma frase inteira que explica a figura, e frase se lê alinhada
+   à esquerda. Um tom a mais de tinta pelo mesmo motivo — `--ink-faint` é o
+   token de rótulo e contador, e aqui o texto é para ser lido.
+
+   O filete repete a marca do lead de abertura, e ele também não é enfeite: a
+   legenda fica logo abaixo da imagem, e sem nada que a prenda à figura ela se
+   confunde com o parágrafo que vem depois. */
+.conteudo-resumo .figura figcaption[data-de-alt='sim'] {
+  text-align: left;
+  color: var(--ink-dim);
+  border-left: 2px solid var(--line-forte);
+  padding-left: 0.7em;
+  margin-top: 0.6em;
+}
+
 /* O último bloco do resumo não pode ficar ao lado de uma figura flutuante:
    sem isto, uma imagem no fim vaza para fora do resumo e sobe por cima dos
    backlinks. */
@@ -1817,6 +2004,18 @@ h3 {
   background: var(--cor-materia, var(--ink));
 }
 
+/* O que já ficou para trás: o mesmo traço da seção ativa, apagado. Diz "você
+   passou por aqui" com a marca que já significa "você está aqui", um grau
+   abaixo — inventar um segundo símbolo (um visto, um ponto cheio) faria a
+   coluna ensinar dois vocabulários para a mesma ideia.
+
+   Não é "lido", e a distinção é a mesma da decisão 16: o aluno pode ter
+   rolado sem ler. Por isso nada disto vai ao banco e nada conta progresso de
+   estudo — vale dentro desta página e some quando ela fecha. */
+.trilho-secao[data-percorrida='sim'] a::before {
+  background: color-mix(in srgb, var(--cor-materia, var(--ink)) 28%, transparent);
+}
+
 /* As arestas ficam um grau abaixo das seções, recuadas e com marca redonda —
    seção é lugar DESTA página, link é saída para outra. Lilás no hover porque é
    a cor de link do site inteiro, inclusive a do wikilink que ele acende. */
@@ -1866,6 +2065,70 @@ h3 {
    O traço de cima e o respiro de baixo vivem AQUI e não em `.cai-em`: eram
    dela enquanto havia uma linha só, e com duas o resumo ganharia dois traços
    separados por um vão, que lê como duas seções em vez de uma ficha. */
+/* A faixa derivada, logo abaixo do título. Ela vem ANTES da ficha e sem traço
+   nenhum: a ficha carrega o traço de cima (ver abaixo), e dois traços
+   separados por um vão leem como duas seções em vez de um cabeçalho — é a
+   mesma conta da decisão 12f, um degrau acima.
+
+   Os separadores são `::before`, e não um caractere no JSX, porque cada item
+   some sozinho: escrito no texto, um resumo sem seções abriria com um ponto
+   solto antes do tempo de leitura. */
+.faixa-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: -0.75rem 0 1.75rem;
+  font-size: var(--t-mini);
+  color: var(--ink-dim);
+}
+.faixa-resumo span + span::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: var(--ink-faint);
+}
+
+/* "Esta página responde" — a pergunta prévia, entre a ficha e o texto.
+   Discreta de propósito: ela enquadra a leitura e não é a leitura, então não
+   pode competir com o lead de abertura que vem logo abaixo dela. Daí o corpo
+   menor e a tinta um passo acima do rótulo. */
+.responde {
+  margin-bottom: 2rem;
+}
+.responde h2 {
+  font-size: var(--t-mini);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.5rem;
+}
+.responde ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.responde li {
+  font-size: var(--t-peq);
+  line-height: 1.5;
+  color: var(--ink-dim);
+  padding-left: 0.9rem;
+  position: relative;
+}
+.responde li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cor-materia, var(--ink-faint));
+}
+
 .ficha {
   display: flex;
   flex-direction: column;
