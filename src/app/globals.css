@@ -751,14 +751,28 @@ h3 {
    `.tableWrapper` e `[data-type='block-math']`, que empatariam em (0,2,0) e
    se decidiriam por ordem no arquivo. Note que o alinhamento não depende disso:
    se alguma dessas regras ganhasse, os dois continuariam pousando juntos, só
-   com outro respiro. */
+   com outro respiro.
+
+   **1.7em, e não mais os 0.9em de parágrafo — esta linha foi mudada de
+   propósito em 04/10.** O comentário acima dizia que valia o espaçamento de
+   parágrafo porque "corrido, o grafo É um parágrafo que começa em negrito". O
+   argumento está certo sobre o que o par É e errado sobre o que ele FAZ: medido
+   no acervo, **416 dos 496 subtítulos são corridos**, então em 113 resumos
+   todas as seções nasciam com o respiro de um parágrafo comum e quatro seções
+   irmãs liam como quatro parágrafos seguidos. O trilho sabia que eram seções
+   (decisão 12d); o olho não tinha como saber.
+
+   O alinhamento das duas linhas NÃO depende deste número — depende de as duas
+   margens de cima serem zero, que é a conta da decisão 12c, e ela continua
+   valendo para qualquer `mb`. Aqui só se escolhe quanto respiro o par recebe de
+   quem vem antes. */
 .conteudo-resumo
   *:has(
     + h2[data-corrido='sim'],
     + h3[data-corrido='sim'],
     + h4[data-corrido='sim']
   ) {
-  margin-bottom: 0.9em;
+  margin-bottom: 1.7em;
 }
 
 /* Limpa o float no SEGUNDO vizinho, não no primeiro — o primeiro é justamente
@@ -768,6 +782,101 @@ h3 {
 .conteudo-resumo :where(h2, h3, h4)[data-corrido='sim'] + * + * {
   clear: both;
 }
+
+/* ---- a seção se anuncia: o número do Grafo 1 ----
+   Cada `h2` do corpo é um nó do mapa (decisão 12), e até aqui a única marca
+   dele era o peso 800 na cor da matéria. Peso é a pista mais fraca que existe
+   numa tela de celular — metade do uso —, e no modo corrido ele divide a linha
+   com a explicação, então nem a quebra de linha sobra para denunciar que ali
+   começa outra coisa.
+
+   **O número NÃO é tamanho, e essa distinção é a decisão 12 inteira.** Um
+   grafo não é maior que o outro: ele contém o outro. `1.` não gradua nada —
+   diz "aqui começa um nó", que é exatamente o que o `h2` significa. Por isso a
+   numeração entra como contador, e `font-size` continua em `1em` como antes.
+
+   **Só `h2`, e só filho direto.** `h3`/`h4` são Grafo 2 e 3: numerá-los pediria
+   `1.2.`, que é hierarquia por notação — de novo graduar o que não gradua. E
+   filho direto mantém de fora o `h2` que apareça dentro de uma tabela ou de uma
+   gaveta de resolução, onde ele não é seção do resumo.
+
+   Vale no editor também, porque `.conteudo-resumo` é a mesma classe nos dois
+   lados (decisão 4): o autor vê a numeração enquanto escreve, e ela acompanha
+   sozinha quando ele move uma seção de lugar. Nada disso vai para o `corpo` —
+   conteúdo gerado por CSS não entra no HTML gravado, então os grifos (decisão
+   21) continuam se ancorando no mesmo texto de sempre. */
+.conteudo-resumo {
+  counter-reset: secao;
+}
+.conteudo-resumo > h2 {
+  counter-increment: secao;
+}
+.conteudo-resumo > h2::before {
+  content: counter(secao) '.';
+  margin-right: 0.45em;
+  /* Menor e mais apagado que o título: ele numera a seção, não compete com o
+     nome dela. A cor sai da mesma `--cor-materia` que o título já usa, com
+     `color-mix` em vez de `opacity` — `opacity` criaria camada de composição
+     num elemento que o `float` do modo corrido já posiciona. */
+  font-size: 0.82em;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--cor-materia, currentColor) 62%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- a abertura do resumo é a definição dele ----
+   Quase todo resumo do acervo começa com uma frase que define o título
+   ("forças de natureza elétrica entre moléculas; interferem nas propriedades
+   físico-químicas…") — é o organizador prévio do assunto, escrito sem ninguém
+   ter chamado de organizador prévio. Ele saía com a aparência de um bullet
+   qualquer, indistinguível da terceira subseção.
+
+   **É o único elemento do corpo que ganha tamanho, e ele não é título.** A
+   decisão 12 recusa escala tipográfica nos `h2/h3/h4` porque grafo não tem
+   tamanho; esta frase não é um grafo, é o resumo do resumo, e a regra de lá não
+   a alcança.
+
+   `> p:first-child` e não `> *:first-child`: resumo que abre com figura, tabela
+   ou título não tem definição de abertura, e vestir uma figura de lead seria
+   afirmar o que o texto não diz. O recuo vem de `padding`, nunca de margem
+   negativa — margem negativa jogaria o filete para dentro dos 24px de recuo
+   fixo do celular (decisão 11) e ele sairia cortado na borda da tela. */
+.conteudo-resumo > p:first-child {
+  font-size: 1.06em;
+  color: var(--ink);
+  border-left: 3px solid var(--cor-materia, var(--line-forte));
+  padding-left: 0.85em;
+}
+
+/* ---- a fórmula que é o ponto do item respira ----
+   São 568 fórmulas inline no acervo contra 26 em bloco, e parte das inline é a
+   conclusão da seção — a fórmula que o aluno procura de volta na véspera —
+   espremida dentro de um bullet, no meio de texto telegráfico.
+
+   **A regra é estreita de propósito: só quando a fórmula é a ÚNICA coisa do
+   parágrafo.** `:only-child` é o que garante isso. Fórmula no meio de uma frase
+   continua exatamente como era — ali ela é parte da frase, e centralizar
+   quebraria a leitura em vez de ajudar.
+
+   Nada no HTML gravado muda: é display, e o `<span>` do editor continua o
+   mesmo (decisão 8). Por isso também não há risco para os grifos nem para a
+   contagem de links do trilho. */
+.conteudo-resumo p:has(> span[data-type='inline-math']:only-child) {
+  display: block;
+  text-align: center;
+  padding: 0.7em 0;
+  margin-top: 0.9em;
+  background: color-mix(in srgb, var(--cor-materia, var(--ink-faint)) 6%, transparent);
+  border-radius: var(--raio-peq);
+}
+/* Dentro de um item de lista o fundo e o respiro sobrariam: o marcador já diz
+   que aquilo é um item, e a caixa brigaria com o recuo da lista. Fica só a
+   centralização e o ar. */
+.conteudo-resumo li > p:has(> span[data-type='inline-math']:only-child) {
+  background: none;
+  padding: 0.25em 0;
+}
+
 /* ---- listas ----
    A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
    são tópicos que se desdobram em subtópicos por 4 ou 5 níveis, no padrão
@@ -1437,6 +1546,24 @@ h3 {
   text-align: center;
   margin-top: 0.5em;
   text-wrap: pretty;
+}
+
+/* A legenda derivada do `alt` (`lib/figuras.ts`) não se parece com a que o
+   autor escreve no painel, e a diferença é de espécie, não de gosto: a dele é
+   um rótulo de poucas palavras, que centralizado fica como nota de rodapé de
+   livro; esta é uma frase inteira que explica a figura, e frase se lê alinhada
+   à esquerda. Um tom a mais de tinta pelo mesmo motivo — `--ink-faint` é o
+   token de rótulo e contador, e aqui o texto é para ser lido.
+
+   O filete repete a marca do lead de abertura, e ele também não é enfeite: a
+   legenda fica logo abaixo da imagem, e sem nada que a prenda à figura ela se
+   confunde com o parágrafo que vem depois. */
+.conteudo-resumo .figura figcaption[data-de-alt='sim'] {
+  text-align: left;
+  color: var(--ink-dim);
+  border-left: 2px solid var(--line-forte);
+  padding-left: 0.7em;
+  margin-top: 0.6em;
 }
 
 /* O último bloco do resumo não pode ficar ao lado de uma figura flutuante:

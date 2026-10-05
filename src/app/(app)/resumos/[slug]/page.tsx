@@ -10,6 +10,7 @@ import { renderizarWikilinks } from '@/lib/wikilinks'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
+import { legendarFiguras } from '@/lib/figuras'
 import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
 import { caminhoAteRaiz } from '@/lib/arvore'
 import { getSessao } from '@/lib/sessao'
@@ -158,12 +159,19 @@ export default async function ResumoPage({
   // As âncoras primeiro, no HTML ainda cru — é a MESMA entrada que o /mapa lê
   // para montar os nós de título (decisão 12), e ler documentos diferentes é o
   // que faria o link do mapa cair no topo da página em silêncio.
+  // As legendas logo depois das âncoras, e pelo mesmo motivo delas: o `alt` é
+  // texto puro, sem fórmula e sem `<div>`, então quanto mais cedo menos HTML
+  // alheio a regex precisa atravessar. Ela não mexe em título nem em link, de
+  // modo que a contagem do trilho (decisão 12d) continua valendo.
   // As gavetas de resolução depois, porque contam `<div>` para achar onde
   // fecham e o KaTeX enche o HTML deles; os wikilinks em seguida; as fórmulas
   // por último, já que o KaTeX gera muito HTML e passar as outras regexes por
   // cima dele seria trabalho à toa.
   const corpoHtml = renderizarMatematica(
-    renderizarWikilinks(renderizarQuestoes(ancorarTitulos(resumo.corpo)), tituloParaSlug)
+    renderizarWikilinks(
+      renderizarQuestoes(legendarFiguras(ancorarTitulos(resumo.corpo))),
+      tituloParaSlug
+    )
   )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
