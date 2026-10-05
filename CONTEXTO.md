@@ -2779,6 +2779,94 @@ a conta da sequência em 8 casos de calendário (virada de mês e de ano, 29 de
 fevereiro, "ainda não estudou hoje", dia pulado, recorde antigo maior que a
 sequência atual).
 
+## 24. A estrutura do resumo passou a ser VISÍVEL, e a medida veio do acervo
+
+**04/10/2026.** Dez mudanças na página do resumo, todas de renderização e CSS —
+**o `corpo` gravado não muda um caractere**, então grifos (21) e a contagem de
+links do trilho (12d) seguem valendo. Cada uma nasceu de um número medido no
+banco, não de gosto:
+
+| o que estava acontecendo | medido |
+|---|---|
+| subtítulo corrido com respiro de parágrafo (0.9em) | **416 dos 496** subtítulos são corridos |
+| a `.ficha` some inteira | **153 dos 254** resumos (60%) |
+| "Nenhum outro resumo cita este ainda" | **249 das 254** páginas (há 5 conexões no acervo) |
+| descrição da figura só para leitor de tela | **223 imagens, 223 com `alt`, 0 legendas** |
+| a cor da matéria dividida entre nó e termo | **764 negritos** contra 496 títulos |
+| fórmula-conclusão espremida num bullet | **568 inline** contra 26 em bloco |
+| resumo sem subtítulo nenhum (trilho vazio) | **107 dos 254** |
+
+**O diagnóstico, numa frase:** a página foi desenhada para um resumo que o
+acervo não tem. Trilho lateral, ficha de três linhas e backlinks, contra um
+resumo mediano de **1.578 caracteres (~250 palavras)**, sem pai, sem edital e
+sem ninguém citando. A ficha não está errada — ela diz a verdade; o que faltava
+era algo que fosse verdade sempre.
+
+**O que entrou.** Numeração do Grafo 1 e 1.7em de respiro no par corrido; o
+primeiro parágrafo promovido a definição de abertura; faixa derivada com
+seções, tempo de leitura e última visita; "Esta página responde" a partir dos
+próprios subtítulos; o trilho marcando o que ficou para trás; o fim da página
+mostrando irmãos quando não há backlink; a legenda vinda do `alt`; a fórmula
+solta com respiro; a cor saindo do `strong`; e o rótulo da questão virando
+"Tente antes de abrir".
+
+**Três coisas que não se adivinham, e as três só apareceram CONFERINDO:**
+
+- **`:only-child` conta elementos e ignora nós de texto.** A regra
+  `p:has(> .katex:only-child)` parecia dizer "parágrafo que só tem uma fórmula"
+  e dizia "parágrafo cujo único ELEMENTO é uma fórmula" — então a abertura de
+  Lançamento horizontal, que é prosa com um `v=0` no meio, saía centralizada
+  dentro de uma caixa. Quem responde agora é `lib/formula-solta.ts`, no
+  servidor, antes de o KaTeX substituir o nó. **E o seletor do primeiro palpite
+  não casava com nada de qualquer jeito**: o nó `data-type="inline-math"` só
+  existe no HTML gravado; na página do aluno ele já virou `<span class="katex">`
+  (decisão 8).
+- **Transparência em cor de matéria reprova em contraste, sempre.** O número da
+  seção saiu com `color-mix(… 62%, transparent)` e foi medido depois: as **24
+  combinações** (12 matérias × 2 temas, contra o pior fundo de cada) ficam
+  abaixo de 4,5:1, a pior em 2,38:1. A 80% ainda reprovam 17; só a cor cheia
+  passa. É o aviso do `materias.ts` outra vez — a paleta nasceu para ponto
+  marcador, e numeral é texto.
+- **Marcador de lista fica órfão quando o conteúdo centraliza.** Com a fórmula
+  no meio e o disco preso à margem, o bullet apontava para o vazio. Sai o
+  marcador quando a fórmula é a única coisa do item.
+
+**A legenda ESVAZIA o `alt`, e isso é acessibilidade, não descuido.** Mesmo
+texto em `alt` e em `<figcaption>` faz o leitor de tela anunciar duas vezes; com
+a descrição visível, a imagem passa a ser decorativa e a legenda é lida uma vez.
+A migração só foi segura porque `grifos` tinha **zero linhas** — a legenda
+acrescenta texto ao documento, e âncora de grifo se apoia em 32 letras de
+contexto (decisão 21). **Quem mexer nisto com o acervo já grifado precisa refazer
+essa conta.**
+
+> [!warning] Uma decisão foi contrariada de propósito, e ela é reversível em uma linha
+> **A decisão 4c manda a cor da matéria pintar `h2/h3/h4` E `<strong>`.** O
+> argumento continua verdadeiro — é o que o olho procura ao varrer —, mas não
+> previu a DOSE: numa página com quatro títulos corridos e seis termos em
+> negrito, dez elementos dividem a mesma marca, e marca que dez coisas têm não
+> distingue nenhuma. A cor ficou nos títulos; o `strong` foi a 600 para pagar a
+> perda. O par 800/500 da decisão 12 valia **enquanto os dois tinham a mesma
+> cor**, que era a premissa dela.
+>
+> As três exceções (`mark strong`, `a strong`, `span[style*='color'] strong`,
+> todas em `color: inherit`) saíram junto: anulavam uma cor que não é mais
+> pintada. **Reverter é devolver `color: var(--cor-materia, inherit)`, o peso a
+> 500 e as três exceções** — está escrito por extenso acima da regra no
+> `globals.css`.
+
+**O que NÃO foi feito, e por quê.** Caixas por tipo de conteúdo (definição,
+exemplo, atenção) funcionam na literatura e exigiriam remarcar 254 resumos à
+mão. O trilho continua inexistente nos 107 resumos sem subtítulo — marcar o
+percurso não resolve coluna vazia, e isso fica aberto.
+
+**O que isto NÃO é.** Nenhuma destas mudanças ataca a causa real de o aluno
+esquecer: a página segue oferecendo só releitura, que é a técnica de menor
+utilidade comprovada. O acervo tem **416 pares "termo → definição" já escritos**
+(os `data-corrido="sim"`), que são um baralho de recuperação pronto esperando
+uso. O estudo que leva a isso está em
+`docs/produto/pedagogia-da-pagina-do-resumo.md`, junto com a razão de "revisão
+espaçada" continuar na lista de pendências abaixo.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
