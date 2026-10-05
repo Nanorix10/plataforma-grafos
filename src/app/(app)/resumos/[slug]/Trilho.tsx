@@ -82,14 +82,33 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
 
   if (itens.length === 0) return null
 
+  /**
+   * Até onde o olho já passou.
+   *
+   * A seção ativa é a última que cruzou a linha do olho, então tudo o que vem
+   * ANTES dela na ordem do documento já foi percorrido — a conta sai de graça
+   * do que `secaoAtual` já calcula, sem um segundo ouvinte de rolagem.
+   *
+   * É progresso, não leitura: o aluno pode ter rolado sem ler, exatamente como
+   * um resumo aberto não é um resumo lido (decisão 16). Por isso a marca é
+   * discreta e não vai para o banco — ela orienta dentro desta página e morre
+   * quando ela fecha.
+   */
+  const ondeEstou = itens.findIndex((i) => i.tipo === 'secao' && i.ancora === ativa)
+
   return (
     <nav ref={nav} className="trilho" aria-label="Nesta página">
       <div className="trilho-fixa">
         <h2>Nesta página</h2>
         <ol>
-          {itens.map((item) =>
+          {itens.map((item, i) =>
             item.tipo === 'secao' ? (
-              <li key={`s-${item.ancora}`} className="trilho-secao" data-nivel={item.nivel}>
+              <li
+                key={`s-${item.ancora}`}
+                className="trilho-secao"
+                data-nivel={item.nivel}
+                data-percorrida={ondeEstou > -1 && i < ondeEstou ? 'sim' : undefined}
+              >
                 <a
                   href={`#${item.ancora}`}
                   aria-current={ativa === item.ancora ? 'true' : undefined}

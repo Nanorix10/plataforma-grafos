@@ -21,7 +21,8 @@ import Trilho from './Trilho'
 import SumarioMovel from './SumarioMovel'
 import RegistraVisita from './RegistraVisita'
 import BotaoFavorito from './BotaoFavorito'
-import { getMarcas } from '@/lib/leituras'
+import { getMarcas, quandoFoi } from '@/lib/leituras'
+import { montarFicha } from '@/lib/ficha-resumo'
 import { getGrifos } from '@/lib/grifos'
 import Grifos from './Grifos'
 import { getRespostasDoResumo } from '@/lib/respostas'
@@ -154,6 +155,22 @@ export default async function ResumoPage({
 
   const trilho = extrairTrilho(resumo.corpo, tituloParaSlug)
 
+  // A faixa do cabeçalho, derivada do que a página já tem em mãos: as seções
+  // saem do trilho recém-extraído, o tempo do tamanho do corpo. Nenhuma ida ao
+  // banco — ver `lib/ficha-resumo.ts` para o porquê de ela existir.
+  const ficha = montarFicha(
+    resumo.corpo,
+    trilho.filter((i) => i.tipo === 'secao')
+  )
+
+  // Quando o aluno esteve aqui pela última vez. A marca é a da visita
+  // ANTERIOR: `RegistraVisita` grava do lado do cliente, depois desta
+  // renderização. "agora" fica de fora de propósito — é o que apareceria ao
+  // recarregar a página, e dizer "você abriu agora" a quem acabou de apertar
+  // F5 é ruído, não informação.
+  const ultimaVisita = marcas.find((m) => m.resumo_id === resumo.id)?.visto_em
+  const voltou = ultimaVisita ? quandoFoi(ultimaVisita) : null
+
   const materia = MATERIAS[resumo.materia_slug as keyof typeof MATERIAS]
   // A ordem importa, e é sempre a mesma: do estrutural para o miúdo.
   // As âncoras primeiro, no HTML ainda cru — é a MESMA entrada que o /mapa lê
@@ -176,6 +193,36 @@ export default async function ResumoPage({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const backlinks = (backlinksRaw ?? []).map((c: any) => c.origem).filter(Boolean)
+
+  /**
+   * Para onde ir quando ninguém cita este resumo.
+   *
+   * Medido em 04/10/2026: o acervo inteiro tem **5 conexões**, então
+   * "Nenhum outro resumo cita este ainda" era o que **249 das 254 páginas**
+   * diziam na despedida — num produto cujo posicionamento é que as conexões
+   * SÃO o mecanismo. A última coisa lida, em 98% das visitas, era uma
+   * declaração de vazio.
+   *
+   * O substituto não finge ser backlink: é vizinhança declarada. Irmãos de pai
+   * quando há pai, e da mesma matéria quando não há — nessa ordem, porque
+   * "está dentro do mesmo assunto" é parentesco mais forte que "é da mesma
+   * disciplina" (decisão 9).
+   *
+   * Sai do catálogo que a página JÁ carregou para resolver os wikilinks:
+   * nenhuma consulta nova. E do catálogo, não da tabela, pelo motivo da
+   * decisão 14 — o que se mostra aqui é NOME, e um irmão de outro vestibular
+   * continua sendo um nome legítimo de se ver.
+   */
+  const irmaos =
+    backlinks.length > 0
+      ? []
+      : (todosResumos ?? [])
+          .filter(
+            (r) =>
+              r.id !== resumo.id &&
+              (resumo.pai_id ? r.pai_id === resumo.pai_id : r.materia_slug === resumo.materia_slug)
+          )
+          .slice(0, 4)
 
   return (
     <>
@@ -290,6 +337,23 @@ export default async function ResumoPage({
           {resumo.titulo}
         </h1>
 
+        {/* A faixa que sempre tem o que dizer. Ela existe porque a ficha logo
+            abaixo some INTEIRA em 153 dos 254 resumos (ver
+            `lib/ficha-resumo.ts`), e nessas páginas o título ficava colado no
+            texto sem degrau nenhum. Cada item some sozinho quando não se
+            aplica — resumo sem subtítulo não anuncia seções, e quem chega pela
+            primeira vez não tem última visita —, mas o tempo de leitura existe
+            para qualquer resumo com texto, então a faixa nunca fica vazia. */}
+        <p className="faixa-resumo">
+          {ficha.secoes > 0 ? (
+            <span>
+              {ficha.secoes} {ficha.secoes === 1 ? 'seção' : 'seções'}
+            </span>
+          ) : null}
+          <span>{ficha.leitura}</span>
+          {voltou && voltou !== 'agora' ? <span>você abriu {voltou}</span> : null}
+        </p>
+
         {/* A ficha do resumo: em que provas ele cai, e quando ele acontece.
             Cada linha some sozinha quando não tem o que dizer, e a ficha
             inteira some quando nenhuma das duas tem — é ela que carrega o
@@ -367,6 +431,26 @@ export default async function ResumoPage({
           </div>
         ) : null}
 
+        {/* O que esta página responde — os nomes das seções que o autor já
+            escreveu, antes do texto em vez de depois dele. Ver pergunta prévia
+            em `lib/ficha-resumo.ts`: quem lê sabendo o que procurar lê
+            procurando, e não varrendo.
+
+            Não é o trilho repetido, e a diferença é onde cada um age: o trilho
+            acompanha a leitura numa coluna lateral que some abaixo de 1340px
+            (decisão 12d), e esta lista é lida UMA vez, antes de começar, em
+            qualquer largura. Some sozinha abaixo de duas seções. */}
+        {ficha.responde.length > 0 ? (
+          <section className="responde">
+            <h2>Esta página responde</h2>
+            <ul>
+              {ficha.responde.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {/* A cor da matéria desce por variável, e o CSS decide onde ela pinta
             (hoje: títulos de seção e termos em negrito). Resumo de matéria
             desconhecida não recebe a variável e cai no `inherit` de reserva. */}
@@ -390,44 +474,51 @@ export default async function ResumoPage({
 
         <Grifos key={resumo.id} resumoId={resumo.id} iniciais={grifos} seletor=".conteudo-resumo" />
 
-        <section className="mt-16 pt-7 border-t border-[var(--line)]">
-          <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
-            Resumos que citam este
-          </h2>
-          {backlinks.length === 0 ? (
-            <p className="text-[length:var(--t-peq)] text-[var(--ink-faint)]">
-              Nenhum outro resumo cita este ainda.
-            </p>
-          ) : (
+        {/* O fim da página. Com backlink, ele é o backlink; sem nenhum, são os
+            vizinhos — e nunca mais a frase que anunciava o vazio (ver o
+            cálculo de `irmaos`, acima). A seção some de vez só no caso em que
+            não há nem uma coisa nem outra: resumo sem citação, sem irmão de pai
+            e único da matéria. */}
+        {backlinks.length > 0 || irmaos.length > 0 ? (
+          <section className="mt-16 pt-7 border-t border-[var(--line)]">
+            <h2 className="text-[length:var(--t-mini)] font-medium text-[var(--ink-faint)] uppercase tracking-[0.04em] mb-4">
+              {backlinks.length > 0
+                ? 'Resumos que citam este'
+                : resumo.pai_id
+                  ? 'No mesmo assunto'
+                  : `Continuar em ${materia?.nome ?? 'outros resumos'}`}
+            </h2>
             <ul className="flex flex-col gap-2">
-              {backlinks.map((b: { slug: string; titulo: string; materia_slug: string }) => (
-                <li key={b.slug}>
-                  <Link
-                    href={`/resumos/${b.slug}`}
-                    className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[var(--raised-hover)]"
-                  >
-                    <span
-                      className="text-sm font-medium truncate"
-                      style={{
-                        color:
-                          MATERIAS[b.materia_slug as keyof typeof MATERIAS]?.cor ??
-                          'var(--ink)',
-                      }}
+              {(backlinks.length > 0 ? backlinks : irmaos).map(
+                (b: { slug: string; titulo: string; materia_slug: string }) => (
+                  <li key={b.slug}>
+                    <Link
+                      href={`/resumos/${b.slug}`}
+                      className="group flex items-center gap-3 rounded-lg bg-[var(--raised)] px-4 py-3 hover:bg-[var(--raised-hover)]"
                     >
-                      {b.titulo}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="ml-auto shrink-0 text-[var(--acento)] transition-transform group-hover:translate-x-0.5"
-                    >
-                      →
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                      <span
+                        className="text-sm font-medium truncate"
+                        style={{
+                          color:
+                            MATERIAS[b.materia_slug as keyof typeof MATERIAS]?.cor ??
+                            'var(--ink)',
+                        }}
+                      >
+                        {b.titulo}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="ml-auto shrink-0 text-[var(--acento)] transition-transform group-hover:translate-x-0.5"
+                      >
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                )
+              )}
             </ul>
-          )}
-        </section>
+          </section>
+        ) : null}
       </article>
       </div>
 
