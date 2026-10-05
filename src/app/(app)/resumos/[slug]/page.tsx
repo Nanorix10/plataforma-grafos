@@ -11,6 +11,7 @@ import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { legendarFiguras } from '@/lib/figuras'
+import { marcarFormulaSolta } from '@/lib/formula-solta'
 import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
 import { caminhoAteRaiz } from '@/lib/arvore'
 import { getSessao } from '@/lib/sessao'
@@ -184,9 +185,13 @@ export default async function ResumoPage({
   // fecham e o KaTeX enche o HTML deles; os wikilinks em seguida; as fórmulas
   // por último, já que o KaTeX gera muito HTML e passar as outras regexes por
   // cima dele seria trabalho à toa.
+  // `marcarFormulaSolta` tem de vir ANTES de `renderizarMatematica`, e é a
+  // única das cinco em que a ordem é obrigatória por si: depois do KaTeX o
+  // parágrafo vira dezenas de `<span>` aninhados e a pergunta "só há uma
+  // fórmula aqui dentro?" deixaria de ser uma regex curta.
   const corpoHtml = renderizarMatematica(
     renderizarWikilinks(
-      renderizarQuestoes(legendarFiguras(ancorarTitulos(resumo.corpo))),
+      renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(resumo.corpo)))),
       tituloParaSlug
     )
   )
