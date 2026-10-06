@@ -1,25 +1,16 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { MATERIAS } from '@/lib/materias'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { getSessao } from '@/lib/sessao'
 import { extrairTitulos } from '@/lib/titulos'
-import GraphView from './GraphView'
-import MindMapView from './MindMapView'
+import Mapa from './Mapa'
 import type { No as NoMapa } from './useExpansao'
 
-type Visao = 'grafo' | 'mental'
-
-export default async function MapaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ visao?: string }>
-}) {
-  const { visao: visaoParam } = await searchParams
-  // o modo vive na URL, e não em estado local, pra que o aluno possa favoritar
-  // ou compartilhar exatamente a visão que estava usando
-  const visao: Visao = visaoParam === 'mental' ? 'mental' : 'grafo'
-
+/* O `?visao=` não é lido aqui de propósito. Quem decide entre grafo e mapa
+   mental é o `Mapa`, no navegador: se a página dependesse do parâmetro, cada
+   troca de aba voltaria ao servidor para refazer tudo isto. Ver o cabeçalho
+   de `Mapa.tsx`. */
+export default async function MapaPage() {
   const { supabase, userId, plano } = await getSessao()
   if (!userId) redirect('/login')
 
@@ -126,63 +117,5 @@ export default async function MapaPage({
     .filter(([slug]) => comResumo.has(slug))
     .map(([slug, m]) => ({ slug, nome: m.nome, cor: m.cor }))
 
-  return (
-    <div className="h-[calc(100vh-3rem)] lg:h-screen flex flex-col">
-      <div className="border-b border-[var(--line)] px-5 sm:px-10 py-3 flex items-center gap-4 shrink-0">
-        <span className="text-xs text-[var(--ink-faint)]">
-          <b className="text-[var(--ink)] font-medium">
-            {visao === 'grafo' ? 'Mapa de conexões' : 'Mapa mental'}
-          </b>{' '}
-          · {nos.filter((n) => n.tipo === 'resumo').length} resumos ·{' '}
-          {nos.filter((n) => n.tipo === 'titulo').length} seções ·{' '}
-          {visao === 'grafo'
-            ? `${links.length} ligações`
-            : `${new Set(nos.map((n) => n.materia)).size} matérias`}
-        </span>
-
-        {/* divide-x põe a linha entre as abas sem depender de qual está ativa */}
-        <div role="tablist" className="ml-auto inline-flex divide-x divide-[var(--line-forte)] overflow-hidden rounded-lg border border-[var(--line-forte)]">
-          <Alternador href="/mapa?visao=grafo" ativo={visao === 'grafo'}>
-            Grafo
-          </Alternador>
-          <Alternador href="/mapa?visao=mental" ativo={visao === 'mental'}>
-            Mapa mental
-          </Alternador>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        {visao === 'grafo' ? (
-          <GraphView nos={nos} links={links} materias={listaMaterias} />
-        ) : (
-          <MindMapView nos={nos} materias={listaMaterias} titulo="Plataforma Grafos" />
-        )}
-      </div>
-    </div>
-  )
-}
-
-function Alternador({
-  href,
-  ativo,
-  children,
-}: {
-  href: string
-  ativo: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      role="tab"
-      aria-selected={ativo}
-      className={`px-3.5 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
-        ativo
-          ? 'shadow-[inset_0_0_0_1px_var(--acento)] text-[var(--acento)]'
-          : 'text-[var(--ink-dim)] hover:text-[var(--ink)]'
-      }`}
-    >
-      {children}
-    </Link>
-  )
+  return <Mapa nos={nos} links={links} materias={listaMaterias} />
 }
