@@ -2106,6 +2106,12 @@ sozinho um dia —, desligar de verdade é ação de painel, e ainda não foi fe
     produção velha servindo normalmente porque ninguém a trocou. Só vale o HTML
     de produção com alguma marca do que mudou, e o alias resolvendo para o
     deploy novo.
+- **As funções rodam em `gru1` (São Paulo), fixado no `vercel.json`, desde
+  06/10.** O padrão da Vercel era `iad1` (Washington), e o Supabase está em
+  `sa-east-1` (São Paulo): toda página logada fazia as consultas atravessando o
+  continente, e o `/mapa` ainda baixava 509 kB de `corpo` nessa viagem. Se o
+  banco um dia mudar de região, a função vai junto — as duas pontas têm de
+  morar perto.
 - O repositório é público, mas nenhuma chave vai junto: o `.gitignore` bloqueia
   `.env*`. As chaves vivem só no `.env.local` (local) e no painel da Vercel.
 - As variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` já estão
