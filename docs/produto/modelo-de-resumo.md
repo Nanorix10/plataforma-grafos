@@ -4,273 +4,271 @@
 > resumo antigo que o autor decidir reescrever. Ela não reescreve nada sozinha:
 > os 255 resumos que existem continuam como estão até alguém abrir um deles com
 > essa intenção.
+>
+> **Revisada no mesmo dia**, depois do primeiro rascunho (*Teorias
+> demográficas*). A primeira versão pedia prosa explicativa, exemplos do
+> cotidiano e de 800 a 1.500 palavras, e o resultado não soava como o autor. A
+> ordem do autor: **termos fiéis às fontes e técnicos, linguagem formal do
+> começo ao fim, tópicos bem definidos só com o essencial, no jeito dele de
+> escrever.** A §3 mede esse jeito, e o resto do documento se curva a ele.
 
-Três decisões do autor fecham o escopo, e o resto do documento sai delas:
+Quatro decisões do autor fecham o escopo:
 
 | decisão | escolha | consequência |
 |---|---|---|
-| para que momento | **ensinar**, com um **fecho de revisão** | o corpo explica o porquê; o fim vira cartões |
-| quem escreve | **Claude rascunha, o autor revisa** | o modelo é também uma especificação de rascunho (§5) e uma lista de conferência (§6) |
+| para que momento | **ensinar**, com um **fecho de revisão** | todo conceito traz o fundamento e o exemplo; o fim vira cartões |
+| quem escreve | **Claude rascunha, o autor revisa** | o modelo é também uma especificação de rascunho (§6) e uma lista de conferência (§7) |
 | o que é uma unidade | **um assunto do caderno** | não se reorganiza o acervo pelo edital; o edital só diz o que falta |
+| como se escreve | **no estilo do autor**: telegráfico, formal, técnico, fiel às fontes | ensinar não pede prosa: o porquê e o exemplo entram como **itens rotulados** |
 
 ## 1. Por que mudar
 
 Medido no banco em 07/10/2026: mediana de **250 palavras** por resumo, 108 sem
 nenhum subtítulo, 9 com o corpo vazio, 21 com questão e **7 conexões** no acervo
-inteiro. O formato telegráfico (`Termo:` → definição curta) é ótimo para quem já
-estudou e inútil para quem nunca viu o assunto: ele diz *o quê* e quase nunca
-*por quê*.
+inteiro.
 
-Os melhores resumos do acervo já mostram o que falta aos outros, e o modelo é a
-generalização deles:
+O problema **não é o formato telegráfico**, que é o do autor e fica. É o que
+falta dentro dele: muitos resumos dizem *o quê* e param — sem o fundamento, sem
+o exemplo, sem questão, sem ligação. Os melhores resumos do acervo têm essas
+peças no mesmo formato enxuto, e o modelo é a generalização deles:
 
-- **Existencialismo** — a angústia de Kierkegaard explicada pela beira do
-  precipício e pela escolha do curso no 3º ano. Analogia e exemplo próximo do
-  aluno: é *isso* que ensina.
+- **Existencialismo** — `Conceito central:`, `Analogia proposta por ele mesmo:`
+  e `Ex:` como itens da lista. A analogia é de Kierkegaard, não inventada.
 - **Movimento circular** — grandeza, figura, regra de três que leva à fórmula,
-  exemplo. A fórmula chega depois de o aluno saber o que ela mede.
+  exemplo resolvido.
 - **Ciclo celular** — estrutura em níveis (`h2` → `h3` → `h4`) que espelha o
-  próprio processo, uma figura por fase.
+  próprio processo, com `Função:` e `Ocorrência:` como rótulos e uma figura por
+  fase.
 
 ## 2. Os princípios, e o que cada um obriga
 
-Cada seção do esqueleto existe por causa de uma evidência, não por gosto. Se uma
-seção parecer sobrar num resumo, a pergunta é se o princípio dela deixou de valer
-ali, não se ela "fica feia".
+Cada parte do esqueleto existe por causa de uma evidência. O estilo do autor
+decide **a forma** de cada parte; o princípio decide **se ela existe**.
 
 | princípio | evidência | vira, no resumo |
 |---|---|---|
 | **Organizador prévio** | Ausubel (1960): o que o aluno já sabe é o fator que mais pesa; o organizador dá onde pendurar o novo | o campo `definicao` e a **abertura** |
-| **Sinalização e segmentação** | Mayer: marcar a estrutura poupa o esforço de descobri-la; material em pedaços é mais retido | cada `h2` responde **uma** pergunta; 3 a 6 seções |
-| **Elaboração / interrogação** | Dunlosky et al. (2013): perguntar "por que isso é assim?" é de utilidade moderada, e barato | cada seção explica a **causa**, não só o fato |
-| **Exemplo concreto** | Weinstein, Madan & Sumeracki (2018): abstração só fixa ancorada em caso | **todo** conceito central tem um exemplo, de preferência do cotidiano do aluno ou do Brasil/MS/PR |
-| **Codificação dupla** | Paivio; Mayer (princípio multimídia): palavra + imagem rende mais que palavra sozinha | figura ou tabela onde a informação **é** espacial ou comparativa — nunca enfeite |
-| **Exemplo resolvido** | Sweller & Cooper (1985): para iniciante, estudar a resolução ensina mais que resolver do zero | nas exatas e em Química, um exemplo resolvido passo a passo antes da questão |
-| **Prática de recuperação** | Roediger & Karpicke (2006); Dunlosky: uma das duas técnicas de **alta** utilidade | a **questão** com resolução escondida e o fecho **Para revisar** |
-| **Erros previsíveis** | quem prestou a prova sabe onde ela pega — é o posicionamento do produto | a caixa **Pegadinha** |
+| **Sinalização e segmentação** | Mayer: marcar a estrutura poupa o esforço de descobri-la | um grafo por conceito; rótulos repetidos (`Fundamento:`, `Solução proposta:`) que o olho reconhece de uma seção para a outra |
+| **Elaboração** | Dunlosky et al. (2013): saber *por que* algo é assim ajuda a reter | o item `Fundamento:` (ou `Causa:`), com o porquê **que está na fonte** |
+| **Exemplo concreto** | Weinstein, Madan & Sumeracki (2018): a abstração fixa ancorada em caso | o item `Ex:`, quando a fonte traz exemplo |
+| **Codificação dupla** | Paivio; Mayer (multimídia) | figura ou tabela onde a informação é espacial ou comparativa |
+| **Exemplo resolvido** | Sweller & Cooper (1985) | nas exatas e em Química, resolução passo a passo |
+| **Prática de recuperação** | Roediger & Karpicke (2006): uma das duas técnicas de **alta** utilidade | a **questão** e o fecho **Para revisar** |
+| **Erros previsíveis** | quem prestou a prova sabe onde ela pega — é o posicionamento do produto | a caixa **Pegadinhas**, com a prova que a usou |
 
-O que **não** entra, também por evidência: resumo do resumo no topo (repetir não é
-recuperar), lista de "curiosidades" (detalhe sedutor, Harp & Mayer 1998 — atrai a
-atenção para o que não cai) e escala tipográfica nos títulos (decisão 12).
+O que **não** entra: prosa explicativa longa, pergunta retórica, segunda pessoa
+("você", "pense"), metáfora coloquial, curiosidade, e qualquer frase que não se
+sustente numa fonte (§6).
 
-## 3. O esqueleto comum
+## 3. O estilo do autor, medido
 
-Vale para todas as matérias. A §4 diz o que muda **dentro** do corpo de cada uma;
-a ordem abaixo não muda.
+Medido nos 3.055 itens de lista do acervo (07/10/2026). Isto é o que o rascunho
+tem de reproduzir:
 
-| # | parte | como se grava (blocos que o editor já tem) | regra |
+| traço | no acervo | regra |
+|---|---|---|
+| **Lista como forma principal** | 3.055 itens; média de **9,4 palavras** por item | tudo que não é definição de grafo é item de lista |
+| **Item termina em `;`** | 2 em cada 3 itens | `;` em todo item, e `.` só no último de uma lista |
+| **Grafo corrido** | 416 dos 496 títulos | `<h2 data-corrido="sim">Termo:</h2>` + a definição numa linha, em minúscula, terminada em `;` |
+| **Rótulo em negrito abrindo o item** | `Ex:` é o mais usado; `Função:`, `Ocorrência:`, `Composto por:`, `Conceito central:` | o porquê, o exemplo e a consequência entram como rótulos, não como parágrafo |
+| **Sub-itens aninhados** | o desdobramento vai um nível abaixo | detalhe de um item é sub-item dele, nunca frase longa |
+| **Tabela comparativa** | quando há um par ou uma série confundível | entra como o autor a escreveu |
+
+**Registro.** Formal e impessoal, na terceira pessoa. Nada de "você", "pense",
+"repare", "não inverta". Nada de imagem que não seja da fonte ("com outra
+roupa", "a seta"). Frase nominal é bem-vinda: "Solução proposta: sujeição
+moral;".
+
+**Terminologia.** O termo é **o da fonte, exatamente**: o nome que o caderno, o
+edital ou a prova usam ("sujeição moral", "progressão geométrica", "Teoria
+Reformista ou Antimalthusiana"). Entre dois nomes, o técnico. Nunca sinônimo
+informal, nunca paráfrase do nome de um conceito. Quando a fonte e o edital
+usam nomes diferentes, os dois aparecem na primeira menção.
+
+**Correção de forma.** Concordância e acentuação podem ser normalizadas
+("acreditam" → "acredita" com sujeito singular). Isso é forma, não conteúdo, e
+cada caso é listado no PR. Conteúdo do caderno não se corrige (regra 9c).
+
+**Rótulos de uso comum**, para o mesmo papel levar sempre o mesmo nome:
+
+| rótulo | papel |
+|---|---|
+| `Fundamento:` / `Causa:` | o porquê |
+| `Consequência:` | o efeito |
+| `Contexto:` | quando, onde, quem |
+| `Ex:` | o exemplo |
+| `Solução proposta:` | a resposta de uma teoria |
+| `Função:` / `Ocorrência:` / `Composto por:` | Biologia e Química, como o acervo já usa |
+| `Obs:` | ressalva |
+
+## 4. O esqueleto comum
+
+Vale para todas as matérias. A §5 diz o que muda dentro do corpo de cada uma.
+
+| # | parte | como se grava | regra |
 |---|---|---|---|
-| 0 | **Definição** | campo `definicao` do resumo | uma frase, ≤ 160 caracteres, diz o que é **e** para que serve. É o que aparece no cartão da lista e no balão do mapa |
-| 1 | **Abertura** | 1 a 3 `<p>` comuns, antes do primeiro grafo | situa: de onde o assunto vem, que problema resolve, ou a pergunta que o resumo vai responder. Sem título |
-| 2 | **Corpo** | grafos `h2` (3 a 6), `h3`/`h4` dentro deles; `Termo:` corrido (decisão 12c) para definição | cada `h2` é uma pergunta respondida. Dentro dela: **ideia → porquê → exemplo**, e só então fórmula, lista ou detalhe |
-| 3 | **Exemplo resolvido** | `h2` "Exemplo resolvido" (exatas, Química; opcional nas outras) | passos numerados, cada passo dizendo **o que** se faz e **por quê** |
-| 4 | **Pegadinha** | caixa (tabela de uma célula, decisão 8c), começando por `<strong>Pegadinha:</strong>` | 1 a 3 erros que a prova explora. Se o autor não souber de nenhum, a caixa sai — não se inventa pegadinha |
-| 5 | **Questão** | `<aside class="questao">` com `<div class="resolucao">` (decisões 9b e 22), gabarito marcado | ao menos **uma**. Prova real (vestibular ou escola) com a origem escrita; questão criada leva o rótulo "Exercício" e nunca nome de vestibular |
-| 6 | **Para revisar** | `h2` "Para revisar" seguido de 4 a 8 `h3` corridos `Termo:` → uma linha | o fecho de revisão. Cada par é um cartão: a frente (`h3`) cabe numa pergunta, o verso numa frase. É o insumo da proposta A de `pedagogia-da-pagina-do-resumo.md` |
-| 7 | **Ligações** | `[[wikilinks]]` **no meio do texto**; "Está dentro de" (`pai_id`); edital; evento | ao menos **dois** `[[…]]`, onde o conceito aparece — nunca numa lista solta no fim. Pai preenchido sempre que houver um assunto que contenha este |
+| 0 | **Definição** | campo `definicao` | uma frase formal, ≤ 160 caracteres: o que é e o que abrange |
+| 1 | **Abertura** | um `<p>` com a definição + uma lista curta que organiza o assunto | o organizador prévio, no formato do autor. Sem título |
+| 2 | **Corpo** | um grafo corrido `h2` por conceito; `h3`/`h4` dentro deles; itens rotulados (§3) | cada conceito traz, quando a fonte tiver: definição, `Fundamento:`, `Ex:` e a consequência ou a solução |
+| 3 | **Exemplo resolvido** | itens numerados (exatas, Química) | cada passo diz o que se faz e com que fórmula |
+| 4 | **Tabela comparativa** | tabela, quando há série ou par confundível | a do caderno, se houver, entra como está |
+| 5 | **Pegadinhas** | caixa (tabela de uma célula, decisão 8c), `<strong>Pegadinhas:</strong>` | só de prova real, com a origem entre parênteses. Sem prova, a caixa sai |
+| 6 | **Questão** | `<aside class="questao">` com `<div class="resolucao">` e gabarito marcado — **sem título** | prova real com a origem no enunciado; resolução item a item com `Correta.` / `Incorreta.` |
+| 7 | **Para revisar** | `h2` "Para revisar" + `h3` corridos `Termo:` → uma linha | 4 a 8 pares, cada um respondível de memória. É o insumo dos cartões de revisão |
+| 8 | **Ligações** | `[[wikilinks]]` no meio do texto; pai; edital; evento | ao menos dois `[[…]]`, onde o conceito aparece |
 
-**Tamanho: 800 a 1.500 palavras.** Abaixo disso, quase sempre falta o porquê ou o
-exemplo. Acima, o resumo vira dois: o assunto-pai fica com a abertura e o mapa
-do todo, e cada parte vira filho por `pai_id` — é o que dá nó de verdade ao mapa
-(decisão 9c, último parágrafo).
+**Sem tamanho mínimo nem máximo.** O resumo tem o que as fontes e o edital pedem
+e nada além. Se ficar grande demais para um assunto só, divide-se em filhos por
+`pai_id`.
 
-Duas regras de forma que valem em todo o corpo:
+**A questão não tem título** porque todo `h2` vira seção numerada e nó do mapa
+(decisão 12), e "Questão" não é um assunto. "Para revisar" mantém o `h2`: é ele
+que delimita os pares que viram cartão.
 
-- **Lista é para itens paralelos, não para raciocínio.** Causa → consequência,
-  argumento e explicação vão em parágrafo. A lista de três níveis com uma frase
-  partida em cada nível é o defeito mais comum do acervo de hoje.
-- **Negrito marca o termo que vai para o "Para revisar"**, e só ele. Se tudo é
-  negrito (como em *Colonização na América*), nada é.
+## 5. As variantes por matéria
 
-## 4. As variantes por matéria
+O esqueleto é o mesmo; o que muda é **a ordem em que o corpo constrói o
+conceito**. Os rótulos de cada variante são sugestões dentro dos da §3.
 
-O esqueleto é o mesmo; o que muda é a **estrutura da informação** dentro do
-corpo (parte 2) — a ordem em que aquela disciplina constrói conhecimento. Os
-`h2` sugeridos abaixo são a espinha, não títulos obrigatórios: o nome de cada
-grafo continua sendo o do assunto.
+### Física e Matemática — conceito → fórmula → aplicação
 
-### Física e Matemática — conceito → intuição → fórmula → aplicação
+1. Grafo corrido com a definição da grandeza ou do objeto, e figura.
+2. Fórmula em bloco, com cada símbolo nomeado e com unidade, em sub-itens
+   (`v: velocidade (m/s);`).
+3. `Fundamento:` de onde ela sai, quando couber em até três passos.
+4. Gráfico, quando a relação tiver um.
+5. Exemplo resolvido.
 
-1. **O fenômeno ou o objeto**, em palavras e com figura (o que acontece, o que
-   se mede).
-2. **A intuição**: um caso extremo ou cotidiano que antecipa a relação ("se o
-   raio dobra, a volta dobra").
-3. **A fórmula**, em bloco, com **cada símbolo nomeado e com unidade** logo
-   abaixo, numa tabela de duas colunas (símbolo | significado e unidade).
-4. **De onde ela sai**, quando a dedução couber em três passos; se não couber,
-   a frase "isto se deduz de [[…]]".
-5. **Gráfico** quando a relação tiver um (MU, MUV, funções).
-6. Exemplo resolvido obrigatório. Pegadinhas típicas: unidade, sinal, escalar ×
-   vetorial, grau × radiano.
-
-Matemática troca 3–4 por **definição → propriedades → procedimento**, e acrescenta
-**casos especiais** (zero, negativo, conjunto vazio).
+Matemática troca 2–3 por definição → propriedades → procedimento, e acrescenta
+casos especiais.
 
 ### Química — macro → micro → símbolo
 
-O triângulo de Johnstone: a química se entende em três níveis, e o aluno trava
-quando o texto pula direto para o terceiro.
-
-1. **Macroscópico**: o que se vê (o sal dissolve, o ferro enferruja).
-2. **Submicroscópico**: o que acontece com partículas e ligações — figura.
-3. **Simbólico**: a equação (`\ce{...}`, decisão 8) ou a fórmula.
+1. O fenômeno observável.
+2. A explicação no nível das partículas, com figura.
+3. A representação simbólica (`\ce{...}`, decisão 8).
 4. Cálculo, quando houver, com exemplo resolvido.
 
 ### Biologia — estrutura → função → processo → relação
 
-1. **Estrutura**: do que é feito e onde fica — **figura obrigatória**.
-2. **Função**: para que serve, e o que acontece quando falha (a doença ou a
-   anomalia é o melhor exemplo da função).
-3. **Processo**: as etapas **em ordem**, um grafo por etapa quando forem
-   cobradas separadamente (o modelo é *Ciclo celular*).
-4. **Relação**: com que outro sistema ou nível se liga — é onde nascem os
-   `[[wikilinks]]`.
-5. **Tabela comparativa** quando o assunto tem um par confundível (mitose ×
-   meiose, xilema × floema).
+1. Estrutura (`Composto por:`) — figura obrigatória.
+2. `Função:` e `Ocorrência:`.
+3. Processo em etapas, um grafo por etapa cobrada (modelo: *Ciclo celular*).
+4. Relação com outro sistema — onde nascem os `[[…]]`.
+5. Tabela comparativa para pares confundíveis (mitose × meiose).
 
 ### História — contexto → causas → processo → consequências
 
-1. **Contexto**: onde, quando e quem — com os anos escritos, que é o que
-   alimenta a linha do tempo (decisão 9d).
-2. **Causas**, separadas em estruturais e imediatas.
-3. **Processo**: a sequência de eventos, com data.
-4. **Consequências** e **permanências** (o que ficou até hoje).
-5. **Tabela comparativa** quando o assunto é um contraste (o modelo é a tabela de
-   *Colonização na América*).
+1. `Contexto:` com os anos escritos (alimenta a linha do tempo, decisão 9d).
+2. `Causas:` estruturais e imediatas.
+3. Processo em ordem, com data.
+4. `Consequências:` e permanências.
+5. Tabela comparativa quando o assunto é um contraste (modelo: *Colonização na
+   América*).
 
-Cada evento com ano vira, além do texto, uma linha em `/admin/eventos` ligada ao
-resumo.
+### Geografia — conceito → fatores → distribuição → impactos
 
-### Geografia — conceito → fatores → distribuição → impacto
+1. Grafo corrido com o conceito.
+2. `Fatores:` / `Causa:`.
+3. Distribuição espacial, com mapa ou figura quando houver.
+4. `Impactos:`.
+5. O caso brasileiro ou regional (MS, PR) **quando a fonte trouxer** — a prova
+   adora, mas o rascunho não o inventa.
 
-1. **Conceito**.
-2. **Fatores**: o que causa ou condiciona.
-3. **Distribuição espacial**: onde acontece — mapa ou figura sempre que possível.
-4. **Impactos** (sociais, econômicos, ambientais).
-5. **O caso brasileiro**, e de MS ou PR quando existir: os vestibulares são da
-   UFMS e da UEM, e o exemplo regional é o que a prova adora.
+### Filosofia e Sociologia — pensador → conceito → exemplo → contraste
 
-### Filosofia e Sociologia — problema → pensador → conceito → exemplo → contraste
+1. O pensador, com datas, em grafo corrido.
+2. `Conceito central:`, com o termo técnico.
+3. `Analogia:` ou `Ex:` **da fonte** (modelo: *Existencialismo*).
+4. Contraste com outro pensador ou corrente, em `[[…]]`.
 
-1. **O problema** que o pensador tentava resolver, no contexto dele.
-2. **O pensador**, com datas (em `Termo:` corrido, como já se faz).
-3. **O conceito central**, com o nome técnico em negrito.
-4. **Analogia ou exemplo do cotidiano do aluno** — obrigatório (o modelo é a beira
-   do precipício de *Existencialismo*).
-5. **Contraste** com outro pensador ou corrente, que é como a prova cobra —
-   linkado em `[[…]]`.
+### Língua Portuguesa — regra → exemplo → exceção
 
-### Língua Portuguesa — regra → exemplo → exceção → como a prova cobra
+1. A regra, em grafo corrido.
+2. Exemplos em tabela de duas colunas (correto | incorreto).
+3. Exceções que a prova usa.
 
-1. **A regra** em uma frase.
-2. **Exemplos certo × errado**, numa tabela de duas colunas.
-3. **Exceções** que a prova usa.
-4. **Como cai**: o tipo de questão (reescrita, identificação, interpretação).
+### Literatura e Arte — contexto → características → autores e obras
 
-### Literatura e Arte — contexto → características → autores e obras → leitura
+1. `Contexto:` — `[[…]]` para o resumo de História.
+2. `Características:`.
+3. Autores e obras; as obras obrigatórias do edital em destaque.
+4. Contraste com a escola anterior.
 
-1. **Contexto histórico** — `[[…]]` para o resumo de História correspondente.
-2. **Características** da escola ou do movimento.
-3. **Autores e obras**, e as **obras obrigatórias** do edital em destaque.
-4. **Um trecho ou uma obra lida de perto** (texto citado ou figura), mostrando
-   onde cada característica aparece.
-5. **Contraste** com a escola anterior.
+## 6. Como Claude rascunha
 
-## 5. Como Claude rascunha
+A regra 9c — **transportar não é reescrever** — continua valendo inteira para a
+migração de texto existente. O rascunho é texto novo, que só vira acervo
+quando o autor aprova o PR; a partir daí, quem responde por ele é o autor.
 
-A regra 9c do `CONTEXTO.md` — **transportar não é reescrever** — continua valendo
-inteira para a **migração** de texto que já existe. O rascunho é outra coisa, e
-existe por decisão explícita do autor em 07/10/2026: texto novo, escrito por
-Claude dentro deste modelo, que só vira acervo depois que o autor lê e aprova. A
-partir da aprovação, quem responde pelo texto é o autor.
+**Fontes, em ordem de autoridade — e só elas:**
 
-**Fontes, em ordem de autoridade:**
+1. **O caderno do autor** sobre o assunto — base e terminologia;
+2. **o edital** — escopo;
+3. **questões de prova reais** (vestibulares e provas da escola) — questão,
+   pegadinhas e o que a banca considera correto.
 
-1. **O caderno do autor** sobre o assunto (documento-mestre da matéria ou prova
-   da escola) — é a base, e o que ele afirma prevalece.
-2. **O edital** — diz o escopo: o que tem de estar e até onde ir.
-3. **Questões de prova reais** (vestibulares e as 59 provas da escola) — para a
-   parte 5 e para as pegadinhas.
-4. **Conhecimento consolidado de livro didático** — só para explicação, exemplo e
-   analogia, nunca para dado.
+**Fora das fontes, nada entra no texto.** O que Claude achar que falta —
+fundamento, exemplo, caso brasileiro — vai como **sugestão na descrição do PR**,
+nunca no corpo. A única exceção é a ilustração matemática de uma definição que
+a fonte já deu (ex.: os primeiros termos de uma progressão geométrica), marcada
+no PR como acréscimo.
 
 **O que Claude não faz:**
 
-- **Não inventa dado.** Ano, número, nome, citação e porcentagem só entram se
-  estiverem numa das fontes 1–3. Na dúvida, sai.
-- **Não atribui questão.** Questão criada é "Exercício"; nome de vestibular só
-  com a prova à mão.
-- **Não contradiz o caderno em silêncio.** Se o caderno parecer errado, o
-  rascunho segue o caderno e o PR aponta o trecho (mesmo princípio de 9c:
-  mostrar e perguntar).
-- **Não inventa pegadinha.** Sem prova real que a explore, a caixa sai.
+- não inventa dado, nome, data, exemplo ou analogia;
+- não atribui questão: questão criada é "Exercício", nunca leva nome de
+  vestibular;
+- não contradiz o caderno em silêncio: segue o caderno e aponta no PR;
+- não inventa pegadinha: sem prova que a explore, a caixa sai.
 
-**O que Claude marca para o autor conferir**, na descrição do PR, e não no texto:
+**O PR lista**, para o autor conferir: cada acréscimo além do caderno, com a
+fonte; cada normalização de forma; cada mudança de ordem; e o que ficou de
+fora por falta de fonte.
 
-- toda analogia e todo exemplo criados (não vieram do caderno);
-- todo trecho que vai além do caderno, com a fonte de onde saiu;
-- toda divergência entre caderno e edital.
+**Como o rascunho chega:** por migration em PR (decisão 9c). **Aprovar o PR é
+publicar** — não há estado de rascunho no banco.
 
-**Como o rascunho chega.** Por enquanto, pelo caminho que já existe: uma
-migration em PR (decisão 9c), em que o diff mostra exatamente que texto entra.
-**Aprovar o PR é publicar** — não há estado de rascunho no banco. Isso serve
-para começar; se o ritmo crescer, o estado de rascunho é a primeira mudança de
-código a propor (§8).
+## 7. Lista de conferência do autor
 
-## 6. Lista de conferência do autor
-
-Antes de aprovar um resumo, rascunhado ou escrito à mão:
-
-- [ ] A **definição** diz o que é e para que serve, em uma frase.
-- [ ] A **abertura** situa o assunto sem título.
-- [ ] Cada **`h2`** responde uma pergunta, e há de 3 a 6.
-- [ ] Todo conceito central tem **porquê** e **exemplo**.
-- [ ] A estrutura do corpo segue a **variante da matéria** (§4).
-- [ ] Fórmula: cada símbolo **nomeado, com unidade**.
+- [ ] Linguagem formal e impessoal do começo ao fim.
+- [ ] Todo termo como está na fonte; nenhum sinônimo informal.
+- [ ] Itens curtos, terminados em `;`; detalhe como sub-item.
+- [ ] A **definição** e a **abertura** dizem o que é e organizam o assunto.
+- [ ] Cada conceito tem, quando a fonte traz: definição, `Fundamento:`, `Ex:`.
+- [ ] A estrutura segue a **variante da matéria** (§5).
+- [ ] Fórmula: cada símbolo nomeado, com unidade.
 - [ ] Figura ou tabela onde a informação é espacial ou comparativa.
 - [ ] **Exemplo resolvido** (exatas e Química).
-- [ ] **Pegadinha** só se for real.
+- [ ] **Pegadinhas** só de prova real, com a origem.
 - [ ] Ao menos **uma questão**, com origem e gabarito marcado.
-- [ ] **Para revisar** com 4 a 8 pares, cada um respondível de memória.
-- [ ] Ao menos **dois `[[wikilinks]]`** no texto, todos resolvendo (sem `<span>`
-      de link quebrado na página).
-- [ ] **Pai** preenchido, se houver; tópico do **edital** ligado, se houver;
-      **evento** cadastrado, se houver ano.
+- [ ] **Para revisar** com 4 a 8 pares respondíveis de memória.
+- [ ] Ao menos **dois `[[wikilinks]]`** que resolvem.
+- [ ] Pai, edital e evento preenchidos quando houver.
 - [ ] Nada que eu não sustentaria na frente de um aluno.
-- [ ] Entre 800 e 1.500 palavras, ou dividido em filhos.
 
-## 7. Exemplo aplicado: *Movimento circular* contra o modelo
-
-O resumo que mais se aproxima do modelo hoje, lido parte por parte:
+## 8. Exemplo aplicado: *Movimento circular* contra o modelo
 
 | parte | hoje | falta |
 |---|---|---|
-| 0 Definição | "Rotação de um corpo ao longo de uma trajetória em forma de circunferência." | dizer para que serve (descrever polias, engrenagens, satélites) |
-| 1 Abertura | repete a definição | uma situação: por que a roda de trás da bicicleta gira mais rápido que o pedal |
-| 2 Corpo | grandezas angulares com figura e regra de três; fórmulas | o **porquê** antes de cada fórmula; tabela símbolo × unidade; um exemplo concreto por grandeza |
-| 3 Exemplo resolvido | ✔ existe | numerar os passos e dizer o porquê de cada um |
-| 4 Pegadinha | — | grau × radiano; velocidade angular igual × linear diferente nas polias ligadas pelo eixo |
-| 5 Questão | — | uma do PAS UEM ou PASSE sobre transmissão de movimento |
-| 6 Para revisar | — | radiano, período, frequência, velocidade angular, aceleração centrípeta |
-| 7 Ligações | pai = *Forças da Mecânica*; nenhum `[[…]]` | `[[Dinâmica do movimento circular]]` onde aparece a aceleração centrípeta, e `[[Cinemática]]` na abertura. O pai merece ser conferido pelo autor: o conteúdo é cinemático, e *Cinemática* existe sob o mesmo avô (*Mecânica*) |
+| 0 Definição | "Rotação de um corpo ao longo de uma trajetória em forma de circunferência." | ✔ |
+| 1 Abertura | a definição | a lista que organiza: grandezas angulares, MCU, transmissão de movimento |
+| 2 Corpo | grandezas com figura e regra de três; fórmulas | cada símbolo com unidade em sub-item; `Fundamento:` antes das fórmulas que se deduzem |
+| 3 Exemplo resolvido | ✔ existe | numerar os passos |
+| 5 Pegadinhas | — | só se houver prova que as explore |
+| 6 Questão | — | uma do PAS UEM ou do PASSE |
+| 7 Para revisar | — | radiano, período, frequência, velocidade angular, aceleração centrípeta |
+| 8 Ligações | pai = *Forças da Mecânica*; nenhum `[[…]]` | `[[Dinâmica do movimento circular]]` na aceleração centrípeta. O pai merece conferência: o conteúdo é cinemático, e *Cinemática* existe sob o mesmo avô (*Mecânica*) |
 
-O texto que já existe fica. O trabalho é **acrescentar** as partes 1, 4, 5 e 6 e
-o porquê dentro da 2 — o que custa muito menos que escrever do zero.
+## 9. O que este documento não decide
 
-## 8. O que este documento não decide (e as mudanças de código a propor)
+Propostas de código separadas, consultadas antes:
 
-Fora do escopo desta norma, e cada uma vira proposta separada, consultada antes:
+1. **Molde no editor** com as partes já postas e os rótulos da variante.
+2. **Estado de rascunho** no banco, para a revisão sair do PR.
+3. **Cartões a partir de "Para revisar"** (proposta A de
+   `pedagogia-da-pagina-do-resumo.md`).
+4. **Medidor de conformidade** em `/admin/editor`.
 
-1. **Molde no editor**: um botão "Novo resumo pelo modelo" que abre com as partes
-   1–7 já postas, com o texto-guia da variante da matéria.
-2. **Estado de rascunho**: o resumo existe no banco sem aparecer para o aluno
-   até o autor aprovar — tira a revisão do PR e a põe no próprio editor.
-3. **Cartões a partir de "Para revisar"**: a proposta A de
-   `pedagogia-da-pagina-do-resumo.md`, que passa a ter fonte regular e
-   conservadora (só os `h3` corridos daquela seção).
-4. **Medidor de conformidade** em `/admin/editor`: quais partes cada resumo tem,
-   para saber quanto do acervo está no modelo.
-
-E fica de fora, de propósito: **reescrever o acervo de uma vez**. A ordem de
-trabalho é o edital — primeiro os tópicos sem resumo da etapa mais próxima da
-prova, depois os resumos existentes daqueles tópicos.
+E fica de fora, de propósito: reescrever o acervo de uma vez. A ordem de
+trabalho é o edital.
