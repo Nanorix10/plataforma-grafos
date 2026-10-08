@@ -5,8 +5,9 @@
 --
 -- Lacuna conferida no banco em 08/10/2026: nenhum resumo tem "vírus" no
 -- título nem no corpo (0 de 258). Tópico de edital: PAS UEM, 2ª etapa,
--- `Caracterização dos vírus.` Só esse edital pede o assunto: processo
--- `pas-uem`.
+-- `Caracterização dos vírus.` Processo `comum`, por decisão do autor
+-- (08/10/2026): o caderno é material de prova de escola (PR1G4), cujo
+-- destino combinado é `comum` (decisão 1c).
 --
 -- **Matéria: Biologia**, pelo cabeçalho do caderno (`BIOLOGIA B`).
 --
@@ -72,7 +73,7 @@ values (
   'virus',
   'Vírus',
   'biologia',
-  'pas-uem',
+  'comum',
   'Partículas acelulares e parasitas intracelulares obrigatórios: estrutura, genômica viral, multiplicação e viroses.',
   '<p>partículas acelulares, parasitas intracelulares obrigatórios, que podem cristalizar e têm como material genético DNA ou RNA;</p>
 <ul><li><p><strong>Estrutura:</strong> capsídeo, material genético e, em alguns, envelope;</p></li>
