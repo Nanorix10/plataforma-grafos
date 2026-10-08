@@ -24,7 +24,7 @@ const RAIZ = resolve(process.cwd())
 const lib = (f: string) => import(pathToFileURL(join(RAIZ, 'src/lib', f)).href)
 
 const { renderizarWikilinks, extrairLinks } = await lib('wikilinks.ts')
-const { renderizarQuestoes, prepararQuestoes } = await lib('questoes.ts')
+const { renderizarQuestoes } = await lib('questoes.ts')
 const { legendarFiguras } = await lib('figuras.ts')
 const { marcarFormulaSolta } = await lib('formula-solta.ts')
 const { ancorarTitulos, extrairTitulos } = await lib('titulos.ts')
@@ -38,12 +38,12 @@ const MAT = arg('materia')!
 const materia = (MATERIAS as any)[MAT]
 if (!materia) throw new Error('matéria desconhecida: ' + MAT)
 
-const html = prepararQuestoes(
-  renderizarMatematica(
-    renderizarWikilinks(
-      renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(corpo)))),
-      links,
-    ),
+// A mesma ordem de page.tsx. renderizarQuestoes já chama prepararQuestoes;
+// chamar de novo duplicava o data-tipo da <aside>.
+const html = renderizarMatematica(
+  renderizarWikilinks(
+    renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(corpo)))),
+    links,
   ),
 )
 
