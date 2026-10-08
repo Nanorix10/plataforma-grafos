@@ -131,6 +131,9 @@ update edital_topicos e
  where ((e.processo_slug = 'pas-uem' and e.etapa = 3
          and e.texto like 'Funções exponenciais: propriedades, domínio, imagem%')
      or (e.processo_slug = 'passe' and e.etapa = 2
-         and e.texto like 'Função exponencial: estudo do crescimento%'))
+         and (e.texto like 'Função exponencial: estudo do crescimento%'
+              -- decisão do autor (08/10): a ponte g(x) = q^(x-1) e o link para
+              -- [[Progressões]] completam o tópico junto com aquele resumo
+              or e.texto like 'Função exponencial e Sequências numéricas%')))
    and e.resumo_id is null
    and r.slug = 'funcao-exponencial';
