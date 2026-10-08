@@ -31,6 +31,11 @@ const { ancorarTitulos, extrairTitulos } = await lib('titulos.ts')
 const { montarFicha } = await lib('ficha-resumo.ts')
 const { MATERIAS } = await lib('materias.ts')
 const { renderizarMatematica } = await lib('matematica.ts')
+// Sob o tsx, o `import 'katex/dist/contrib/mhchem.mjs'` de lib/matematica.ts
+// registra o \ce numa instância do KaTeX diferente da que ela usa, e toda
+// fórmula de Química sairia como erro. No Next há uma instância só; aqui o
+// build CommonJS do mhchem se registra na mesma que o tsx carregou.
+await import(pathToFileURL(join(RAIZ, 'node_modules/katex/dist/contrib/mhchem.js')).href)
 
 const corpo = readFileSync(arg('corpo')!, 'utf8')
 const links: Record<string, string> = JSON.parse(readFileSync(arg('links')!, 'utf8'))
