@@ -26,6 +26,22 @@
 --    questão 12 (gabarito 11, item 16 incorreto), em
 --    `Documents/UEM-Provas/pdfs/pas15/E2G1CG.pdf`, p. 10, para a pegadinha.
 --
+-- ## Decisões do autor (08/10/2026)
+--
+-- - *Aedes aegypti* sai de "Reservatório natural", que fica só com a
+--   definição, e vira exemplo do item novo "Vetor: organismo que transmite o
+--   agente etiológico", como a PAS-UEM 2015, etapa 2, questão 9 o chama
+--   ("vetor viral"), em `pas15/E2G1CG.pdf`.
+-- - Correção: DNA viral "fita dupla hélice" → "em geral, fita dupla hélice"
+--   (há vírus de DNA de fita simples, ex. parvovírus).
+-- - Correção: formatos do capsídeo "helicoidal, circular, icosaédrico" →
+--   "helicoidal, icosaédrico, complexo".
+-- - Correção: penetração "como por meio das proteínas de canal" → "como
+--   endocitose ou fusão do envelope com a membrana plasmática".
+-- - As duas figuras ficam. A dos ciclos teve recortada a legenda impressa do
+--   livro didático ("Figura 16.12 …"); o desenho está inteiro. A da
+--   estrutura tem origem provavelmente externa.
+--
 -- ## O que difere do caderno
 --
 -- - A definição de "Bacteriófago" e os itens "Composto por", "Ciclo lítico" e
@@ -65,7 +81,7 @@ values (
 <li><p><strong>Viroses:</strong> doenças causadas por vírus;</p></li>
 <li><p><strong>Bacteriófago:</strong> estrutura e ciclos.</p></li></ul>
 <h2 data-corrido="sim">Estrutura:</h2>
-<p>formato diferenciado: helicoidal, circular, icosaédrico;</p>
+<p>formato diferenciado: helicoidal, icosaédrico, complexo;</p>
 <ul><li><p><strong>Capsídeo:</strong> envoltório do material genético composto por capsômeros, que são proteínas (ver [[Macromoléculas]]);</p></li>
 <li><p><strong>Material genético:</strong> DNA ou RNA;</p></li>
 <li><p><strong>Nucleocapsídeo:</strong> material genético junto ao capsídeo;</p></li>
@@ -73,7 +89,7 @@ values (
 <h2 data-corrido="sim">Genômica viral:</h2>
 <p>material genético viral: DNA ou RNA;</p>
 <ul><li><p><strong>DNA:</strong></p>
-<ul><li><p><strong>Composto por:</strong> fita dupla hélice;</p></li>
+<ul><li><p><strong>Composto por:</strong> em geral, fita dupla hélice;</p></li>
 <li><p><strong>No hospedeiro:</strong> precisa virar RNA para começar a produzir proteínas próprias;</p></li></ul></li>
 <li><p><strong>RNA<sup>+</sup>:</strong></p>
 <ul><li><p><strong>Composto por:</strong> fita simples com códon de início AUG;</p></li>
@@ -89,7 +105,7 @@ values (
 <h3 data-corrido="sim">Fixação:</h3>
 <p>o vírus se fixa na membrana plasmática do hospedeiro;</p>
 <h3 data-corrido="sim">Penetração:</h3>
-<p>o vírus penetra o hospedeiro; pode ocorrer de várias formas diferentes, como por meio das proteínas de canal;</p>
+<p>o vírus penetra o hospedeiro; pode ocorrer de várias formas, como endocitose ou fusão do envelope com a membrana plasmática;</p>
 <h3 data-corrido="sim">Desnudamento:</h3>
 <p>o capsídeo libera o material genético no interior da célula;</p>
 <h3 data-corrido="sim">Multiplicação viral:</h3>
@@ -104,7 +120,8 @@ values (
 <p>doenças causadas por vírus;</p>
 <ul><li><p><strong>Agente etiológico:</strong> causador da doença;</p>
 <ul><li><p><strong>Ex:</strong> vírus da dengue;</p></li></ul></li>
-<li><p><strong>Reservatório natural:</strong> portador natural do vírus que não fica doente;</p>
+<li><p><strong>Reservatório natural:</strong> portador natural do vírus que não fica doente;</p></li>
+<li><p><strong>Vetor:</strong> organismo que transmite o agente etiológico;</p>
 <ul><li><p><strong>Ex:</strong> <em>Aedes aegypti</em>;</p></li></ul></li>
 <li><p><strong>Profilaxia:</strong> prevenção;</p></li>
 <li><p><strong>Arbovírus:</strong> vírus portados por artrópodes (insetos, aracnídeos, crustáceos…);</p></li>
