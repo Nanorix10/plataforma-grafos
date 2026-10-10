@@ -33,9 +33,19 @@
 --   pelo Toyotismo.
 -- - Tabela comparativa montada só com itens do caderno (reorganização, não
 --   conteúdo novo).
--- - "fordismo no fim do século XIX" (PR1G2) ficou de fora: o PR pede a decisão
---   do autor. O "fim do século XIX" ficou só no Taylorismo, que o caderno
---   também data no XIX.
+--
+-- ## Correções de conteúdo, decididas pelo autor em 10/10/2026
+--
+-- 1. Taylorismo: o caderno dizia "Estabelece o uso da linha de montagem."
+--    (PR2G1 §00221). Item retirado: a linha de montagem com esteira é do
+--    Fordismo. Na tabela, a linha "Linha de montagem" virou "Organização da
+--    produção", e a célula do Taylorismo diz "Divisão da produção em etapas".
+-- 2. Toyotismo: o caderno dizia "Funcionários especialistas por setor;"
+--    (PR2G1 §00213). Trocado por "Funcionários polivalentes (atuam em várias
+--    etapas);", e a tabela ganhou a linha "Funcionários".
+-- 3. Fordismo: o caderno dizia "Taylorismo e fordismo no fim do século XIX"
+--    (PR1G2 §00090). O Contexto do Fordismo data a linha de montagem de Ford
+--    em 1913–14, no início do século XX; o Taylorismo segue no fim do XIX.
 --
 -- ## Edital
 --
@@ -77,12 +87,11 @@ values (
 <li><p><strong>Fundamento:</strong> divide a produção em várias etapas, com funcionários muito especializados;</p>
 <ul><li><p>Cronometragem da produção;</p></li>
 <li><p>Bônus salariais por produção;</p></li></ul></li>
-<li><p>Estabelece o uso da <strong>linha de montagem</strong>;</p></li>
 <li><p><strong>Consequência:</strong> aumento da produtividade e da eficiência e, com isso, aumento do lucro;</p></li>
 <li><p><strong>Obs:</strong> para os críticos, esse modelo causa a <strong>alienação</strong> do funcionário (não domina todo o processo).</p></li></ul>
 <h2 data-corrido="sim">Fordismo:</h2>
 <p>o Taylorismo observado, aplicado às fábricas e melhorado para a sua realidade;</p>
-<ul><li><p><strong>Contexto:</strong> Estados Unidos, na Segunda Revolução Industrial;</p></li>
+<ul><li><p><strong>Contexto:</strong> Estados Unidos, na Segunda Revolução Industrial; linha de montagem de Ford em 1913–14, no início do século XX;</p></li>
 <li><p>Coloca uma <strong>esteira</strong> na linha de montagem;</p></li>
 <li><p>Estabelece bônus por produtividade, finais de semana e aumento de salário;</p></li>
 <li><p><strong>Grandes estoques:</strong> para atender a sociedade de consumo da época (American Way of Life);</p></li>
@@ -94,12 +103,13 @@ values (
 <li><p><strong>Just in Time:</strong> fim dos grandes estoques;</p>
 <ul><li><p><strong>Fundamento:</strong> evitar crises de superprodução e abrir a possibilidade de customização;</p></li>
 <li><p><strong>Ex:</strong> carros sob demanda;</p></li></ul></li>
-<li><p>Funcionários especialistas por setor;</p></li>
+<li><p>Funcionários polivalentes (atuam em várias etapas);</p></li>
 <li><p>Robotização e automação.</p></li></ul>
 <h2>Comparação entre os modelos</h2>
 <table><tbody><tr><th><p></p></th><th><p><strong>Taylorismo</strong></p></th><th><p><strong>Fordismo</strong></p></th><th><p><strong>Toyotismo</strong></p></th></tr>
 <tr><td><p>Objetivo</p></td><td><p>Produtividade e eficiência</p></td><td><p>Produtividade</p></td><td><p>Qualidade</p></td></tr>
-<tr><td><p>Linha de montagem</p></td><td><p>Estabelece o uso</p></td><td><p>Coloca a esteira</p></td><td><p>Robotização e automação</p></td></tr>
+<tr><td><p>Organização da produção</p></td><td><p>Divisão da produção em etapas</p></td><td><p>Esteira na linha de montagem</p></td><td><p>Robotização e automação</p></td></tr>
+<tr><td><p>Funcionários</p></td><td><p>Muito especializados</p></td><td><p>—</p></td><td><p>Polivalentes (atuam em várias etapas)</p></td></tr>
 <tr><td><p>Estoques</p></td><td><p>—</p></td><td><p>Grandes estoques</p></td><td><p>Fim dos grandes estoques (Just in Time)</p></td></tr>
 <tr><td><p>Produto</p></td><td><p>—</p></td><td><p>Padronizado, sem customização</p></td><td><p>Sob demanda, com customização</p></td></tr></tbody></table>
 <table><tbody><tr><td><p><strong>Pegadinhas:</strong></p>
