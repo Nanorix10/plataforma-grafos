@@ -14,6 +14,13 @@ O corpo vai para o banco do jeito que o editor TipTap grava. Uma tag fora destes
 <li><p><strong>Parte B:</strong> o que é.</p></li></ul>
 ```
 
+**Panorama** (só Humanas, modelo §5-A): logo depois da abertura, sem título. Tabela de duas colunas sem `<th>`; o rótulo em negrito na primeira, o dado na segunda, itens separados por `;`. Os campos e a ordem são os do esqueleto do grupo; campo sem fonte sai.
+
+```html
+<table><tbody><tr><td><p><strong>Período</strong></p></td><td><p>séc. XIV (Wyclif) a 1545 (Concílio de Trento)</p></td></tr>
+<tr><td><p><strong>Agentes</strong></p></td><td><p>Wyclif; Huss; Lutero; Calvino; Henrique VIII</p></td></tr></tbody></table>
+```
+
 **Grafo corrido:** um `h2` por conceito. O `h3`/`h4` de dentro segue o mesmo formato. A definição começa em minúscula.
 
 ```html

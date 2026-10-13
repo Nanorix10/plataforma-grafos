@@ -11,6 +11,13 @@
 > ordem do autor: **termos fiéis às fontes e técnicos, linguagem formal do
 > começo ao fim, tópicos bem definidos só com o essencial, no jeito dele de
 > escrever.** A §3 mede esse jeito, e o resto do documento se curva a ele.
+>
+> **13/10/2026.** História, Filosofia, Sociologia, Literatura e Arte ganharam
+> esqueletos próprios (§5-A). A estrutura comum da §4 nasceu nas exatas: ela
+> prevê fórmula e exemplo resolvido, e não prevê período, pensador nem escola.
+> Os três esqueletos foram conferidos remontando três resumos do acervo
+> (*Reforma Protestante*, *Existencialismo* e *Romantismo*), sem acrescentar
+> nenhum fato.
 
 Quatro decisões do autor fecham o escopo:
 
@@ -103,7 +110,10 @@ cada caso é listado no PR. Conteúdo do caderno não se corrige (regra 9c).
 
 ## 4. O esqueleto comum
 
-Vale para todas as matérias. A §5 diz o que muda dentro do corpo de cada uma.
+Vale para Física, Matemática, Química, Biologia, Geografia e Língua Portuguesa;
+a §5 diz o que muda dentro do corpo de cada uma. **História, Filosofia,
+Sociologia, Literatura e Arte seguem a §5-A**, que guarda daqui a definição, a
+abertura e o fecho.
 
 | # | parte | como se grava | regra |
 |---|---|---|---|
@@ -157,15 +167,6 @@ casos especiais.
 4. Relação com outro sistema — onde nascem os `[[…]]`.
 5. Tabela comparativa para pares confundíveis (mitose × meiose).
 
-### História — contexto → causas → processo → consequências
-
-1. `Contexto:` com os anos escritos (alimenta a linha do tempo, decisão 9d).
-2. `Causas:` estruturais e imediatas.
-3. Processo em ordem, com data.
-4. `Consequências:` e permanências.
-5. Tabela comparativa quando o assunto é um contraste (modelo: *Colonização na
-   América*).
-
 ### Geografia — conceito → fatores → distribuição → impactos
 
 1. Grafo corrido com o conceito.
@@ -175,25 +176,86 @@ casos especiais.
 5. O caso brasileiro ou regional (MS, PR) **quando a fonte trouxer** — a prova
    adora, mas o rascunho não o inventa.
 
-### Filosofia e Sociologia — pensador → conceito → exemplo → contraste
-
-1. O pensador, com datas, em grafo corrido.
-2. `Conceito central:`, com o termo técnico.
-3. `Analogia:` ou `Ex:` **da fonte** (modelo: *Existencialismo*).
-4. Contraste com outro pensador ou corrente, em `[[…]]`.
-
 ### Língua Portuguesa — regra → exemplo → exceção
 
 1. A regra, em grafo corrido.
 2. Exemplos em tabela de duas colunas (correto | incorreto).
 3. Exceções que a prova usa.
 
-### Literatura e Arte — contexto → características → autores e obras
+## 5-A. Os esqueletos de Humanas
 
-1. `Contexto:` — `[[…]]` para o resumo de História.
-2. `Características:`.
-3. Autores e obras; as obras obrigatórias do edital em destaque.
-4. Contraste com a escola anterior.
+História, Filosofia, Sociologia, Literatura e Arte não constroem o conceito por
+fórmula nem por exemplo resolvido: o que a prova cobra é **quando, quem, em que
+ordem e contra o quê**. Por isso essas cinco matérias têm **três esqueletos**,
+um por grupo, e não uma variante do esqueleto comum.
+
+Os três compartilham o começo e o fim da §4: **definição** (parte 0),
+**abertura** (parte 1) e o **fecho comum** — Pegadinhas, Questão, Para revisar
+e Ligações (partes 5 a 8), com as mesmas regras. O estilo da §3 vale inteiro.
+O que muda é o miolo, e todos ganham uma peça nova logo depois da abertura: o
+**Panorama**.
+
+### O Panorama
+
+Uma tabela de duas colunas, **sem título**, entre a abertura e o primeiro
+grafo. A primeira coluna é o rótulo em negrito; a segunda, o dado, com itens
+separados por `;`. Os campos são fixos por esqueleto e vêm sempre na mesma
+ordem, para o olho achar o período ou o pensador no mesmo lugar em todo resumo
+(sinalização, §2).
+
+| regra | por quê |
+|---|---|
+| **campo sem fonte sai**, não se preenche | o Panorama é onde a lacuna fica visível; inventar uma data aqui é inventá-la no resumo inteiro |
+| só o que o corpo do resumo também diz | o Panorama resume o resumo; um dado que só existe nele não tem fundamento nem contexto |
+| sem título | um `h2` viraria seção numerada e nó do mapa (decisão 12), e "Panorama" não é um assunto — a mesma razão da questão |
+| não substitui a `.ficha` do cabeçalho | a `.ficha` (pai, "Cai em", "Quando") é derivada pelo site; o Panorama é escrito, e diz o que está **dentro** do assunto |
+
+O nome não é "Ficha" justamente por causa da `.ficha`: dois blocos com o mesmo
+nome na mesma página confundem o leitor e quem mexe no código.
+
+### História — por processo
+
+| # | parte | regra |
+|---|---|---|
+| 0–1 | definição e abertura | a lista organizadora nomeia causas, processo e consequências |
+| 2 | **Panorama** | `Período` (anos) · `Lugar` · `Agentes` · `Documentos` |
+| 3 | `Causas:` | grafo corrido; cada causa como item rotulado, estruturais antes de imediatas |
+| 4 | o processo | **um grafo por fase, em ordem**, com o ano no título quando a fonte o traz: `Período do Terror (1793–1794):`. Sem ano na fonte, o título sai sem ano e o PR registra a lacuna |
+| 5 | `Consequências:` | grafo corrido; `Permanências:` como item |
+| 6 | tabela comparativa | quando o processo tem vertentes paralelas (as reformas luterana, calvinista e anglicana) ou o assunto é um contraste (*Colonização na América*) |
+| 7 | fecho comum | |
+
+Os anos do Panorama e dos títulos alimentam a linha do tempo (decisão 9d): um
+resumo de História sem nenhum ano escrito não tem como aparecer nela.
+
+### Filosofia e Sociologia — por pensador
+
+| # | parte | regra |
+|---|---|---|
+| 0–1 | definição e abertura | a lista organizadora traz as características da corrente ou a tese de cada pensador, numa linha |
+| 2 | **Panorama** | `Pensadores` (com datas) · `Corrente` · `Obras` · `Conceitos-chave` |
+| 3 | um grafo por pensador | `Nome (nascimento–morte):` + quem foi, numa linha; dentro, os itens `Conceito central:` · `Fundamento:` · `Analogia:` ou `Ex:` **da fonte** · `Obra:` |
+| 4 | `Contraste:` | com dois pensadores ou mais no resumo, **tabela**: um pensador por coluna, critérios por linha (conceito central, resposta, o que rejeita). Com um só, o contraste é com outra corrente, em `[[…]]` |
+| 5 | fecho comum | |
+
+Pensador que a fonte só nomeia, sem conteúdo, não ganha grafo: um título vazio
+vira nó no mapa que não leva a nada.
+
+### Literatura e Arte — por escola
+
+| # | parte | regra |
+|---|---|---|
+| 0–1 | definição e abertura | a lista organizadora nomeia contexto, as fases e os gêneros |
+| 2 | **Panorama** | `Período` (Europa e Brasil, com anos) · `Marco inicial` · `Marco final` · `Autores` · `Obras` |
+| 3 | `Contexto:` | grafo corrido, com `[[…]]` para o resumo de História do mesmo período |
+| 4 | `Características:` | grafo corrido; `Linguagem:`, `Temas:` e `Forma:` como itens. A tabela de características do caderno, se houver, entra como está |
+| 5 | as fases | um grafo por geração ou fase (`1ª geração:`); sem fases na fonte, um por autor. Cada um traz os traços e as obras com o autor |
+| 6 | `Contraste com <escola anterior>:` | grafo corrido, com `[[…]]` para a escola anterior; tabela quando a fonte compara traço a traço |
+| 7 | fecho comum | |
+
+**Obra obrigatória do edital** leva *(obra do edital)* depois do título, no
+Panorama e no corpo — só quando um tópico de `edital_topicos` a cita. Enredo de
+obra é sub-item da obra, nunca grafo próprio.
 
 ## 6. Como Claude rascunha
 
@@ -236,7 +298,10 @@ publicar** — não há estado de rascunho no banco.
 - [ ] Itens curtos, terminados em `;`; detalhe como sub-item.
 - [ ] A **definição** e a **abertura** dizem o que é e organizam o assunto.
 - [ ] Cada conceito tem, quando a fonte traz: definição, `Fundamento:`, `Ex:`.
-- [ ] A estrutura segue a **variante da matéria** (§5).
+- [ ] A estrutura segue a **variante da matéria** (§5) ou, em Humanas, o
+      **esqueleto do grupo** (§5-A).
+- [ ] Humanas: **Panorama** logo após a abertura, só com campos que a fonte
+      traz e que o corpo também diz.
 - [ ] Fórmula: cada símbolo nomeado, com unidade.
 - [ ] Figura ou tabela onde a informação é espacial ou comparativa.
 - [ ] **Exemplo resolvido** (exatas e Química).
@@ -269,6 +334,9 @@ Propostas de código separadas, consultadas antes:
 3. **Cartões a partir de "Para revisar"** (proposta A de
    `pedagogia-da-pagina-do-resumo.md`).
 4. **Medidor de conformidade** em `/admin/editor`.
+5. **Classe própria para o Panorama.** Hoje ele usa a tabela comum, que divide
+   as colunas meio a meio, e a coluna de rótulos sai larga demais. Pede uma
+   marca no HTML (`data-panorama`) e uma regra em `.conteudo-resumo`.
 
 E fica de fora, de propósito: reescrever o acervo de uma vez. A ordem de
 trabalho é o edital.
