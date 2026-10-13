@@ -30,6 +30,7 @@ import type { FormulaSalva } from '@/lib/formulas'
 import Regua from './Regua'
 import { Imagem, TabelaLivre } from './imagem'
 import { TituloCorrido } from './tituloCorrido'
+import { ItemComFigura } from './itemComFigura'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
@@ -934,13 +935,24 @@ export default function EditorCorpo({
   const editor = useEditor({
     // evita erro de hidratação: o editor só monta no cliente
     immediatelyRender: false,
+    /* A barra, a faixa da tabela, a da questão e o painel da imagem leem o
+       estado do editor NA HORA DO RENDER (`isActive`, `getAttributes`). No
+       TipTap 3 o padrão deixou de redesenhar a cada transação, e só a
+       digitação redesenhava (pelo `setHtml` do autosave): clicar numa imagem,
+       numa tabela ou num grafo mudava a seleção sem a tela saber — o painel
+       não abria e o seletor seguia dizendo "Texto normal" dentro de um grafo.
+       Redesenhar por transação custa o mesmo que a digitação já custava. */
+    shouldRerenderOnTransaction: true,
     extensions: [
       /* `heading: false` desliga o título que vem no kit, e `TituloCorrido`
          entra no lugar: é a mesma extensão, só que com o atributo `corrido`.
          Mesmo arranjo (e mesmo motivo) do `table: false` mais abaixo — duas
          extensões com o mesmo nome de nó não convivem. */
-      StarterKit.configure({ heading: false }),
+      StarterKit.configure({ heading: false, listItem: false }),
       TituloCorrido,
+      // Mesmo arranjo: o item de lista do kit exige parágrafo primeiro, e
+      // este aceita figura — o autor usa imagem como item da lista.
+      ItemComFigura,
       TextStyleKit,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),

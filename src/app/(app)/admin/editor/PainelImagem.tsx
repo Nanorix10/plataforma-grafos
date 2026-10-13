@@ -481,22 +481,27 @@ export default function PainelImagem({
 
       {/* ---- texto ---- */}
       <Grupo>
+        {/* O campo que importa é o `alt`: na página do aluno ele VIRA a
+            legenda (decisão 24), e é o que o leitor de tela lê. Por isso ele
+            vem primeiro e se chama "legenda". O `<figcaption>` escrito à mão
+            continua existindo como "rótulo" — curto e centralizado — e, quando
+            preenchido, ganha do `alt` na página. */}
         <Campo rotulo="legenda">
-          <input
-            value={a.legenda ?? ''}
-            onChange={(e) => set({ legenda: e.target.value })}
-            placeholder="aparece abaixo da imagem"
-            title="Sai em texto menor e apagado sob a imagem"
-            className="campo h-[26px] w-[170px] !py-0 !px-1.5 text-[11.5px]"
-          />
-        </Campo>
-        <Campo rotulo="alt">
           <input
             value={a.alt ?? ''}
             onChange={(e) => set({ alt: e.target.value })}
-            placeholder="descrição para quem não vê"
-            title="Lido por leitor de tela e mostrado se a imagem não carregar"
-            className="campo h-[26px] w-[170px] !py-0 !px-1.5 text-[11.5px]"
+            placeholder="o que a figura mostra"
+            title="Sai sob a imagem na página do aluno e é lida pelo leitor de tela. Descreva o que a figura mostra."
+            className="campo h-[26px] w-[260px] !py-0 !px-1.5 text-[11.5px]"
+          />
+        </Campo>
+        <Campo rotulo="rótulo">
+          <input
+            value={a.legenda ?? ''}
+            onChange={(e) => set({ legenda: e.target.value })}
+            placeholder="opcional, curto"
+            title="Rótulo curto e centralizado sob a imagem. Preenchido, ele aparece NO LUGAR da legenda — que segue valendo para o leitor de tela."
+            className="campo h-[26px] w-[130px] !py-0 !px-1.5 text-[11.5px]"
           />
         </Campo>
         <Campo rotulo="link">

@@ -905,6 +905,14 @@ h3 {
   content: '';
 }
 
+/* O mesmo órfão com a figura que abre um item (`itemComFigura.ts`): a imagem
+   é bloco, então o marcador vai parar ao lado da primeira LINHA de texto do
+   item — que é a legenda, embaixo da imagem. Um disco apontando para a
+   legenda e não para a figura lê como defeito. */
+.conteudo-resumo li:has(> .figura:first-child)::marker {
+  content: '';
+}
+
 /* ---- listas ----
    A lista não é um recurso ocasional aqui: é a forma do resumo. Os originais
    são tópicos que se desdobram em subtópicos por 4 ou 5 níveis, no padrão
@@ -1618,12 +1626,26 @@ h3 {
    O filete repete a marca do lead de abertura, e ele também não é enfeite: a
    legenda fica logo abaixo da imagem, e sem nada que a prenda à figura ela se
    confunde com o parágrafo que vem depois. */
-.conteudo-resumo .figura figcaption[data-de-alt='sim'] {
+.conteudo-resumo .figura figcaption[data-de-alt='sim'],
+.conteudo-resumo .figura[data-legenda-alt]::after {
   text-align: left;
   color: var(--ink-dim);
   border-left: 2px solid var(--line-forte);
   padding-left: 0.7em;
   margin-top: 0.6em;
+}
+
+/* A mesma legenda dentro do EDITOR, onde ela não existe no HTML: o plugin
+   `legendaDoAlt` (`admin/editor/imagem.ts`) marca a figura com o `alt`, e o
+   texto é desenhado aqui. Repete a fonte e o tamanho do `figcaption` acima,
+   e herda o resto da regra `[data-de-alt]` — o autor vê o que o aluno vê. */
+.conteudo-resumo .figura[data-legenda-alt]::after {
+  content: attr(data-legenda-alt);
+  display: block;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 
 /* O último bloco do resumo não pode ficar ao lado de uma figura flutuante:
