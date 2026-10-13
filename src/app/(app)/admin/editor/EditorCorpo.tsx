@@ -4,6 +4,7 @@
 // e não pelo globals.css, que embarca em toda página do site
 import 'katex/dist/katex.min.css'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
+import type { JSONContent } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyleKit } from '@tiptap/extension-text-style'
 import { Highlight } from '@tiptap/extension-highlight'
@@ -31,6 +32,7 @@ import Regua from './Regua'
 import { Imagem, TabelaLivre } from './imagem'
 import { TituloCorrido } from './tituloCorrido'
 import { ItemComFigura } from './itemComFigura'
+import { BLOCOS } from './blocos'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
@@ -400,6 +402,129 @@ function htmlDoConteudo(editor: Editor, no: ProseMirrorNode) {
   return caixa.innerHTML
 }
 
+/* Os ícones de alinhamento eram ≡ ⁃ ≣ ☰, que só se distinguiam passando o
+   mouse. Quatro linhas desenhadas dizem o lado sozinhas. */
+const ROTULO_ALINHAR = {
+  left: 'Alinhar à esquerda',
+  center: 'Centralizar',
+  right: 'Alinhar à direita',
+  justify: 'Justificar',
+} as const
+
+function IconeAlinhar({ lado }: { lado: keyof typeof ROTULO_ALINHAR }) {
+  const linhas = [12, 8, 12, 8]
+  return (
+    <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
+      {linhas.map((l, i) => {
+        const w = lado === 'justify' ? 12 : l
+        const x = lado === 'left' || lado === 'justify' ? 1 : lado === 'right' ? 13 - w : (14 - w) / 2
+        return <rect key={i} x={x} y={1 + i * 3} width={w} height={1.4} rx={0.7} fill="currentColor" />
+      })}
+    </svg>
+  )
+}
+
+/**
+ * Insere um bloco de estrutura no nível do resumo, logo depois do trecho onde
+ * está o cursor.
+ *
+ * `insertContent` puro põe o bloco DENTRO de onde o cursor estiver: com ele no
+ * fim de um item de lista, a questão inteira virava sub-item, e o "Para
+ * revisar" entrava como grafo pendurado num tópico. Questão, caixa, tabela e
+ * fecho são peças do esqueleto (modelo de resumo, §4), não desdobramento de
+ * um item. Numa linha vazia do primeiro nível, o bloco ocupa o lugar dela.
+ */
+function inserirNoTopo(editor: Editor, conteudo: JSONContent | JSONContent[]) {
+  const { $from } = editor.state.selection
+  const topo = $from.depth >= 1 ? $from.node(1) : null
+  const alvo =
+    topo && topo.type.name === 'paragraph' && topo.content.size === 0
+      ? { from: $from.before(1), to: $from.after(1) }
+      : $from.depth >= 1
+        ? $from.after(1)
+        : $from.pos
+  editor.chain().focus().insertContentAt(alvo, conteudo).scrollIntoView().run()
+}
+
+/**
+ * Os blocos do estilo do site (`blocos.ts`), num menu só.
+ *
+ * Substitui os botões soltos "Tabela" e "Questão": a questão inseria um
+ * esqueleto genérico, sem os itens que a página precisa para ficar clicável, e
+ * as outras peças do modelo — pegadinhas, exemplo resolvido, para revisar —
+ * não tinham botão nenhum.
+ */
+function MenuBlocos({ editor }: { editor: Editor }) {
+  const [aberto, setAberto] = useState(false)
+  const caixa = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!aberto) return
+    function aoClicarFora(e: MouseEvent) {
+      if (!caixa.current?.contains(e.target as Node)) setAberto(false)
+    }
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === 'Escape') setAberto(false)
+    }
+    document.addEventListener('mousedown', aoClicarFora)
+    document.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.removeEventListener('mousedown', aoClicarFora)
+      document.removeEventListener('keydown', aoTeclar)
+    }
+  }, [aberto])
+
+  const opcao = (chave: string, nome: string, uso: string, inserir: () => void) => (
+    <button
+      key={chave}
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => {
+        inserir()
+        setAberto(false)
+      }}
+      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[var(--sel)]"
+    >
+      <span className="block text-[13px] text-[var(--ink)]">{nome}</span>
+      <span className="block text-[11.5px] text-[var(--ink-faint)]">{uso}</span>
+    </button>
+  )
+
+  return (
+    <div className="relative shrink-0" ref={caixa}>
+      <Bt
+        title="Inserir questão, pegadinhas, tabela, exemplo resolvido ou para revisar"
+        largo
+        ativo={aberto}
+        onClick={() => setAberto((v) => !v)}
+      >
+        ＋ Bloco
+      </Bt>
+      {aberto && (
+        <div className="absolute z-50 top-[32px] left-0 w-[300px] bg-[var(--raised)] border border-[var(--line-forte)] rounded-lg shadow-[0_16px_40px_rgba(0,0,0,0.5)] p-1.5">
+          {BLOCOS.map((b) =>
+            opcao(b.chave, b.nome, b.uso, () => inserirNoTopo(editor, b.conteudo()))
+          )}
+          {/* 2 colunas porque é o formato dos dois usos reais: linha do tempo
+              (ano | evento) e glossário (termo | definição) */}
+          {opcao('tabela', 'Tabela de 2 colunas', 'Linha do tempo, glossário', () =>
+            inserirNoTopo(editor, {
+              type: 'table',
+              content: [0, 1, 2].map((linha) => ({
+                type: 'tableRow',
+                content: [0, 1].map(() => ({
+                  type: linha === 0 ? 'tableHeader' : 'tableCell',
+                  content: [{ type: 'paragraph' }],
+                })),
+              })),
+            })
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Barra({
   editor,
   telaCheia,
@@ -437,6 +562,32 @@ function Barra({
   const [tamanhoDigitado, setTamanhoDigitado] = useState<string | null>(null)
   const tamanhoAtual = tamanhoDigitado ?? tamanhoDoEditor
 
+  /* A segunda fileira lembra se ficou aberta. A barra só monta no cliente
+     (o editor tem `immediatelyRender: false`), então ler o `localStorage` no
+     inicializador não descasa servidor e cliente. */
+  const [mais, setMaisEstado] = useState(() => {
+    try {
+      return localStorage.getItem('editor-barra-mais') === 'sim'
+    } catch {
+      return false
+    }
+  })
+  const setMais = (f: (v: boolean) => boolean) =>
+    setMaisEstado((v) => {
+      const n = f(v)
+      try {
+        localStorage.setItem('editor-barra-mais', n ? 'sim' : 'nao')
+      } catch {}
+      return n
+    })
+
+  /* A barra tem duas camadas, e o critério é o estilo do site (modelo de
+     resumo, §3–§4). Na primeira fileira fica o que todo resumo usa: grafo,
+     negrito, lista e recuo, fórmula, imagem, os blocos prontos e o `[[`. Em
+     "Mais" fica o que o estilo quase nunca pede — cor, marca-texto, tamanho,
+     alinhamento, citação, código —, porque o que fica gravado no HTML faz um
+     resumo destoar dos outros (decisão 4c). Continua tudo a um clique; só
+     deixa de disputar o olho com o que se usa a toda hora. */
   return (
     <div className="sticky top-0 z-20 flex flex-wrap items-center gap-0.5 px-3 py-1.5 bg-[var(--panel)] border-b border-[var(--line)]">
       <Bt title="Desfazer (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}>
@@ -459,28 +610,19 @@ function Barra({
         aria-label="Estilo do bloco"
         /* Fundo e cor explícitos, e não `bg-transparent`: no modo escuro do
            Windows a LISTA aberta de um <select> herda o tema do sistema, e o
-           campo transparente deixava texto claro sobre fundo claro. E o anel
-           de foco volta — `outline-none` sozinho tirava o único sinal de que
-           o teclado está aqui. */
+           campo transparente deixava texto claro sobre fundo claro. */
         className="h-[28px] text-[12.5px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
       >
-        {/* "Grafo" e não "Título": cada um deles vira um nó no /mapa, pendurado
-            no resumo e nos de nível acima (decisão 12). O nome antigo sugeria
-            uma escala de tamanho que não existe mais — os três saem no corpo do
-            texto, só em negrito. O valor gravado continua sendo h2/h3/h4. */}
+        {/* "Grafo" e não "Título": cada um vira um nó no /mapa (decisão 12). */}
         <option value="p">Texto normal</option>
         <option value="h2">Grafo 1</option>
         <option value="h3">Grafo 2</option>
         <option value="h4">Grafo 3</option>
       </select>
 
-      {/* Junta o grafo à explicação numa linha só, no formato em que os resumos
-          sempre foram escritos: "Termo: definição". Só faz sentido com o cursor
-          dentro de um grafo, então fora dele o botão fica apagado.
-
-          Digitar `:` no fim do grafo faz o mesmo sozinho (ver `tituloCorrido`).
-          O botão fica: é ele que DESLIGA o modo, e é o caminho para quem já
-          escreveu o título antes de decidir juntar as duas linhas. */}
+      {/* Junta o grafo à explicação numa linha só ("Termo: definição"). Digitar
+          `:` no fim do grafo faz o mesmo (ver `tituloCorrido`); o botão é o que
+          DESLIGA o modo. */}
       <Bt
         title="Grafo na mesma linha da explicação — ou digite “:” no fim do grafo"
         ativo={editor.isActive('heading', { corrido: true })}
@@ -498,67 +640,13 @@ function Barra({
         T¶
       </Bt>
 
-      {/* Tamanho é campo numérico livre, não uma lista fechada: os cinco
-          valores de antes cobriam o que se imaginou na mesa, não o que o texto
-          pede. A `datalist` mantém os atalhos comuns a um clique. Vazio =
-          tamanho padrão do corpo do resumo.
-
-          A faixa é 1–100 porque foi o pedido, e não porque 1 e 2 sejam
-          tamanhos úteis: abaixo de uns 6px a letra deixa de ser legível na
-          tela, e o que o autor vê é uma tarja cinza. Fica valendo assim mesmo
-          — quem escreve é quem sabe o que quer, e o Ctrl+Z desfaz. */}
-      <span className="inline-flex items-center gap-1 shrink-0">
-        <input
-          type="number"
-          min={TAMANHO_MINIMO}
-          max={TAMANHO_MAXIMO}
-          step={1}
-          list="tamanhos-de-texto"
-          aria-label="Tamanho do texto, em pixels"
-          title="Tamanho do texto (px) — vazio usa o tamanho padrão"
-          value={tamanhoAtual}
-          onChange={(e) => {
-            const v = e.target.value
-            setTamanhoDigitado(v)
-
-            // Sem `.focus()` de propósito: devolver o foco ao editor aqui
-            // tiraria o cursor do campo no meio da digitação. Os comandos do
-            // TipTap agem sobre a seleção guardada, que continua de pé.
-            if (v === '') return editor.chain().unsetFontSize().run()
-            const n = Number(v)
-            // fora da faixa, guarda o que foi digitado mas não aplica —
-            // é o estado passageiro de quem ainda está digitando "23"
-            if (!Number.isFinite(n) || n < TAMANHO_MINIMO || n > TAMANHO_MAXIMO) return
-            editor.chain().setFontSize(`${n}px`).run()
-          }}
-          // ao sair, o campo volta a espelhar o editor: se o que ficou ali era
-          // inválido, ele some em vez de mentir sobre o tamanho aplicado
-          onBlur={() => setTamanhoDigitado(null)}
-          // as setinhas nativas do `number` comiam metade da caixa e cortavam
-          // o segundo dígito; sem elas cabe o número e o marcador da datalist
-          className="campo !w-[52px] h-[28px] !py-0 !px-1.5 text-[12.5px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
-          placeholder="17"
-        />
-        <datalist id="tamanhos-de-texto">
-          {TAMANHOS.map((t) => (
-            <option key={t} value={t.replace('px', '')} />
-          ))}
-        </datalist>
-      </span>
-
       <Sep />
 
-      <Bt title="Negrito (Ctrl+B)" ativo={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+      <Bt title="Negrito (Ctrl+B) — ou digite “:” depois do termo" ativo={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
         <b>B</b>
       </Bt>
       <Bt title="Itálico (Ctrl+I)" ativo={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
         <i>I</i>
-      </Bt>
-      <Bt title="Sublinhado (Ctrl+U)" ativo={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-        <u>U</u>
-      </Bt>
-      <Bt title="Tachado" ativo={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
-        <s>S</s>
       </Bt>
       <Bt
         title="Subscrito (Ctrl+,) — v₀, μc"
@@ -575,76 +663,6 @@ function Barra({
         x<sup>2</sup>
       </Bt>
 
-      {/* cor do texto */}
-      <div className="flex items-center gap-0.5 px-1">
-        {CORES.map((cor) => (
-          <button
-            key={cor}
-            type="button"
-            title={`Cor ${cor}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().setColor(cor).run()}
-            className="w-[14px] h-[14px] rounded-full border border-black/15 shrink-0"
-            style={{ background: cor }}
-          />
-        ))}
-
-        {/* Cor livre. As sete bolinhas acima continuam porque são um clique só
-            para o caso comum; este é para quando nenhuma delas serve.
-            O que vai gravado é o par `light-dark()` derivado em `lib/cor.ts` —
-            a cor fica no HTML do resumo para sempre e precisa ler nos dois
-            temas. O campo nativo só entende `#rrggbb`, então o valor mostrado é
-            a ponta clara do par que o texto já tem. */}
-        <label
-          title="Qualquer cor"
-          className="relative w-[14px] h-[14px] rounded-full border border-black/15 shrink-0 cursor-pointer overflow-hidden focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[var(--acento)]"
-          style={{
-            background:
-              'conic-gradient(#F04A5E, #E8C24A, #5FBF6A, #4AA8E8, #8E6FE0, #F04A5E)',
-          }}
-        >
-          <span className="sr-only">Escolher qualquer cor do texto</span>
-          <input
-            type="color"
-            value={primeiroHex(editor.getAttributes('textStyle').color, '#9184D9')}
-            onChange={(e) =>
-              editor.chain().focus().setColor(parDeTemas(e.target.value)).run()
-            }
-            className="absolute inset-0 opacity-0 cursor-pointer"
-          />
-        </label>
-      </div>
-
-      {/* marca-texto */}
-      <div className="flex items-center gap-0.5 px-1">
-        {MARCAS.map((cor) => (
-          <button
-            key={cor}
-            type="button"
-            title="Marca-texto"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleHighlight({ color: cor }).run()}
-            className="w-[14px] h-[14px] rounded-sm border border-black/15 shrink-0"
-            style={{ background: cor }}
-          />
-        ))}
-      </div>
-
-      <Sep />
-
-      <Bt title="Alinhar à esquerda" ativo={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
-        ≡
-      </Bt>
-      <Bt title="Centralizar" ativo={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
-        ⁃
-      </Bt>
-      <Bt title="Alinhar à direita" ativo={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
-        ≣
-      </Bt>
-      <Bt title="Justificar" ativo={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
-        ☰
-      </Bt>
-
       <Sep />
 
       <Bt title="Lista com marcadores" ativo={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
@@ -653,10 +671,9 @@ function Barra({
       <Bt title="Lista numerada" ativo={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
         1.
       </Bt>
-      {/* Recuo por botão, além do Tab. O corpo do resumo é uma árvore de
-          tópicos de 4 ou 5 níveis, e nessa profundidade o Tab exige que o
-          cursor esteja no lugar certo do item — o botão funciona de qualquer
-          posição da linha, como no editor de documentos de origem. */}
+      {/* Recuo por botão, além do Tab: numa árvore de 4 ou 5 níveis o Tab
+          exige o cursor no lugar certo do item, e o botão funciona de
+          qualquer posição da linha. */}
       <Bt
         title="Diminuir recuo (Shift+Tab)"
         onClick={() => editor.chain().focus().liftListItem('listItem').run()}
@@ -669,43 +686,28 @@ function Barra({
       >
         ⇥
       </Bt>
-      <Bt title="Citação" ativo={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-        &rdquo;
-      </Bt>
-      <Bt title="Código" ativo={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>
-        {'</>'}
-      </Bt>
-      <Bt title="Linha divisória" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-        —
-      </Bt>
+
+      <Sep />
+
       <Bt
-        // 2 colunas por padrão porque é o formato dos dois usos reais:
-        // linha do tempo (ano | evento) e glossário (termo | definição)
-        title="Inserir tabela 2 colunas — linha do tempo, glossário"
+        title="Inserir equação ou reação química"
         largo
-        ativo={editor.isActive('table')}
-        onClick={() =>
-          editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()
-        }
+        ativo={formulaAberta}
+        onClick={aoAbrirFormula}
       >
-        ▦ Tabela
+        ∑ Equação
       </Bt>
-      {/* Fica ao lado da tabela porque as duas são "blocos que se insere", e
-          não formatação do que já está escrito. */}
-      <Bt
-        title="Questão resolvida — a resolução fica escondida até o aluno clicar"
-        largo
-        ativo={editor.isActive('questao')}
-        onClick={() => editor.chain().focus().inserirQuestao().run()}
-      >
-        ？ Questão
-      </Bt>
+      <MenuSimbolos editor={editor} />
+
+      <Sep />
+
       <Bt title="Inserir imagem — ou cole com Ctrl+V, ou arraste o arquivo" largo onClick={aoPedirImagem}>
         🖼 Imagem
       </Bt>
-
-      {/* Os controles da imagem NÃO ficam aqui: são trinta, e moram no
-          `PainelImagem`, que abre embaixo da barra quando há uma selecionada. */}
+      <MenuBlocos editor={editor} />
+      <Bt title="Link para outro resumo" largo onClick={() => editor.chain().focus().insertContent('[[').run()}>
+        [[ ]]
+      </Bt>
 
       {/* A tabela ganha a mesma liberdade da imagem: um glossário de duas
           colunas largas respira melhor fora do recuo do texto. */}
@@ -734,43 +736,12 @@ function Barra({
       <Sep />
 
       <Bt
-        title="Link externo"
-        ativo={editor.isActive('link')}
+        title={mais ? 'Esconder formatação extra' : 'Cor, marca-texto, tamanho, alinhamento e outros'}
         largo
-        onClick={() => {
-          const atual = editor.getAttributes('link').href ?? ''
-          const url = window.prompt('Endereço do link (deixe vazio pra remover):', atual)
-          if (url === null) return
-          if (url === '') editor.chain().focus().unsetLink().run()
-          else editor.chain().focus().setLink({ href: url }).run()
-        }}
+        ativo={mais}
+        onClick={() => setMais((v) => !v)}
       >
-        🔗
-      </Bt>
-      <Bt title="Link para outro resumo" largo onClick={() => editor.chain().focus().insertContent('[[').run()}>
-        [[ ]]
-      </Bt>
-
-      <Sep />
-
-      <Bt
-        title="Inserir equação ou reação química"
-        largo
-        ativo={formulaAberta}
-        onClick={aoAbrirFormula}
-      >
-        ∑ Equação
-      </Bt>
-      <MenuSimbolos editor={editor} />
-
-      <Sep />
-
-      <Bt
-        title="Limpar formatação"
-        largo
-        onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-      >
-        ⌫
+        {mais ? '⌃ Menos' : '⋯ Mais'}
       </Bt>
 
       <div className="ml-auto flex items-center gap-0.5">
@@ -783,6 +754,151 @@ function Barra({
           {telaCheia ? '⤡ Sair' : '⤢ Janela completa'}
         </Bt>
       </div>
+
+      {mais ? (
+        <div className="basis-full flex flex-wrap items-center gap-0.5 pt-1.5 mt-1 border-t border-[var(--line)]">
+          {/* Tamanho é campo numérico livre (1–100), com atalhos na
+              `datalist`. Vazio = tamanho padrão do corpo do resumo. */}
+          <span className="inline-flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              min={TAMANHO_MINIMO}
+              max={TAMANHO_MAXIMO}
+              step={1}
+              list="tamanhos-de-texto"
+              aria-label="Tamanho do texto, em pixels"
+              title="Tamanho do texto (px) — vazio usa o tamanho padrão"
+              value={tamanhoAtual}
+              onChange={(e) => {
+                const v = e.target.value
+                setTamanhoDigitado(v)
+                // Sem `.focus()`: devolver o foco ao editor tiraria o cursor
+                // do campo no meio da digitação.
+                if (v === '') return editor.chain().unsetFontSize().run()
+                const n = Number(v)
+                // fora da faixa, guarda o que foi digitado mas não aplica
+                if (!Number.isFinite(n) || n < TAMANHO_MINIMO || n > TAMANHO_MAXIMO) return
+                editor.chain().setFontSize(`${n}px`).run()
+              }}
+              onBlur={() => setTamanhoDigitado(null)}
+              className="campo !w-[52px] h-[28px] !py-0 !px-1.5 text-[12.5px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+              placeholder="17"
+            />
+            <datalist id="tamanhos-de-texto">
+              {TAMANHOS.map((t) => (
+                <option key={t} value={t.replace('px', '')} />
+              ))}
+            </datalist>
+          </span>
+
+          <Sep />
+
+          <Bt title="Sublinhado (Ctrl+U)" ativo={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <u>U</u>
+          </Bt>
+          <Bt title="Tachado" ativo={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+            <s>S</s>
+          </Bt>
+
+          {/* cor do texto: sete prontas e o seletor livre, que grava o par
+              `light-dark()` derivado em `lib/cor.ts` */}
+          <div className="flex items-center gap-0.5 px-1">
+            {CORES.map((cor) => (
+              <button
+                key={cor}
+                type="button"
+                title={`Cor ${cor}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => editor.chain().focus().setColor(cor).run()}
+                className="w-[14px] h-[14px] rounded-full border border-black/15 shrink-0"
+                style={{ background: cor }}
+              />
+            ))}
+            <label
+              title="Qualquer cor"
+              className="relative w-[14px] h-[14px] rounded-full border border-black/15 shrink-0 cursor-pointer overflow-hidden focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[var(--acento)]"
+              style={{
+                background:
+                  'conic-gradient(#F04A5E, #E8C24A, #5FBF6A, #4AA8E8, #8E6FE0, #F04A5E)',
+              }}
+            >
+              <span className="sr-only">Escolher qualquer cor do texto</span>
+              <input
+                type="color"
+                value={primeiroHex(editor.getAttributes('textStyle').color, '#9184D9')}
+                onChange={(e) =>
+                  editor.chain().focus().setColor(parDeTemas(e.target.value)).run()
+                }
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </label>
+          </div>
+
+          {/* marca-texto */}
+          <div className="flex items-center gap-0.5 px-1">
+            {MARCAS.map((cor) => (
+              <button
+                key={cor}
+                type="button"
+                title="Marca-texto"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => editor.chain().focus().toggleHighlight({ color: cor }).run()}
+                className="w-[14px] h-[14px] rounded-sm border border-black/15 shrink-0"
+                style={{ background: cor }}
+              />
+            ))}
+          </div>
+
+          <Sep />
+
+          {(['left', 'center', 'right', 'justify'] as const).map((lado) => (
+            <Bt
+              key={lado}
+              title={ROTULO_ALINHAR[lado]}
+              ativo={editor.isActive({ textAlign: lado })}
+              onClick={() => editor.chain().focus().setTextAlign(lado).run()}
+            >
+              <IconeAlinhar lado={lado} />
+            </Bt>
+          ))}
+
+          <Sep />
+
+          <Bt title="Citação" ativo={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            &rdquo;
+          </Bt>
+          <Bt title="Código" ativo={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>
+            {'</>'}
+          </Bt>
+          <Bt title="Linha divisória" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+            —
+          </Bt>
+          <Bt
+            title="Link externo"
+            ativo={editor.isActive('link')}
+            largo
+            onClick={() => {
+              const atual = editor.getAttributes('link').href ?? ''
+              const url = window.prompt('Endereço do link (deixe vazio pra remover):', atual)
+              if (url === null) return
+              if (url === '') editor.chain().focus().unsetLink().run()
+              else editor.chain().focus().setLink({ href: url }).run()
+            }}
+          >
+            🔗
+          </Bt>
+
+          <Sep />
+
+          <Bt
+            title="Limpar formatação"
+            largo
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+          >
+            ⌫ Limpar
+          </Bt>
+        </div>
+      ) : null}
     </div>
   )
 }
