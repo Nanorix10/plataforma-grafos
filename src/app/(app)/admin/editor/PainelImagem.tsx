@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import {
   LARGURA_MINIMA_LATERAL,
@@ -14,6 +14,7 @@ import {
 } from './imagem'
 import { COLUNA_MINIMA, LARGURA_PAGINA } from '@/lib/pagina'
 import { enviarImagem } from './actions'
+import { otimizarImagem } from './otimizarImagem'
 
 /**
  * O painel de opções da imagem — o equivalente ao "Opções da imagem" do Google
@@ -205,6 +206,25 @@ export default function PainelImagem({
     set({ quebra: lado, escapa: false })
 
   const temRecorte = lerRecorte(a.recorte) !== null
+
+  /* Algum ajuste fora do padrão já aplicado? Então a seção abre sozinha e o
+     botão ganha um ponto: esconder um giro ou uma borda que estão valendo
+     faria o autor achar que a figura "veio assim". */
+  const temAjuste = Boolean(
+    a.altura ||
+      a.rotacao ||
+      a.margem ||
+      a.bordaLargura ||
+      a.link ||
+      (a.brilho ?? 100) !== 100 ||
+      (a.contraste ?? 100) !== 100 ||
+      (a.saturacao ?? 100) !== 100 ||
+      (a.opacidade ?? 100) !== 100 ||
+      (a.recolorir ?? 'nenhum') !== 'nenhum'
+  )
+  // `null` = seguir o `temAjuste`; depois do primeiro clique, manda o autor
+  const [ajustes, setAjustes] = useState<boolean | null>(null)
+  const verAjustes = ajustes ?? temAjuste
   /* Sem a proporção do arquivo não há como saber a altura do que sobrou. O
      editor grava esse dado assim que a imagem carrega, então isto é falso por
      um instante numa imagem antiga — e o botão diz o motivo em vez de sumir. */
@@ -238,13 +258,25 @@ export default function PainelImagem({
     aoEnviarErro(null)
     aoMudarEnvio(1)
     try {
+      const otimizado = await otimizarImagem(arquivo)
       const fd = new FormData()
-      fd.append('arquivo', arquivo)
+      fd.append('arquivo', otimizado)
       const r = await enviarImagem(fd)
-      // troca só o `src`: tamanho, borda e ajustes ficam, que é o ponto de
-      // "substituir imagem" em vez de apagar e inserir outra
-      if (r.ok) set({ src: r.url })
-      else aoEnviarErro(r.erro)
+      if (!r.ok) {
+        aoEnviarErro(r.erro)
+        return
+      }
+      // troca o `src` e a proporção do arquivo novo; tamanho, borda e ajustes
+      // ficam, que é o ponto de "substituir imagem" em vez de apagar e inserir
+      // outra. A proporção TEM de vir junto: com a do arquivo antigo, o
+      // espaço reservado e o recorte sairiam com a forma da imagem anterior.
+      let natural = ''
+      try {
+        const bmp = await createImageBitmap(otimizado)
+        natural = `${bmp.width} ${bmp.height}`
+        bmp.close()
+      } catch {}
+      set({ src: r.url, natural, recorte: '' })
     } finally {
       aoMudarEnvio(-1)
     }
@@ -373,20 +405,6 @@ export default function PainelImagem({
             />
           </Campo>
         ) : null}
-        <Campo rotulo="alt.">
-          <input
-            value={a.altura ?? ''}
-            onChange={(e) => set({ altura: e.target.value })}
-            placeholder="auto"
-            disabled={temRecorte}
-            title={
-              temRecorte
-                ? 'Desligado porque a imagem está recortada: os dois cortam, e o recorte manda.'
-                : 'Vazio mantém a proporção original. Com valor, a imagem é cortada para caber (object-fit: cover).'
-            }
-            className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px] disabled:opacity-45"
-          />
-        </Campo>
 
         {/* ---- recorte ----
             A 11c recusava recorte porque ele "pede interface própria". O
@@ -417,67 +435,9 @@ export default function PainelImagem({
             ↺ Imagem inteira
           </Opcao>
         ) : null}
-        <Campo rotulo="giro">
-          <Numerico valor={a.rotacao ?? 0} aoMudar={(n) => set({ rotacao: n })} min={-360} max={360} sufixo="°" />
-        </Campo>
-        <Opcao ativo={false} onClick={() => set({ rotacao: ((a.rotacao ?? 0) + 90) % 360 })} title="Girar 90° à direita">
-          ↻
-        </Opcao>
-        <Campo rotulo="espaço">
-          <Numerico valor={a.margem ?? 0} aoMudar={(n) => set({ margem: n })} min={0} max={80} sufixo="px" />
-        </Campo>
       </Grupo>
 
-      {/* ---- borda ---- */}
-      <Grupo>
-        <Campo rotulo="borda">
-          <Numerico valor={a.bordaLargura ?? 0} aoMudar={(n) => set({ bordaLargura: n })} min={0} max={20} sufixo="px" largura={46} />
-        </Campo>
-        <input
-          type="color"
-          value={a.bordaCor ?? '#9184D9'}
-          onChange={(e) => set({ bordaCor: e.target.value })}
-          title="Cor da borda"
-          aria-label="Cor da borda"
-          className="w-[26px] h-[26px] rounded border border-[var(--line-forte)] bg-transparent cursor-pointer"
-        />
-        <select
-          value={a.bordaEstilo ?? 'solid'}
-          onChange={(e) => set({ bordaEstilo: e.target.value })}
-          aria-label="Estilo da borda"
-          className="campo h-[26px] !py-0 !px-1 text-[11.5px] !w-auto"
-        >
-          <option value="solid">sólida</option>
-          <option value="dashed">tracejada</option>
-          <option value="dotted">pontilhada</option>
-        </select>
-      </Grupo>
 
-      {/* ---- ajustes de cor ----
-          Filtros de CSS, então não tocam no arquivo: dá para voltar atrás
-          sempre, e a mesma imagem serve a dois resumos com ajustes diferentes.
-          O preço é que o aluno baixa a imagem original — o que é justo, já que
-          o contrário exigiria processar e guardar uma cópia por ajuste. */}
-      <Grupo>
-        <Campo rotulo="brilho">
-          <Numerico valor={a.brilho ?? 100} aoMudar={(n) => set({ brilho: n })} min={0} max={300} sufixo="%" largura={50} />
-        </Campo>
-        <Campo rotulo="contraste">
-          <Numerico valor={a.contraste ?? 100} aoMudar={(n) => set({ contraste: n })} min={0} max={300} sufixo="%" largura={50} />
-        </Campo>
-        <Campo rotulo="cor">
-          <Numerico valor={a.saturacao ?? 100} aoMudar={(n) => set({ saturacao: n })} min={0} max={300} sufixo="%" largura={50} />
-        </Campo>
-        <Campo rotulo="opacidade">
-          <Numerico valor={a.opacidade ?? 100} aoMudar={(n) => set({ opacidade: n })} min={10} max={100} sufixo="%" largura={50} />
-        </Campo>
-        <Opcao ativo={a.recolorir === 'cinza'} onClick={() => set({ recolorir: a.recolorir === 'cinza' ? 'nenhum' : 'cinza' })} title="Preto e branco">
-          ◑ P&B
-        </Opcao>
-        <Opcao ativo={a.recolorir === 'sepia'} onClick={() => set({ recolorir: a.recolorir === 'sepia' ? 'nenhum' : 'sepia' })} title="Sépia">
-          ◐ Sépia
-        </Opcao>
-      </Grupo>
 
       {/* ---- texto ---- */}
       <Grupo>
@@ -504,19 +464,110 @@ export default function PainelImagem({
             className="campo h-[26px] w-[130px] !py-0 !px-1.5 text-[11.5px]"
           />
         </Campo>
-        <Campo rotulo="link">
-          <input
-            value={a.link ?? ''}
-            onChange={(e) => set({ link: e.target.value })}
-            placeholder="https://…"
-            title="Clicar na imagem abre este endereço"
-            className="campo h-[26px] w-[150px] !py-0 !px-1.5 text-[11.5px]"
-          />
-        </Campo>
       </Grupo>
+
+      {/* ---- ajustes ----
+          Recolhidos: o estilo do site quase nunca pede giro, borda, filtro de
+          cor ou link na figura, e eram vinte controles disputando a altura que
+          a folha usa. Abrem sozinhos quando a imagem já tem algum deles, para
+          ninguém ajustar às cegas o que não está vendo. */}
+      {verAjustes ? (
+        <>
+          <Grupo>
+            <Campo rotulo="alt.">
+              <input
+                value={a.altura ?? ''}
+                onChange={(e) => set({ altura: e.target.value })}
+                placeholder="auto"
+                disabled={temRecorte}
+                title={
+                  temRecorte
+                    ? 'Desligado porque a imagem está recortada: os dois cortam, e o recorte manda.'
+                    : 'Vazio mantém a proporção original. Com valor, a imagem é cortada para caber (object-fit: cover).'
+                }
+                className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px] disabled:opacity-45"
+              />
+            </Campo>
+            <Campo rotulo="giro">
+              <Numerico valor={a.rotacao ?? 0} aoMudar={(n) => set({ rotacao: n })} min={-360} max={360} sufixo="°" />
+            </Campo>
+            <Opcao ativo={false} onClick={() => set({ rotacao: ((a.rotacao ?? 0) + 90) % 360 })} title="Girar 90° à direita">
+              ↻
+            </Opcao>
+            <Campo rotulo="espaço">
+              <Numerico valor={a.margem ?? 0} aoMudar={(n) => set({ margem: n })} min={0} max={80} sufixo="px" />
+            </Campo>
+            <Campo rotulo="link">
+              <input
+                value={a.link ?? ''}
+                onChange={(e) => set({ link: e.target.value })}
+                placeholder="https://…"
+                title="Clicar na imagem abre este endereço"
+                className="campo h-[26px] w-[150px] !py-0 !px-1.5 text-[11.5px]"
+              />
+            </Campo>
+          </Grupo>
+          {/* ---- borda ---- */}
+          <Grupo>
+            <Campo rotulo="borda">
+              <Numerico valor={a.bordaLargura ?? 0} aoMudar={(n) => set({ bordaLargura: n })} min={0} max={20} sufixo="px" largura={46} />
+            </Campo>
+            <input
+              type="color"
+              value={a.bordaCor ?? '#9184D9'}
+              onChange={(e) => set({ bordaCor: e.target.value })}
+              title="Cor da borda"
+              aria-label="Cor da borda"
+              className="w-[26px] h-[26px] rounded border border-[var(--line-forte)] bg-transparent cursor-pointer"
+            />
+            <select
+              value={a.bordaEstilo ?? 'solid'}
+              onChange={(e) => set({ bordaEstilo: e.target.value })}
+              aria-label="Estilo da borda"
+              className="campo h-[26px] !py-0 !px-1 text-[11.5px] !w-auto"
+            >
+              <option value="solid">sólida</option>
+              <option value="dashed">tracejada</option>
+              <option value="dotted">pontilhada</option>
+            </select>
+          </Grupo>
+          {/* ---- ajustes de cor ----
+              Filtros de CSS, então não tocam no arquivo: dá para voltar atrás
+              sempre, e a mesma imagem serve a dois resumos com ajustes diferentes.
+              O preço é que o aluno baixa a imagem original — o que é justo, já que
+              o contrário exigiria processar e guardar uma cópia por ajuste. */}
+          <Grupo>
+            <Campo rotulo="brilho">
+              <Numerico valor={a.brilho ?? 100} aoMudar={(n) => set({ brilho: n })} min={0} max={300} sufixo="%" largura={50} />
+            </Campo>
+            <Campo rotulo="contraste">
+              <Numerico valor={a.contraste ?? 100} aoMudar={(n) => set({ contraste: n })} min={0} max={300} sufixo="%" largura={50} />
+            </Campo>
+            <Campo rotulo="cor">
+              <Numerico valor={a.saturacao ?? 100} aoMudar={(n) => set({ saturacao: n })} min={0} max={300} sufixo="%" largura={50} />
+            </Campo>
+            <Campo rotulo="opacidade">
+              <Numerico valor={a.opacidade ?? 100} aoMudar={(n) => set({ opacidade: n })} min={10} max={100} sufixo="%" largura={50} />
+            </Campo>
+            <Opcao ativo={a.recolorir === 'cinza'} onClick={() => set({ recolorir: a.recolorir === 'cinza' ? 'nenhum' : 'cinza' })} title="Preto e branco">
+              ◑ P&B
+            </Opcao>
+            <Opcao ativo={a.recolorir === 'sepia'} onClick={() => set({ recolorir: a.recolorir === 'sepia' ? 'nenhum' : 'sepia' })} title="Sépia">
+              ◐ Sépia
+            </Opcao>
+          </Grupo>
+        </>
+      ) : null}
 
       {/* ---- arquivo ---- */}
       <Grupo>
+        <Opcao
+          ativo={verAjustes}
+          onClick={() => setAjustes(!verAjustes)}
+          title="Altura, giro, espaço, link, borda e ajustes de cor"
+        >
+          ⚙ Ajustes{temAjuste ? ' •' : ''}
+        </Opcao>
         <Opcao ativo={false} onClick={() => trocaRef.current?.click()} title="Trocar o arquivo mantendo tamanho, borda e ajustes">
           ⇄ Substituir
         </Opcao>
