@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Leva um assunto do caderno do autor até um **PR aberto** com a migration do resumo. A skill termina no PR: mesclar, aplicar no banco e conferir em produção acontecem só depois da aprovação do autor ([`publicar.md`](publicar.md)).
 
-**A norma é [`docs/produto/modelo-de-resumo.md`](../../../docs/produto/modelo-de-resumo.md).** Leia o arquivo inteiro antes do passo 3. É ele que define o estilo do autor (§3), o esqueleto (§4), a variante da matéria (§5), as fontes permitidas (§6) e a lista de conferência (§7). Esta skill não repete nada disso: ela diz onde estão as fontes, em que ordem trabalhar e quando parar.
+**A norma é [`docs/produto/modelo-de-resumo.md`](../../../docs/produto/modelo-de-resumo.md).** Leia o arquivo inteiro antes do passo 3. É ele que define o estilo do autor (§3), o esqueleto (§4), a variante da matéria (§5), os esqueletos de Humanas (§5-A), as fontes permitidas (§6) e a lista de conferência (§7). Esta skill não repete nada disso: ela diz onde estão as fontes, em que ordem trabalhar e quando parar.
 
 ## Parada
 
@@ -73,7 +73,7 @@ Com a resposta do autor, o texto segue o que ele decidiu, e o PR registra a deci
 
 ### 4. Corpo
 
-Escreva o `corpo.html` no scratchpad, seguindo o modelo (§3, §4 e a variante da §5). Os moldes de HTML de cada peça estão em [`formato.md`](formato.md).
+Escreva o `corpo.html` no scratchpad, seguindo o modelo (§3, §4 e a variante da §5; em História, Filosofia, Sociologia, Literatura e Arte, o esqueleto da §5-A). Os moldes de HTML de cada peça estão em [`formato.md`](formato.md).
 
 - **Figuras:** todas as do caderno entram, na âncora `[IMG]` em que o caderno as põe. Converta para WebP q82 em `public/img/resumos/<matéria>/<nome-descritivo>.webp`, com `alt` que descreva o que a figura mostra. No PR, liste cada figura e marque as que parecem tiradas de livro didático ou da internet.
 - **Wikilinks:** só para títulos que existem. Confira cada um no `resumos_catalogo` e monte o `links.json` (`{"Título exato": "slug"}`) que a prévia usa.
