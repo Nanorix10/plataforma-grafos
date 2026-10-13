@@ -2873,6 +2873,40 @@ uso. O estudo que leva a isso está em
 `docs/produto/pedagogia-da-pagina-do-resumo.md`, junto com a razão de "revisão
 espaçada" continuar na lista de pendências abaixo.
 
+## 25. As questões vão para o fim, na seção "Pratique", e só na leitura
+
+**13/10/2026.** Uma somatória de cinco itens entre dois conceitos interrompe quem
+está lendo para aprender: ela é pulada, e quem pula não volta. Agora a leitura
+tira cada `<aside class="questao">` com `data-id` do meio do texto e a junta numa
+seção **Pratique**, antes do "Para revisar" (ou no fim, se ele não existir). No
+lugar fica uma ponte de uma linha, que é link:
+"✎ Questão 1 · PAS-UEM 2024, 3ª etapa — em Pratique". Quem faz isso é
+`lib/pratique.ts`.
+
+**O banco e o editor não mudam.** O autor segue escrevendo a questão colada ao
+conceito que ela cobra; quem move é a página do aluno. É a mesma divisão da
+decisão 9b (`<div>` no editor, `<details>` na leitura), e o preço também é o
+mesmo: nesse ponto o editor e a leitura deixam de ser o mesmo desenho.
+
+Três coisas que não se adivinham:
+
+- **Os grifos sobrevivem.** A âncora é o trecho (decisão 21), e `ancorar` aceita a
+  ocorrência mesmo sem casar prefixo nem sufixo — só um grifo encostado numa
+  questão perde o desempate por contexto, e o texto exato continua achando.
+- **Roda uma vez, e trilho, ficha e corpo leem o MESMO resultado.** O trilho acha
+  os wikilinks pela ordem (12d); se ele lesse o corpo cru e a página o
+  reorganizado, um link dentro de uma questão desalinharia a contagem. O mapa
+  (`extrairTitulos`) segue no corpo cru de propósito: "Pratique" não é conceito e
+  não vira nó.
+- **Ponte colada no ponto de entrada sai.** Nos resumos do modelo atual a questão
+  já fechava o texto, e a ponte apontaria para a linha de baixo. Neles a D só dá
+  nome à seção e numera; onde ela muda a leitura é nos resumos antigos, com a
+  questão no meio.
+
+O número da questão é contador de CSS (`.pratique ~ .questao`), não texto, pelo
+motivo dos selos da decisão 22. Questão sem `data-id` fica onde está: sem id não
+há âncora para a ponte nem resposta a guardar.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:

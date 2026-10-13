@@ -806,7 +806,7 @@ h3 {
    conteúdo gerado por CSS não entra no HTML gravado, então os grifos (decisão
    21) continuam se ancorando no mesmo texto de sempre. */
 .conteudo-resumo {
-  counter-reset: secao;
+  counter-reset: secao questao;
 }
 .conteudo-resumo > h2 {
   counter-increment: secao;
@@ -3002,4 +3002,66 @@ h3 {
    seletor é `.ProseMirror` de propósito: na leitura esta linha não existe. */
 .ProseMirror .questao[data-gabarito]::before {
   content: 'Questão resolvida · gabarito ' attr(data-gabarito);
+}
+
+/* ---- Pratique: as questões reunidas no fim (lib/pratique.ts) ----
+   A leitura move cada questão para a seção "Pratique", antes do "Para
+   revisar", e deixa no lugar dela uma ponte de uma linha. A ponte é LINK, e
+   não aviso: quem quer resolver ali mesmo vai num clique.
+
+   Discreta de propósito — ela informa que o trecho cai em prova, e não pode
+   competir com o texto que interrompe menos do que a questão interrompia. */
+.conteudo-resumo .ponte-questao {
+  margin-top: 0.6em;
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  line-height: 1.4;
+}
+.conteudo-resumo .ponte-questao a {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.45em;
+  padding: 0.2em 0.8em;
+  border: 1px dashed var(--line-forte);
+  border-radius: 99px;
+  color: var(--acento);
+  font-weight: 500;
+  text-decoration: none;
+}
+.conteudo-resumo .ponte-questao a::before {
+  content: '✎';
+}
+.conteudo-resumo .ponte-questao a span {
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+.conteudo-resumo .ponte-questao a:hover {
+  border-style: solid;
+  border-color: var(--acento);
+  background: var(--acento-fraco);
+}
+
+/* A seção começa com um traço, como uma ficha: ela muda de modo — de ler para
+   recuperar de memória —, e o traço diz isso antes do título. */
+.conteudo-resumo > h2.pratique {
+  margin-top: 2.4em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--line-forte);
+}
+.conteudo-resumo .pratique-intro {
+  font-family: var(--fonte-texto), sans-serif;
+  font-size: var(--t-peq);
+  color: var(--ink-dim);
+}
+
+/* O número da questão é contador, e não texto, pelo motivo dos selos: texto
+   novo dentro da moldura mudaria o que os grifos (decisão 21) usam de âncora.
+   Conta só as que estão DEPOIS do título — questão sem `data-id` fica no meio
+   do texto, sem ponte, e não pode empurrar a numeração das pontes. */
+.conteudo-resumo .pratique ~ .questao {
+  counter-increment: questao;
+}
+.conteudo-resumo .pratique ~ .questao::before {
+  content: 'Questão ' counter(questao) ' · Tente antes de abrir';
 }

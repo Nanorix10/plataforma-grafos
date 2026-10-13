@@ -10,6 +10,7 @@ import { renderizarWikilinks } from '@/lib/wikilinks'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
 import { renderizarQuestoes } from '@/lib/questoes'
+import { reunirQuestoes } from '@/lib/pratique'
 import { legendarFiguras } from '@/lib/figuras'
 import { marcarFormulaSolta } from '@/lib/formula-solta'
 import { ancorarTitulos, extrairTrilho } from '@/lib/titulos'
@@ -154,13 +155,17 @@ export default async function ResumoPage({
     ).values(),
   ].sort((a, b) => a.processo_slug.localeCompare(b.processo_slug) || a.etapa - b.etapa)
 
-  const trilho = extrairTrilho(resumo.corpo, tituloParaSlug)
+  // As questões vão para a seção "Pratique" no fim (ver lib/pratique.ts). O
+  // trilho, a ficha e o renderizador leem ESTE corpo, nunca o cru: o trilho
+  // conta os wikilinks pela ordem, e mudar a ordem só de um lado desalinharia.
+  const corpo = reunirQuestoes(resumo.corpo)
+  const trilho = extrairTrilho(corpo, tituloParaSlug)
 
   // A faixa do cabeçalho, derivada do que a página já tem em mãos: as seções
   // saem do trilho recém-extraído, o tempo do tamanho do corpo. Nenhuma ida ao
   // banco — ver `lib/ficha-resumo.ts` para o porquê de ela existir.
   const ficha = montarFicha(
-    resumo.corpo,
+    corpo,
     trilho.filter((i) => i.tipo === 'secao')
   )
 
@@ -191,7 +196,7 @@ export default async function ResumoPage({
   // fórmula aqui dentro?" deixaria de ser uma regex curta.
   const corpoHtml = renderizarMatematica(
     renderizarWikilinks(
-      renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(resumo.corpo)))),
+      renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(corpo)))),
       tituloParaSlug
     )
   )
