@@ -1,5 +1,7 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import { Table } from '@tiptap/extension-table'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 /**
  * A imagem do resumo, com o conjunto de opções do Google Docs.
@@ -387,6 +389,37 @@ export const Imagem = Node.create({
       },
       miolo,
       ...(a.legenda ? [['figcaption', {}, a.legenda]] : []),
+    ]
+  },
+
+  /* A legenda que o aluno lê sai do `alt` (decisão 24, `lib/figuras.ts`), mas
+     só na LEITURA: o HTML gravado não tem `<figcaption>`. Sem isto o editor
+     mostrava a figura sem legenda nenhuma, e o autor só descobria a frase
+     embaixo dela abrindo a página do aluno.
+
+     É uma decoração, e não um `<figcaption>` no `renderHTML`, de propósito:
+     decoração existe só na tela do editor e não vai para o `getHTML()`.
+     Gravar a legenda faria `legendarFiguras` desistir da figura ("legenda
+     escrita à mão ganha sempre") e o `alt` deixaria de ser esvaziado — o
+     leitor de tela leria a mesma frase duas vezes. Quem desenha o texto é o
+     CSS, com `attr()`, nas mesmas regras de `figcaption[data-de-alt]`. */
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('legendaDoAlt'),
+        props: {
+          decorations: (estado) => {
+            const marcas: Decoration[] = []
+            estado.doc.descendants((no, pos) => {
+              if (no.type.name !== this.name) return
+              const alt = String(no.attrs.alt ?? '').trim()
+              if (!alt || no.attrs.legenda) return
+              marcas.push(Decoration.node(pos, pos + no.nodeSize, { 'data-legenda-alt': alt }))
+            })
+            return DecorationSet.create(estado.doc, marcas)
+          },
+        },
+      }),
     ]
   },
 
