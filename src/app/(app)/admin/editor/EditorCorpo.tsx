@@ -18,7 +18,7 @@ import { Superscript } from '@tiptap/extension-superscript'
 // o mhchem ensina o KaTeX a ler \ce{...}; aqui é pro preview dentro do editor,
 // o mesmo import existe em lib/matematica.ts para a renderização no servidor
 import 'katex/dist/contrib/mhchem.mjs'
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { WikilinkSuggestion, type EstadoSugestao } from './wikilinkSuggestion'
 import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
@@ -33,6 +33,8 @@ import { Imagem, TabelaLivre } from './imagem'
 import { TituloCorrido } from './tituloCorrido'
 import { ItemComFigura } from './itemComFigura'
 import { BLOCOS } from './blocos'
+import { otimizarImagem } from './otimizarImagem'
+import { avisosDeEstilo } from './avisosEstilo'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
@@ -903,6 +905,54 @@ function Barra({
   )
 }
 
+/**
+ * Os avisos de estilo (`avisosEstilo.ts`) no rodapé: um contador que abre a
+ * lista, e cada item leva o cursor à primeira ocorrência.
+ *
+ * Mora no rodapé, e não num painel lateral, porque a folha já disputa a
+ * largura com a barra do site e com as faixas de imagem (decisão 11c-sexies).
+ */
+function AvisosEstilo({ editor }: { editor: Editor }) {
+  const [aberto, setAberto] = useState(false)
+  const doc = editor.state.doc
+  const avisos = useMemo(() => avisosDeEstilo(doc), [doc])
+  const total = avisos.reduce((n, a) => n + a.quantos, 0)
+
+  return (
+    <span className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        title="Conferência do resumo contra o modelo de resumo"
+        className={total ? 'text-[var(--erro)] underline decoration-dotted' : 'text-[var(--ink-faint)]'}
+      >
+        {total ? `⚠ ${total} ${total === 1 ? 'aviso' : 'avisos'} de estilo` : '✓ estilo ok'}
+      </button>
+      {aberto && total > 0 ? (
+        <span className="absolute z-50 bottom-[22px] left-0 w-[380px] bg-[var(--raised)] border border-[var(--line-forte)] rounded-lg shadow-[0_16px_40px_rgba(0,0,0,0.5)] p-1.5 flex flex-col">
+          {avisos.map((a) => (
+            <button
+              key={a.chave}
+              type="button"
+              disabled={a.pos === null}
+              onClick={() => {
+                if (a.pos === null) return
+                editor.chain().focus().setTextSelection(a.pos + 1).scrollIntoView().run()
+              }}
+              className="text-left px-2 py-1.5 rounded text-[12px] text-[var(--ink)] enabled:hover:bg-[var(--sel)]"
+            >
+              {a.quantos > 1 ? <b>{a.quantos}× </b> : null}
+              {a.texto}
+              {a.pos !== null ? <span className="text-[var(--ink-faint)]"> — ir</span> : null}
+            </button>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 export default function EditorCorpo({
   conteudoInicial,
   titulos,
@@ -969,9 +1019,11 @@ export default function EditorCorpo({
    */
   async function subirEInserir(arquivos: File[]) {
     setErroImagem(null)
-    for (const arquivo of arquivos) {
+    for (const bruto of arquivos) {
       setEnviando((n) => n + 1)
       try {
+        // WebP e no máximo 1840px de lado — ver `otimizarImagem.ts`
+        const arquivo = await otimizarImagem(bruto)
         const fd = new FormData()
         fd.append('arquivo', arquivo)
         const r = await enviarImagem(fd)
@@ -1372,6 +1424,12 @@ export default function EditorCorpo({
         <span>{palavras} palavras</span>
         <span className="opacity-40">·</span>
         <span className={status === 'erro' ? 'text-[var(--stamp)]' : undefined}>{rotuloStatus}</span>
+        {editor ? (
+          <>
+            <span className="opacity-40">·</span>
+            <AvisosEstilo editor={editor} />
+          </>
+        ) : null}
         {/* O envio da imagem acontece longe da vista — o arquivo sai daqui,
             sobe, volta como URL. Sem este aviso, colar um print de 4 MB numa
             conexão ruim pareceria não ter feito nada. */}
