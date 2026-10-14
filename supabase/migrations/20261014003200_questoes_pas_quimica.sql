@@ -1,4 +1,4 @@
--- Questões do PAS-UEM (1ª e 2ª etapas) em química: só enunciado e gabarito oficial; fórmulas em {}.
+-- Questões do PAS-UEM (1ª e 2ª etapas) em química: só enunciado e gabarito oficial; fórmulas em \ce{}.
 -- Fonte: UEM - Questões por matéria com gabarito (2016-2026).pdf e os cadernos originais;
 -- cada questão conferida contra o recorte do caderno. Sem resolução escrita: a página
 -- corrige item a item pelo data-gabarito, e a leitura as reúne em "Pratique" (decisão 25).
