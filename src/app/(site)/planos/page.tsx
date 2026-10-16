@@ -5,6 +5,7 @@ import {
   INCLUI_SEMPRE,
   PRECOS_ANUNCIADOS,
   AVISO_SEM_PRECO,
+  CANAL_DE_AVISO,
   PERIODO_DE_ACESSO,
   PRAZO_DE_LIBERACAO,
   precoLegivel,
@@ -236,7 +237,12 @@ export default function PlanosPage() {
             liberação é manual depois do Pix (decisão 1b do CONTEXTO.md); quando
             o webhook do Mercado Pago existir, este parágrafo muda junto. */}
         <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed">
-          Você cria sua conta aqui no site e nos avisa do pagamento. A liberação
+          Você cria sua conta aqui no site e nos avisa do pagamento pelo{' '}
+          {CANAL_DE_AVISO.nome} (
+          <a href={CANAL_DE_AVISO.url} target="_blank" rel="noopener noreferrer" className="underline">
+            {CANAL_DE_AVISO.arroba}
+          </a>
+          ). A liberação
           é feita por nós, {PRAZO_DE_LIBERACAO}, e o acesso aparece na sua conta — nada é enviado por
           e-mail ou WhatsApp, porque o material vive no site e é lá que você lê.
         </p>

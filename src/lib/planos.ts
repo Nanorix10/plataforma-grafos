@@ -157,6 +157,19 @@ export const PERIODO_DE_ACESSO = {
 export const PRAZO_DE_LIBERACAO = 'em até 24 horas' as const
 
 /**
+ * Por onde o aluno avisa que pagou.
+ *
+ * "Nos avisa do pagamento" sem dizer ONDE deixava o comprador sem o passo
+ * seguinte justamente depois de pagar. É o perfil pessoal do Leandro, e não um
+ * perfil da marca, de propósito: a confiança do lançamento vem de ser ele.
+ */
+export const CANAL_DE_AVISO = {
+  nome: 'direct do Instagram',
+  arroba: '@leandroverduguez',
+  url: 'https://www.instagram.com/leandroverduguez/',
+} as const
+
+/**
  * O que TODO plano entrega, sem exceção.
  *
  * Vale a pena dizer isto em voz alta na página de planos, porque é a coisa
