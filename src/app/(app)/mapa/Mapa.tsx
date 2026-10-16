@@ -19,10 +19,11 @@
 
 import { useSearchParams } from 'next/navigation'
 import GraphView from './GraphView'
+import Mapa3D from './Mapa3D'
 import MindMapView from './MindMapView'
 import type { Materia, No } from './useExpansao'
 
-type Visao = 'grafo' | 'mental'
+type Visao = 'grafo' | 'mental' | '3d'
 type Link = { origem: string; destino: string }
 
 export default function Mapa({
@@ -35,7 +36,8 @@ export default function Mapa({
   materias: Materia[]
 }) {
   const params = useSearchParams()
-  const visao: Visao = params.get('visao') === 'mental' ? 'mental' : 'grafo'
+  const v = params.get('visao')
+  const visao: Visao = v === 'mental' || v === '3d' ? v : 'grafo'
 
   function trocar(nova: Visao) {
     if (nova === visao) return
@@ -52,10 +54,10 @@ export default function Mapa({
       <div className="border-b border-[var(--line)] px-5 sm:px-10 py-3 flex items-center gap-4 shrink-0">
         <span className="text-xs text-[var(--ink-faint)]">
           <b className="text-[var(--ink)] font-medium">
-            {visao === 'grafo' ? 'Mapa de conexões' : 'Mapa mental'}
+            {visao === 'grafo' ? 'Mapa de conexões' : visao === 'mental' ? 'Mapa mental' : 'Mapa em 3D'}
           </b>{' '}
           · {resumos} resumos · {secoes} seções ·{' '}
-          {visao === 'grafo'
+          {visao !== 'mental'
             ? `${links.length} ligações`
             : `${new Set(nos.map((n) => n.materia)).size} matérias`}
         </span>
@@ -68,14 +70,19 @@ export default function Mapa({
           <Aba ativo={visao === 'mental'} onClick={() => trocar('mental')}>
             Mapa mental
           </Aba>
+          <Aba ativo={visao === '3d'} onClick={() => trocar('3d')}>
+            3D
+          </Aba>
         </div>
       </div>
 
       <div className="flex-1 min-h-0">
         {visao === 'grafo' ? (
           <GraphView nos={nos} links={links} materias={materias} />
-        ) : (
+        ) : visao === 'mental' ? (
           <MindMapView nos={nos} materias={materias} titulo="Plataforma Grafos" />
+        ) : (
+          <Mapa3D nos={nos} links={links} materias={materias} />
         )}
       </div>
     </div>

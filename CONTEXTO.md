@@ -53,6 +53,8 @@ src/app/
       [slug]/Grifos.tsx           grifar e anotar, sem tocar no HTML (decisão 21)
       [slug]/Questoes.tsx         responder as questões no clique (decisão 22)
     mapa/                     grafo d3 das conexões
+      Mapa3D.tsx              aba 3D: moldura, ficha e controles (decisão 26)
+      motor3d.ts              cena Three.js, arranjos, rótulos e Teste-se
     admin/editor/             CRUD de resumos (só admin)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
       wikilinkSuggestion.ts   autocomplete do `[[`
@@ -2906,6 +2908,48 @@ Três coisas que não se adivinham:
 O número da questão é contador de CSS (`.pratique ~ .questao`), não texto, pelo
 motivo dos selos da decisão 22. Questão sem `data-id` fica onde está: sem id não
 há âncora para a ponte nem resposta a guardar.
+
+## 26. O mapa ganhou uma aba 3D, e o 3D só entra onde codifica algo
+
+**15/10/2026.** `/mapa?visao=3d`, ao lado de Grafo e Mapa mental, que não
+mudaram. Nasceu de um levantamento de pedagogia e visualização (brief "Mapa e
+grafo em 3D" no vault) e de três protótipos aprovados pelo Leandro. A regra que
+saiu das fontes, e que manda em todo o desenho: **3D sozinho não ensina; o que
+ajuda é movimento, lugar fixo e o aluno agindo.** Enfeite que não codifica nada
+piora a retenção (Rey, 2012).
+
+| o quê | por quê |
+|---|---|
+| cada matéria é uma galáxia num lugar FIXO do anel, pela ordem de `MATERIAS` | memória espacial; mesma regra da 10b — publicar resumo não gira o céu |
+| o céu gira devagar sozinho até o primeiro gesto | rotação é o que torna um grafo em 3D legível (Ware & Franck, 1996); desliga com `prefers-reduced-motion` |
+| matéria aberta em **Árvore** (andares = nível da hierarquia) ou **Solta** (física: galho puxa, citação aproxima, todos se repelem) | profundidade só com significado (Cockburn & McKenzie, 2002); o aluno escolhe, e a escolha fica no `localStorage` |
+| galho é reta cheia, citação é arco TRACEJADO cujos traços correm de quem cita para quem é citado | os dois eixos da decisão 9, com o mesmo par de traços da marca (9h) |
+| **Teste-se**: os nomes de um ramo viram "?", o aluno lembra, revela e marca | prática de recuperação — construir/agir rende mais que olhar (Nesbit & Adesope, 2006) |
+
+**O Three.js (~600 kB) só desce para quem abre a aba.** `Mapa3D.tsx` faz
+`import('three')` e `import('./motor3d')` dentro do efeito; o arquivo do motor
+só é citado como TIPO. Mesma família da decisão 10 e do KaTeX da decisão 8.
+
+**O motor é imperativo e o React só desenha a ficha.** Mil nós animados por
+quadro não passam pelo React. O motor publica um `Retrato` (ficha, trilha,
+placar) a cada mudança, e o componente renderiza dele — nunca lê o motor
+durante o render, que é o que as regras do React Compiler recusam.
+
+Três coisas que não se adivinham:
+
+- **As cores saem de uma sonda**, não de `getPropertyValue`: os tokens são
+  `light-dark(…)` e a propriedade devolve a expressão, não a cor. Um `<span>`
+  pintado com o token e lido por `getComputedStyle` dá o RGB do tema vigente.
+- **O RGB precisa ser declarado sRGB** (`setRGB(…, SRGBColorSpace)`). Sem isso
+  o Three 0.170 o lê como linear e clareia na saída: o `--canvas` escuro saiu
+  cinza-marrom e as matérias desbotaram — pego no navegador, não no build.
+- **Resumo bloqueado sai em `--ink-faint`** na esfera e no rótulo (decisão 4c),
+  sem seções (a página já não as manda) e fora do Teste-se.
+
+**O que ficou de fora, declarado:** o Teste-se guarda o progresso só no
+navegador — os erros ainda não vão para o "Para refazer" (decisão 22). E o
+valor da aba depende do mesmo conteúdo que a 10b-bis cobra: com 10 citações
+entre matérias e quase nenhum `pai_id`, a Árvore de Biologia é um anel lotado.
 
 ## O que a lista do boletim ainda deve
 
