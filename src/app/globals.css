@@ -508,6 +508,39 @@ button:focus-visible,
   background-size: 26px 26px;
 }
 
+/* Rótulos da aba 3D (`mapa/motor3d.ts`). São divs escritas pelo motor a cada
+   quadro, por cima do canvas — por isso a classe mora aqui e não em utilitário:
+   o motor troca o `className` inteiro e só compara strings curtas.
+   O contorno na cor do fundo é o mesmo recurso do grafo 2D: segura a leitura
+   quando um rótulo encosta em outro. */
+.mapa3d-rotulo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--ink);
+  text-shadow: 0 0 3px var(--canvas), 0 0 3px var(--canvas), 0 0 2px var(--canvas);
+}
+.mapa3d-materia { font-weight: 700; font-size: 14px; }
+.mapa3d-secao { font-size: 10.5px; color: var(--ink-dim); }
+.mapa3d-on { font-weight: 600; }
+.mapa3d-bloq { color: var(--ink-faint); }
+.mapa3d-ok { color: var(--ok); }
+.mapa3d-x { color: var(--erro); }
+/* No Teste-se, o nome escondido vira uma etiqueta "?" tracejada. */
+.mapa3d-q {
+  font-family: var(--fonte-mono), monospace;
+  font-weight: 500;
+  color: var(--ink-dim);
+  background: var(--raised);
+  border: 1px dashed var(--line-forte);
+  border-radius: 6px;
+  padding: 0 5px;
+  text-shadow: none;
+}
+.mapa3d-q.mapa3d-on { color: var(--acento); border: 1px solid var(--acento); }
+
 /* ---- ramo que abre e fecha ----
 
    `grid-template-rows: 0fr → 1fr` anima ALTURA DESCONHECIDA sem medir nada em
