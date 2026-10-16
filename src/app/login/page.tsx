@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { mensagemDeErro } from '@/lib/erros-auth'
 import { CampoSenha } from '@/components/CampoSenha'
 import { CartaoAcesso, LinkAcesso } from '@/components/CartaoAcesso'
+import { PRAZO_DE_LIBERACAO } from '@/lib/planos'
 
 /**
  * As duas abas, como DADO e no escopo do módulo.
@@ -133,7 +134,7 @@ export default function LoginPage() {
           </p>
           <p className="mt-3 text-sm leading-relaxed text-[var(--ink-faint)]">
             Depois de entrar, sua conta ainda começa sem acesso aos resumos. A liberação é
-            feita à mão depois do pagamento.
+            feita à mão, {PRAZO_DE_LIBERACAO} depois do pagamento.
           </p>
 
           <button

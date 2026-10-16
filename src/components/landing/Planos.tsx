@@ -79,7 +79,10 @@ export default function Planos() {
             <p className="rotulo border-t border-[var(--line)] pt-4">
               {precoLegivel(plano.preco)}
               {plano.preco !== null && (
-                <span className="text-[var(--ink-faint)]"> · {PERIODO_DE_ACESSO.curto}</span>
+                <span className="text-[var(--ink-faint)]">
+                  {' '}
+                  · {PERIODO_DE_ACESSO.curto}, até {PERIODO_DE_ACESSO.ate}
+                </span>
               )}
             </p>
           </article>
