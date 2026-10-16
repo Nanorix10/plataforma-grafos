@@ -1,3 +1,4 @@
+import Link from 'next/link'
 /**
  * A primeira dobra — **campo escuro, lockup, declaração em caixa baixa**.
  *
@@ -208,14 +209,21 @@ export default function Dobra() {
           as mesmas provas que você.
         </p>
 
-        <a
-          href="#portas"
-          className="chamada reveal inline-flex items-center gap-6 mt-14 no-underline"
-          data-atraso="3"
-        >
-          <span className="rotulo">comece por onde faz sentido</span>
-          <Seta />
-        </a>
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-6 mt-14">
+          <a
+            href="#portas"
+            className="chamada reveal inline-flex items-center gap-6 no-underline"
+            data-atraso="3"
+          >
+            <span className="rotulo">comece por onde faz sentido</span>
+            <Seta />
+          </a>
+          {/* A prova antes da promessa: quem chega pelo vídeo de lançamento
+              lê um resumo inteiro sem cadastro (`(site)/amostra`). */}
+          <Link href="/amostra" className="link-amostra rotulo reveal" data-atraso="3">
+            ou leia um resumo inteiro, grátis →
+          </Link>
+        </div>
       </div>
     </header>
   )

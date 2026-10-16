@@ -23,10 +23,16 @@ export default function Questoes({
   resumoId,
   respostas,
   seletor,
+  guardar = true,
 }: {
   resumoId: string
   respostas: Resposta[]
   seletor: string
+  /**
+   * `false` na amostra pública (`/amostra`): o visitante responde e vê a
+   * correção, mas não tem conta onde guardar — e `responder` recusaria.
+   */
+  guardar?: boolean
 }) {
   const [erro, setErro] = useState<string | null>(null)
 
@@ -46,6 +52,7 @@ export default function Questoes({
 
     function salvar(aside: HTMLElement, acertou: boolean, resposta: string | null) {
       setErro(null)
+      if (!guardar) return
       void responder({
         resumoId,
         questaoId: aside.id.slice(2),
@@ -113,7 +120,7 @@ export default function Questoes({
       conteudo.removeEventListener('click', aoClicar)
       conteudo.removeEventListener('keydown', aoTeclar as EventListener)
     }
-  }, [resumoId, respostas, seletor])
+  }, [resumoId, respostas, seletor, guardar])
 
   return (
     <p role="status" className="text-[length:var(--t-peq)] text-[var(--erro)] empty:hidden mt-4">

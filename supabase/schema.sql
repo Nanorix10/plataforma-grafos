@@ -536,3 +536,19 @@ create table dias_de_estudo (
 -- `meu_estudo()` devolve em jsonb as contagens da pagina do aluno (grifos,
 -- respostas, edital por etapa). `security invoker`, EXECUTE revogado de
 -- PUBLIC e de anon. Ver a migration 20260923180000_pagina_do_aluno.sql.
+
+-- ---------------------------------------------------------------------------
+-- Amostra gratis (migration 20261016071826_amostra_gratis.sql). Decisao 27.
+-- Um resumo inteiro legivel sem conta, para a pagina publica `/amostra`.
+alter table resumos add column amostra boolean not null default false;
+
+-- Permissiva, entao se SOMA a "resumo legivel so com o plano que o cobre":
+-- anon e conta sem plano leem so' a linha marcada; o resto segue fechado.
+create policy "amostra e' publica"
+  on resumos for select to anon, authenticated
+  using (amostra);
+
+-- `amostra_contexto(slug)`: jsonb com citados, citam, irmaos, caminho e provas
+-- da amostra -- so' a vizinhanca dela, para os wikilinks e o "Cai em" da pagina
+-- publica sem abrir `resumos_catalogo` ao anon. `security definer`; slug que
+-- nao e' amostra devolve null. EXECUTE so' para anon e authenticated.

@@ -129,6 +129,12 @@ export default function Planos() {
           </svg>
         </span>
       </Link>
+
+      <p className="rotulo reveal mt-8">
+        <Link href="/amostra" className="link-amostra">
+          antes de escolher, leia um resumo inteiro grátis →
+        </Link>
+      </p>
     </section>
   )
 }

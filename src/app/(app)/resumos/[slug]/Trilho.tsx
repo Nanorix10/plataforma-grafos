@@ -35,7 +35,19 @@ import { secaoAtual } from './secaoAtual'
  * quase todo resumo — há três ou quatro visíveis ao mesmo tempo, e o observer
  * só diria que todos entraram. O `rAF` garante uma conta por quadro.
  */
-export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
+export default function Trilho({
+  itens,
+  prefixoLiga = '/resumos/',
+}: {
+  itens: ItemTrilho[]
+  /**
+   * Para onde a aresta leva, e por onde o `<a>` do texto é achado. A amostra
+   * pública (`/amostra`) troca para `/planos?de=`: quem não tem conta não abre
+   * o resumo do outro lado, e o renderizador de lá escreve os links com o
+   * mesmo prefixo, então a contagem por posição continua batendo.
+   */
+  prefixoLiga?: string
+}) {
   const [ativa, setAtiva] = useState<string | null>(null)
   const nav = useRef<HTMLElement>(null)
 
@@ -75,7 +87,7 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
    */
   function acender(indice: number, ligado: boolean) {
     const links = document.querySelectorAll<HTMLAnchorElement>(
-      '.conteudo-resumo a[href^="/resumos/"]'
+      `.conteudo-resumo a[href^="${prefixoLiga}"]`
     )
     links[indice]?.classList.toggle('aceso', ligado)
   }
@@ -119,7 +131,7 @@ export default function Trilho({ itens }: { itens: ItemTrilho[] }) {
             ) : (
               <li key={`l-${item.slug}`} className="trilho-liga" data-nivel={item.nivel}>
                 <Link
-                  href={`/resumos/${item.slug}`}
+                  href={`${prefixoLiga}${item.slug}`}
                   onMouseEnter={() => acender(item.indice, true)}
                   onMouseLeave={() => acender(item.indice, false)}
                   onFocus={() => acender(item.indice, true)}

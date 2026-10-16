@@ -3098,3 +3098,28 @@ h3 {
 .conteudo-resumo .pratique ~ .questao::before {
   content: 'Questão ' counter(questao) ' · Tente antes de abrir';
 }
+
+/* A amostra pública (`(site)/amostra`) mora no grupo `(site)`, cujo layout põe
+   `.titulo-display` em volta de tudo e pintaria os títulos do resumo com a
+   Gabarito. Aqui eles voltam à fonte de quem os cerca, como no `(app)`: a
+   amostra existe para mostrar o resumo EXATAMENTE como o aluno o lê. Mesma
+   especificidade (0,1,1), e ganha por vir depois. */
+.amostra :is(h1, h2) {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+/* O link da amostra grátis, na dobra e nos planos da landing. Sublinhado no
+   acento: é a única chamada da página que não tem seta, e sem o traço ela
+   leria como rótulo. Vem depois de `.landing .dobra .rotulo` para ganhar dele
+   a cor, com a mesma especificidade. */
+.landing .link-amostra {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--acento);
+  text-underline-offset: 5px;
+}
+.landing .dobra .link-amostra {
+  color: var(--dobra-ink);
+  text-decoration-color: var(--dobra-acento);
+}
