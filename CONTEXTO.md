@@ -37,6 +37,7 @@ src/lib/
 
 src/app/
   page.tsx                    landing pública
+  (site)/amostra/             o resumo grátis, sem login (decisão 27)
   login/                      cadastro e login
   (app)/                      TUDO que exige login
     layout.tsx                guard de auth + Sidebar
@@ -2951,6 +2952,68 @@ navegador — os erros ainda não vão para o "Para refazer" (decisão 22). E o
 valor da aba depende do mesmo conteúdo que a 10b-bis cobra: com 10 citações
 entre matérias e quase nenhum `pai_id`, a Árvore de Biologia é um anel lotado.
 
+## 27. Um resumo inteiro se lê sem conta, em `/amostra`
+
+**16/10/2026.** Para o vídeo de lançamento: quem nunca ouviu falar do site lê um
+resumo de verdade antes de pagar. O resumo é **Funções inorgânicas**, escolhido
+pelo Leandro porque cai no PASSE 1 **e** no PAS UEM 1 — serve aos dois públicos —
+e tem questões resolvidas e ligações. A landing aponta para ele na dobra e nos
+planos.
+
+**A decisão 14 não afrouxou: ganhou uma porta nomeada.** Coluna
+`resumos.amostra` (nasce `false`) e uma policy de select **a mais**,
+`to anon, authenticated using (amostra)`. Policies permissivas se somam por OU,
+então a do plano segue igual e só a linha marcada passa. Trocar de amostra é um
+`update` (e o `SLUG_DA_AMOSTRA` da página); desmarcar faz `/amostra` dar 404 em
+vez de uma página vazia.
+
+**O catálogo continua fechado ao `anon`.** Os `[[wikilinks]]`, o "Cai em" e os
+vizinhos precisam de nome, slug e definição de OUTROS resumos, e reabrir
+`resumos_catalogo` entregaria o acervo inteiro a qualquer um. Quem responde é
+`amostra_contexto(slug)`, `security definer`, que devolve só a vizinhança de um
+resumo marcado (citados, quem cita, irmãos, caminho, provas) e `null` para o
+resto. Aqui `definer` é o certo, ao contrário da busca (15): a função não
+devolve corpo nenhum, e quem chama não alcança as tabelas de onde ela lê.
+
+**As ligações levam a `/planos?de=<slug>`, com a definição no `title`.** O
+resumo do outro lado não é amostra; mandar a `/resumos/…` jogaria o visitante
+no login. O `Trilho` e o `SumarioMovel` ganharam `prefixoLiga` por isso: o
+trilho acha o `<a>` do texto pelo prefixo do `href` (12d), e os dois lados têm
+de usar o mesmo.
+
+**Mesmo pipeline da página do aluno; fica de fora o que exige conta.** Pratique,
+trilho, ficha, "Esta página responde", lupa e questões respondíveis entram;
+grifos, favorito, visita e dia de estudo não. `Questoes` ganhou
+`guardar={false}`: corrige na tela e não chama `responder`, que recusaria sem
+sessão.
+
+**É estática, com `revalidate = 300`, e lê com o `supabase-js` puro, sem
+cookie.** O pico de um vídeo cai sobre HTML pronto. O preço: editar a amostra
+leva até 5 minutos para aparecer.
+
+**A migration foi aplicada pelo MCP, e o arquivo renomeado para a versão que
+ele gravou.** `supabase db push` recusa este banco: treze migrations de setembro
+estão no histórico remoto com versões diferentes dos nomes dos arquivos
+(`20260913044505` lá, `20260913100000` aqui), e a CLI pede um `migration repair`
+que, seguido de `push`, tentaria reaplicar as de setembro. É o mesmo padrão dos
+branches `chore/rename-*-migration`. Consertar o histórico é tarefa à parte.
+
+**Conferido em produção com papel simulado** (`set local role` e
+`request.jwt.claims`):
+
+| quem | lê `resumos` | a amostra | outro (`celula`) |
+|---|---|---|---|
+| `anon` | **1** | 1 | **0** |
+| conta sem plano | **1** | 1 | **0** |
+| aluno com plano completo | 243 | 1 | 1 |
+
+Antes da migration, `anon` lia 0 da própria amostra. `amostra_contexto` devolve
+`null` para `celula`.
+
+Dentro de `.amostra` os títulos voltam à fonte do `(app)`: o layout do `(site)`
+põe `.titulo-display` em volta de tudo, e a Gabarito pintaria o `h1` e os
+subtítulos do resumo.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
@@ -2967,6 +3030,7 @@ Continuam abertas, e nenhuma é de código sozinho:
   backlinks e a árvore estão prontos esperando dado. É a mesma conclusão a que
   a física do grafo chegou por outro caminho (decisão 10b-bis).
 - PWA offline,
-  revisão espaçada, canal de dúvida, resumo de amostra sem login.
+  revisão espaçada, canal de dúvida. (O resumo de amostra sem login saiu em
+  16/10 — decisão 27.)
 - **Imprimir / salvar em PDF** está adiado por decisão de produto: depende de
   resolver se o acervo pode sair do site.

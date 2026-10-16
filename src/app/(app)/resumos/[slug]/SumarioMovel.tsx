@@ -24,7 +24,14 @@ import { secaoAtual } from './secaoAtual'
  * aluno está no instante em que abre, então calcula UMA vez, no toque. Uma
  * conta por abertura contra uma por quadro.
  */
-export default function SumarioMovel({ itens }: { itens: ItemTrilho[] }) {
+export default function SumarioMovel({
+  itens,
+  prefixoLiga = '/resumos/',
+}: {
+  itens: ItemTrilho[]
+  /** O mesmo do `Trilho`: a amostra pública manda a aresta para `/planos`. */
+  prefixoLiga?: string
+}) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const [ativa, setAtiva] = useState<string | null>(null)
 
@@ -84,7 +91,7 @@ export default function SumarioMovel({ itens }: { itens: ItemTrilho[] }) {
                 </li>
               ) : (
                 <li key={`l-${item.slug}`} className="trilho-liga" data-nivel={item.nivel}>
-                  <Link href={`/resumos/${item.slug}`} onClick={fechar}>
+                  <Link href={`${prefixoLiga}${item.slug}`} onClick={fechar}>
                     {item.texto}
                   </Link>
                 </li>
