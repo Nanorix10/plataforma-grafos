@@ -10,9 +10,12 @@ import { PROCESSOS } from '@/lib/processos'
  * dos mesmos planos estava em `(app)/conta/page.tsx`. O mesmo produto se
  * chamava "Acesso PASSE" na página de vendas e "PASSE" na conta do aluno.
  *
- * O preço entra aqui pelo mesmo motivo, e ainda não existe: `preco: null` é
- * "não decidido", e a interface é obrigada a tratar esse caso em vez de
- * mostrar um `R$ 00` de mentira — que era o que estava no ar.
+ * O preço entra aqui pelo mesmo motivo. Ficou `null` ("não decidido") até
+ * 16/10/2026, e a interface continua tratando esse caso em vez de mostrar um
+ * `R$ 00` de mentira. Os valores de hoje são de PRIMEIRA TURMA: pagamento
+ * único, valendo até o fim das provas de 2026 — ver `PERIODO_DE_ACESSO`. A
+ * conta por trás (concorrência, custo de infraestrutura, dias até cada prova,
+ * conteúdo de cada plano) está na wiki, em "Preços dos planos".
  *
  * **Quando o pagamento pelo Mercado Pago entrar**, é este arquivo que o
  * checkout lê. Nada mais precisa saber de preço.
@@ -41,7 +44,10 @@ export type Plano = {
    * > falha para o lado seguro, mas continua sendo falha.
    */
   processos: string[]
-  /** Preço mensal em reais. `null` enquanto o Leandro não decidir. */
+  /**
+   * Preço em reais, pago UMA vez, pelo período de `PERIODO_DE_ACESSO`.
+   * `null` = não decidido. Não é mensalidade: a tela não pode dizer "/mês".
+   */
   preco: number | null
   /**
    * O selo do cartão em destaque, **e o texto dele**. No máximo um plano tem.
@@ -76,21 +82,28 @@ export const PLANOS: Record<string, Plano> = {
   passe: {
     nome: 'Acesso PASSE',
     processos: ['passe', 'comum'],
-    preco: null,
+    preco: 39,
     paraQuem: 'Você presta só o PASSE, da UFMS.',
   },
   completo: {
     nome: 'Acesso Completo',
     processos: ['passe', 'pas-uem', 'pas-unb', 'comum'],
-    preco: null,
+    preco: 49,
     paraQuem: 'Você presta mais de um, ou ainda não decidiu quais vai fazer.',
     selo: 'Mais completo',
   },
   pas: {
     nome: 'Acesso PAS',
     processos: ['pas-uem', 'pas-unb', 'comum'],
-    preco: null,
-    paraQuem: 'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE.',
+    preco: 35,
+    /*
+     * A segunda frase é obrigatória enquanto o PAS UnB não tiver resumo
+     * próprio (0 em 16/10/2026, nem tópico de edital). Sem ela, quem presta só
+     * a UnB compraria esperando o que não existe — o pedido de reembolso que o
+     * `paraQuem` existe para evitar. Tire quando houver conteúdo da UnB.
+     */
+    paraQuem:
+      'Você presta o PAS da UEM, o da UnB, ou os dois — e não o PASSE. O PAS UnB ainda não tem resumo próprio: por enquanto, ele leva o conteúdo comum.',
   },
   /**
    * `nenhum` é o plano de quem acabou de se cadastrar — ver a decisão 1b do
@@ -129,6 +142,7 @@ export const INCLUI_SEMPRE = [
   'Todas as matérias do processo seletivo escolhido',
   'O conteúdo comum a mais de um vestibular, seja qual for o plano',
   'Resumos interligados, com o mapa de conexões',
+  'Questões de prova com resolução, respondidas no próprio resumo',
   'Linha do tempo dos eventos históricos',
   'Leitura no próprio site, sem baixar nada',
   'Atualizações do acervo enquanto o acesso estiver ativo',
@@ -159,6 +173,21 @@ export const PLANOS_A_VENDA = (['passe', 'completo', 'pas'] as const).map((slug)
  * página de venda — parece decidido e barato ao mesmo tempo. "A definir" diz a
  * verdade e não custa credibilidade nenhuma num produto que ainda vai abrir.
  */
+/**
+ * Quanto tempo o pagamento vale. Um fato só, lido pelos cartões de preço e
+ * pela FAQ — trocar a data aqui troca nas três telas.
+ *
+ * É até 31/12 e não até a data de cada prova porque as três caem entre 1º/11
+ * (PAS UEM) e 13/12 (PASSE e PAS 2 da UnB), e um prazo por plano seria uma
+ * regra que o admin teria de lembrar aluno a aluno. **A expiração é manual**,
+ * como a liberação: em janeiro, bloquear em `/admin/pessoas`.
+ */
+export const PERIODO_DE_ACESSO = {
+  curto: 'pagamento único',
+  longo: 'Pagamento único. O acesso vale até 31/12/2026, depois das provas deste ano.',
+  ate: '31/12/2026',
+} as const
+
 export function precoLegivel(preco: number | null): string {
   if (preco === null) return 'A definir'
   return preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

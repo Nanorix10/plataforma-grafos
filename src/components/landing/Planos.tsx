@@ -3,6 +3,7 @@ import {
   AVISO_SEM_PRECO,
   INCLUI_SEMPRE,
   PLANOS_A_VENDA,
+  PERIODO_DE_ACESSO,
   PRECOS_ANUNCIADOS,
   precoLegivel,
 } from '@/lib/planos'
@@ -77,6 +78,9 @@ export default function Planos() {
 
             <p className="rotulo border-t border-[var(--line)] pt-4">
               {precoLegivel(plano.preco)}
+              {plano.preco !== null && (
+                <span className="text-[var(--ink-faint)]"> · {PERIODO_DE_ACESSO.curto}</span>
+              )}
             </p>
           </article>
         ))}

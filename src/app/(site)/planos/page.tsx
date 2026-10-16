@@ -5,6 +5,7 @@ import {
   INCLUI_SEMPRE,
   PRECOS_ANUNCIADOS,
   AVISO_SEM_PRECO,
+  PERIODO_DE_ACESSO,
   precoLegivel,
 } from '@/lib/planos'
 import { PROVAS } from '@/lib/processos'
@@ -99,11 +100,13 @@ export default function PlanosPage() {
                 não tem linha de preço, e quem responde por todos é o aviso
                 acima. As duas páginas leem o mesmo `PRECOS_ANUNCIADOS`. */}
             {p.preco !== null && (
-              <div className="text-[length:var(--t-titulo)] font-medium">
-                {precoLegivel(p.preco)}
-                <span className="text-[length:var(--t-peq)] text-[var(--ink-faint)] font-normal">
-                  /mês
-                </span>
+              <div>
+                <div className="text-[length:var(--t-titulo)] font-medium">
+                  {precoLegivel(p.preco)}
+                </div>
+                <p className="text-[length:var(--t-mini)] text-[var(--ink-faint)] mt-1">
+                  {PERIODO_DE_ACESSO.curto}, até {PERIODO_DE_ACESSO.ate}
+                </p>
               </div>
             )}
 

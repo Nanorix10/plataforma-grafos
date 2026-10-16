@@ -1,3 +1,5 @@
+import { PERIODO_DE_ACESSO } from '@/lib/planos'
+
 /**
  * As perguntas que decidem a compra.
  *
@@ -51,10 +53,9 @@ export const FAQ: Duvida[] = [
   },
   {
     pergunta: 'Quanto tempo dura o meu acesso?',
-    /* ⏳ FALTA: decisão do Leandro. Mensal, por etapa, por ano, vitalício?
-       A resposta muda o preço e muda o que o cartão de plano diz — hoje ele diz
-       "/mês" quando o preço existir, o que já assume mensalidade. */
-    resposta: null,
+    /* Decidido em 16/10/2026: pagamento único de primeira turma. A frase vem
+       de `PERIODO_DE_ACESSO`, a mesma que os cartões de preço leem. */
+    resposta: PERIODO_DE_ACESSO.longo,
   },
   {
     pergunta: 'E se eu não gostar? Tem reembolso?',
