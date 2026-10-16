@@ -130,6 +130,33 @@ export const PLANO_PROCESSOS: Record<string, string[]> = Object.fromEntries(
 )
 
 /**
+ * Quanto tempo o pagamento vale. Um fato só, lido pelos cartões de preço, pela
+ * lista do `INCLUI_SEMPRE` e pela FAQ — trocar a data aqui troca em todas.
+ *
+ * É até 31/12 e não até a data de cada prova porque as três caem entre 1º/11
+ * (PAS UEM) e 13/12 (PASSE e PAS 2 da UnB), e um prazo por plano seria uma
+ * regra que o admin teria de lembrar aluno a aluno. **A expiração é manual**,
+ * como a liberação: em janeiro, bloquear em `/admin/pessoas`.
+ */
+export const PERIODO_DE_ACESSO = {
+  curto: 'pagamento único',
+  longo: 'Pagamento único. O acesso vale até 31/12/2026, depois das provas deste ano.',
+  ate: '31/12/2026',
+} as const
+
+/**
+ * Em quanto tempo o acesso é liberado depois do pagamento.
+ *
+ * A liberação é manual (decisão 1b do `CONTEXTO.md`), e "feita por nós depois
+ * do pagamento" sem prazo é o ponto em que um comprador que nunca ouviu falar
+ * do site desiste: parece dinheiro mandado para ninguém. 24 horas foi o prazo
+ * que o Leandro escolheu por conseguir cumprir mesmo em semana de prova — é
+ * promessa, então só muda aqui, e as quatro telas que falam da liberação leem
+ * esta frase. Quando o webhook do pagamento existir, ela vira "na hora".
+ */
+export const PRAZO_DE_LIBERACAO = 'em até 24 horas' as const
+
+/**
  * O que TODO plano entrega, sem exceção.
  *
  * Vale a pena dizer isto em voz alta na página de planos, porque é a coisa
@@ -145,7 +172,7 @@ export const INCLUI_SEMPRE = [
   'Questões de prova com resolução, respondidas no próprio resumo',
   'Linha do tempo dos eventos históricos',
   'Leitura no próprio site, sem baixar nada',
-  'Atualizações do acervo enquanto o acesso estiver ativo',
+  `Atualizações do acervo até ${PERIODO_DE_ACESSO.ate}`,
 ] as const
 
 /** Os planos que aparecem na vitrine, na ordem em que ela os mostra. */
@@ -173,21 +200,6 @@ export const PLANOS_A_VENDA = (['passe', 'completo', 'pas'] as const).map((slug)
  * página de venda — parece decidido e barato ao mesmo tempo. "A definir" diz a
  * verdade e não custa credibilidade nenhuma num produto que ainda vai abrir.
  */
-/**
- * Quanto tempo o pagamento vale. Um fato só, lido pelos cartões de preço e
- * pela FAQ — trocar a data aqui troca nas três telas.
- *
- * É até 31/12 e não até a data de cada prova porque as três caem entre 1º/11
- * (PAS UEM) e 13/12 (PASSE e PAS 2 da UnB), e um prazo por plano seria uma
- * regra que o admin teria de lembrar aluno a aluno. **A expiração é manual**,
- * como a liberação: em janeiro, bloquear em `/admin/pessoas`.
- */
-export const PERIODO_DE_ACESSO = {
-  curto: 'pagamento único',
-  longo: 'Pagamento único. O acesso vale até 31/12/2026, depois das provas deste ano.',
-  ate: '31/12/2026',
-} as const
-
 export function precoLegivel(preco: number | null): string {
   if (preco === null) return 'A definir'
   return preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

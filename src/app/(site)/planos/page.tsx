@@ -6,6 +6,7 @@ import {
   PRECOS_ANUNCIADOS,
   AVISO_SEM_PRECO,
   PERIODO_DE_ACESSO,
+  PRAZO_DE_LIBERACAO,
   precoLegivel,
 } from '@/lib/planos'
 import { PROVAS } from '@/lib/processos'
@@ -236,7 +237,7 @@ export default function PlanosPage() {
             o webhook do Mercado Pago existir, este parágrafo muda junto. */}
         <p className="text-[length:var(--t-peq)] text-[var(--ink-dim)] leading-relaxed">
           Você cria sua conta aqui no site e nos avisa do pagamento. A liberação
-          é feita por nós e o acesso aparece na sua conta — nada é enviado por
+          é feita por nós, {PRAZO_DE_LIBERACAO}, e o acesso aparece na sua conta — nada é enviado por
           e-mail ou WhatsApp, porque o material vive no site e é lá que você lê.
         </p>
       </section>

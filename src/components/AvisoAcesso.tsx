@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PRAZO_DE_LIBERACAO } from '@/lib/planos'
 
 /**
  * O recado de quem ainda não tem o acervo liberado — e o caminho para resolver.
@@ -20,7 +21,7 @@ import Link from 'next/link'
 
 const TEXTO = {
   nenhum:
-    'Sua conta ainda não tem acesso liberado. A liberação é feita à mão depois do pagamento.',
+    `Sua conta ainda não tem acesso liberado. A liberação é feita à mão, ${PRAZO_DE_LIBERACAO} depois do pagamento.`,
   parcial: 'Quer os outros vestibulares? O Acesso Completo libera os três.',
 } as const
 

@@ -45,7 +45,7 @@ export const AUTOR = {
   conquistas: [
     {
       titulo: 'Está em 1º lugar em medicina',
-      onde: 'PASSE da UFMS, entre todos os candidatos',
+      onde: 'na classificação da 1ª etapa do PASSE da UFMS',
       ano: 2025,
     },
     {

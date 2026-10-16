@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PRAZO_DE_LIBERACAO } from '@/lib/planos'
 import { PROVAS } from '@/lib/processos'
 import { Seta } from './Dobra'
 
@@ -39,7 +40,7 @@ export default function Fechamento() {
         </h2>
         <p className="reveal text-[var(--ink-dim)] max-w-[62ch] leading-relaxed" data-atraso="2">
           crie a conta agora — leva um minuto e não pede cartão. ela nasce sem acesso, e a liberação
-          do acervo é feita por nós depois do pagamento.
+          do acervo é feita por nós {PRAZO_DE_LIBERACAO} depois do pagamento.
         </p>
       </div>
 
