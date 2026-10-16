@@ -1,4 +1,4 @@
-import { PERIODO_DE_ACESSO, PRAZO_DE_LIBERACAO } from '@/lib/planos'
+import { CANAL_DE_AVISO, PERIODO_DE_ACESSO, PRAZO_DE_LIBERACAO } from '@/lib/planos'
 
 /**
  * As perguntas que decidem a compra.
@@ -29,7 +29,7 @@ export const FAQ: Duvida[] = [
        do Pix. Quando o webhook do Mercado Pago entrar, esta resposta muda — e
        muda aqui, num lugar só. */
     resposta:
-      `Você cria sua conta no site e nos avisa do pagamento. A liberação é feita por nós, ${PRAZO_DE_LIBERACAO}, e o acesso aparece na sua conta. Nada é enviado por e-mail ou WhatsApp: o material vive no site.`,
+      `Você cria sua conta no site e nos avisa do pagamento pelo ${CANAL_DE_AVISO.nome} (${CANAL_DE_AVISO.arroba}). A liberação é feita por nós, ${PRAZO_DE_LIBERACAO}, e o acesso aparece na sua conta. Nada é enviado por e-mail ou WhatsApp: o material vive no site.`,
   },
   {
     pergunta: 'Preciso baixar algum arquivo?',
