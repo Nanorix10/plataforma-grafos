@@ -322,7 +322,11 @@ export default async function ResumoPage({
       >
         <Trilho itens={trilho} />
 
-      <article className="max-w-[var(--pagina)] mx-auto px-6 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] py-10 md:py-14">
+      {/* `w-full` porque item de grade com `mx-auto` mede pelo CONTEÚDO: as
+          tabelas (que rolam sozinhas no celular) empurravam o artigo a 920px
+          numa tela de 375, com rolagem horizontal na página toda. A folha
+          continua com 920 no desktop — a coluna é `minmax(0, var(--pagina))`. */}
+      <article className="w-full max-w-[var(--pagina)] mx-auto px-6 md:pl-[var(--margem-esq)] md:pr-[var(--margem-dir)] py-10 md:py-14">
         {/* A etiqueta é contornada na cor da matéria, e o texto vai na mesma
             cor. Ela já foi a ÚNICA peça colorida da página, quando o título
             ficava neutro; agora a cor da matéria vale para todo título do
