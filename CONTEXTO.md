@@ -3070,17 +3070,21 @@ prender. Tudo o que é ferramenta é igual em todo modelo novo:
 
 Cinco escolhas que não se adivinham:
 
-- **O plano de corte é fixo no MUNDO, não na célula.** Gira-se a célula, e a
-  janela aberta continua virada para o aluno — como uma lâmina que ele vira
-  com a mão. As organelas não são cortadas (só quem tem `casca: true`), senão
-  cada mitocôndria virava meia cápsula oca.
-- **O raio do Three.js não sabe do corte.** Para ele a metade da membrana que
-  sumiu continua sólida: todo clique cairia nela. `cortado()` descarta o
-  acerto que está do lado apagado do plano, no clique E no teste de rótulo.
-- **O rótulo prende no ponto mais próximo da câmera que está à vista.** Cada
-  peça declara várias âncoras; a cada poucos quadros um raio da câmera até
-  cada uma diz se outra peça está na frente. Ribossomo é `miuda`: não conta
-  como obstáculo, senão escondia tudo.
+- **O corte é uma CUNHA fixa no MUNDO, não na célula** (desde 10/11, ver
+  abaixo; antes era meia célula). Gira-se a célula, e a abertura continua
+  virada para o aluno. São dois planos com `clipIntersection`: some só o que
+  está do lado de fora dos dois.
+- **O raio do Three.js não sabe do corte.** Para ele a parte que sumiu
+  continua sólida: todo clique cairia nela. `cortado()` descarta o acerto que
+  está dentro da cunha, no clique E no teste de rótulo.
+- **Translúcido não rouba clique.** Vacúolo, citoplasma e estroma são
+  atravessados pelo olhar; vale o primeiro OPACO atrás deles, e o translúcido
+  só ganha se não houver mais nada. Achado clicando no núcleo da vegetal e
+  acendendo o vacúolo.
+- **O rótulo prende no ponto mais próximo da câmera que está à vista.** As
+  âncoras saem da própria malha; a cada poucos quadros um raio da câmera até
+  cada uma diz se outra peça está na frente. Ribossomo e citoesqueleto são
+  `miuda`: não contam como obstáculo, senão escondiam tudo.
 - **Coluna de rótulo só a partir de 560px, e nome inteiro só a partir de
   760px.** Na coluna do resumo (620px) "Retículo endoplasmático rugoso"
   invadia a célula — vale o `curto` ("RE rugoso"), e o cartão diz o nome
@@ -3090,12 +3094,51 @@ Cinco escolhas que não se adivinham:
   `Math.random` a célula mudaria a cada recarga, e o aluno que lembrou "a
   mitocôndria de baixo" não a acharia de novo.
 
-**A Célula é feita por código, e é esquemática de propósito**, como a figura do
-livro: fora de escala, para caber tudo. Feita por código porque as
-ferramentas precisam de cada organela como peça separada e com nome — um
-modelo pronto de terceiros chega como malha única. Para anatomia e espécimes
-reais, a fonte de fora continua sendo o caminho (Smithsonian CC0, NIH 3D,
-Z-Anatomy CC BY-SA), e o crédito vai junto do modelo.
+### A Célula é modelada no Blender (10/11/2026)
+
+A primeira Célula, montada com primitivas no navegador, foi recusada pelo
+autor: formas de brinquedo, cor chapada, pouco detalhe interno. A atual é
+modelada no **Blender** e chega ao site como `.glb` (`celula-animal.glb`,
+`celula-vegetal.glb`, 0,4 e 0,7 MB com Draco).
+
+**A fonte da verdade é a RECEITA, não o .glb:**
+`ferramentas/modelos-3d/celula_blender.py` monta a célula do zero dentro do
+Blender e exporta. Mudar uma forma é mudar a receita e exportar de novo;
+editar o .glb à mão se perde na próxima exportação. Ela existe porque o
+Blender caiu na primeira tentativa e levou a cena junto — com a receita,
+reconstruir são 2 segundos. Como rodar está no cabeçalho dela.
+
+O que a receita desenha, e que a primeira versão não tinha: carioteca DUPLA
+com 110 poros, cromatina em fios e grumos, RE rugoso em sacos que continuam a
+carioteca, Golgi com bordas dilatadas e vesículas brotando, mitocôndria com
+membrana interna em cristas, centríolos com 9 trios, citoesqueleto,
+polissomos; na vegetal, parede com plasmodesmos, vacúolo com tonoplasto e
+cloroplastos com grana ligados por lamelas.
+
+Quatro coisas que não se adivinham:
+
+- **Cada malha leva `parte` como propriedade do objeto**, e o exportador a grava
+  em `extras`. É por ela que o visualizador agrupa as malhas (a membrana do
+  núcleo, o nucleoplasma e os poros são todos `nucleo`). O NOME do objeto não
+  serve: o Blender acrescenta `.001` quando reconstrói.
+- **O corte da prévia é no MATERIAL**, não por boolean. O boolean nas peças com
+  espessura derrubou o Blender. `previa_corte(False)` antes de exportar — senão
+  o nó de transparência iria junto e o glTF perderia a cor.
+- **Tom "Neutral", não AgX.** O AgX é o do Blender, mas no navegador desbotou
+  tudo para um rosa-quase-branco. E o `sheen` exportado sai forte demais no
+  Three.js: a parede virava um véu; o visualizador o limita a 0,08.
+- **Cada variante abre no ângulo dela** (`vista` no `celula.html`). Na vegetal
+  o núcleo fica na borda, e o ângulo da animal o deixava inteiro dentro da
+  cunha. Por isso trocar de variante volta à vista dela.
+
+O nome e o texto de cada estrutura moram no `celula.html`, ligados pelo id.
+A página carrega `three`, os addons e o `three-mesh-bvh` (raios rápidos numa
+malha de 290 mil triângulos) por **importmap**: o GLTFLoader importa `three`
+pelo nome, e os dois precisam ser o mesmo módulo.
+
+Para anatomia e espécimes reais, a fonte de fora continua sendo o caminho
+(Smithsonian CC0, NIH 3D, Z-Anatomy CC BY-SA), e o crédito vai junto do
+modelo. `.glb` também saiu do `proxy.ts`.
 
 Água e coração continuam com o encanamento próprio de antes; migrá-los para o
 `_base.js` é trabalho separado e não muda o que o aluno vê.
