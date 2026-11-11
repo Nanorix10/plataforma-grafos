@@ -2,44 +2,34 @@
  * O visualizador comum dos modelos 3D (decisão 28 do CONTEXTO.md).
  *
  * Um modelo é um .html em `public/modelos-3d/` que entra no resumo por
- * <iframe>. Antes deste arquivo, cada modelo copiava ~150 linhas de
- * encanamento — tema, giro com o mouse, laço de animação — e copiou junto o
- * bug do observador de tema que travava a aba (ver o aviso na decisão 28).
- * Agora o modelo só DESCREVE as peças dele, e tudo o que é ferramenta mora
- * aqui, igual em todos:
+ * <iframe>. O modelo só DESCREVE as peças; tudo o que é ferramenta mora aqui,
+ * igual em todos:
  *
  *   - girar arrastando (e pelo teclado), zoom por botão, voltar à vista;
- *   - "Abrir": um plano de corte tira a metade da frente das cascas
- *     (membrana, parede, carioteca) para mostrar o que há dentro;
+ *   - "Abrir": um corte em CUNHA, fixo no mundo e virado para o aluno, tira
+ *     um quarto da célula e mostra o interior de tudo o que atravessa;
  *   - rótulos com linha-guia, que somem quando a peça fica escondida;
  *   - clicar numa peça acende ela e abre o cartão com o que ela FAZ;
- *   - "Estruturas": a lista de peças, que também é o caminho do teclado e
- *     do leitor de tela;
- *   - "Teste-se": os nomes viram "?", o aluno tenta lembrar e revela
- *     (prática de recuperação, a mesma regra do mapa 3D da decisão 26);
- *   - tela cheia.
+ *   - "Estruturas": a lista de peças (caminho do teclado e do leitor de tela);
+ *   - "Teste-se": os nomes viram "?", o aluno lembra e revela;
+ *   - variantes (Animal / Vegetal) e tela cheia.
  *
- * O contrato do modelo:
+ * Duas formas de dar as peças:
  *
- *   criarVisualizador({
- *     titulo, dica?,
- *     variantes?: [{ id, nome }],          // ex.: Animal / Vegetal
- *     montar(THREE, varianteId) => {
- *       grupo,                              // THREE.Group com tudo
- *       raio,                               // raio que precisa caber na tela
- *       partes: [{
- *         id, nome, curto?, descricao,
- *         so?,                              // 'Só na célula vegetal', etc.
- *         casca?: true,                     // é cortada ao abrir
- *         objetos: [Object3D],              // o que pertence à peça
- *         ancoras: [Vector3],               // pontos LOCAIS para o rótulo
- *         miuda?: true,                     // não esconde as outras (ribossomos)
- *       }]
- *     }
- *   })
+ *   1. ARQUIVO (o caminho de qualidade): `arquivo(variante)` devolve a URL de
+ *      um .glb exportado do Blender. Cada malha traz em `extras.parte` o id da
+ *      estrutura; `partes` dá nome e texto de cada id. Uma parte listada que
+ *      não existe no arquivo da variante simplesmente não aparece.
+ *
+ *   2. CÓDIGO: `montar(THREE, variante)` devolve { grupo, raio, partes } com
+ *      os objetos já montados (era o caminho da primeira Célula).
+ *
+ * A página que usa este arquivo precisa de um <script type="importmap"> que
+ * diga onde estão `three`, `three/addons/` e `three-mesh-bvh` — o GLTFLoader
+ * importa `three` pelo nome, e os dois têm de ser o MESMO módulo.
  */
 
-const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/three.module.min.js'
+const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/gltf/'
 
 /** Largura da coluna de rótulos de cada lado, quando a janela é larga. */
 const COLUNA = 128
@@ -76,6 +66,7 @@ button { font: inherit; color: var(--tinta); background: var(--caixa); border: 1
 button:hover { border-color: var(--acento); }
 button:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
 button[aria-pressed='true'] { background: var(--acento-fundo); border-color: var(--acento); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
 .topo { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px;
   align-items: flex-start; justify-content: space-between; pointer-events: none; }
 .topo > * { pointer-events: auto; }
@@ -114,8 +105,9 @@ button[aria-pressed='true'] { background: var(--acento-fundo); border-color: var
 .dica { left: 50%; transform: translateX(-50%); bottom: 10px; padding: 3px 9px; font-size: 12px;
   color: var(--tinta-fraca); pointer-events: none; transition: opacity .4s; }
 .aviso { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px;
-  text-align: center; color: var(--tinta-fraca); }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  text-align: center; color: var(--tinta-fraca); margin: 0; }
+.carregando { position: absolute; inset: 0; display: grid; place-items: center; color: var(--tinta-fraca);
+  pointer-events: none; }
 `
 
 /* ------------------------------------------------------------------ */
@@ -139,9 +131,22 @@ export async function criarVisualizador(cfg) {
 
   /* Se o Three.js não carregar (sem internet, CDN fora do ar), a janela diz
      o porquê em vez de ficar em branco. */
-  let THREE
+  let THREE, GLTFLoader, DRACOLoader, RoomEnvironment, bvh
   try {
-    THREE = await import(THREE_URL)
+    THREE = await import('three')
+    if (cfg.arquivo) {
+      ;[{ GLTFLoader }, { DRACOLoader }, { RoomEnvironment }, bvh] = await Promise.all([
+        import('three/addons/loaders/GLTFLoader.js'),
+        import('three/addons/loaders/DRACOLoader.js'),
+        import('three/addons/environments/RoomEnvironment.js'),
+        import('three-mesh-bvh'),
+      ])
+      /* Malha detalhada (centenas de milhares de triângulos) e um raio por
+         rótulo a cada poucos quadros: sem a árvore de caixas (BVH), cada raio
+         testaria triângulo por triângulo. */
+      THREE.BufferGeometry.prototype.computeBoundsTree = bvh.computeBoundsTree
+      THREE.Mesh.prototype.raycast = bvh.acceleratedRaycast
+    }
   } catch {
     avisar('Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.')
     return
@@ -157,8 +162,13 @@ export async function criarVisualizador(cfg) {
     return
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
-  // Recorte por material: só as cascas recebem o plano, o resto fica inteiro.
   renderer.localClippingEnabled = true
+  /* Mapeamento "Neutral" (o da Khronos para materiais PBR): preserva o matiz
+     e a saturação da cor do material. O AgX, que é o do Blender, aqui
+     desbotava tudo para um rosa-quase-branco — testado lado a lado com a
+     prévia aprovada. */
+  renderer.toneMapping = THREE.NeutralToneMapping
+  renderer.toneMappingExposure = 1.0
   const tela = renderer.domElement
   tela.tabIndex = 0
   tela.setAttribute('role', 'img')
@@ -166,20 +176,34 @@ export async function criarVisualizador(cfg) {
   palco.append(tela)
 
   const cena = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 200)
-  cena.add(new THREE.HemisphereLight(0xffffff, 0x8088a0, 1.5))
-  const sol = new THREE.DirectionalLight(0xffffff, 2.0)
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200)
+  if (RoomEnvironment) {
+    // Luz de estúdio refletida: é o que dá volume e brilho de verdade às
+    // superfícies, em vez de cor chapada.
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    cena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    cena.environmentIntensity = 0.35
+  }
+  cena.add(new THREE.HemisphereLight(0xffffff, 0x6a7088, RoomEnvironment ? 0.55 : 1.5))
+  const sol = new THREE.DirectionalLight(0xfff4ea, RoomEnvironment ? 1.9 : 2.0)
   sol.position.set(4, 6, 8)
   cena.add(sol)
-  const contraluz = new THREE.DirectionalLight(0xffffff, 0.6)
+  const contraluz = new THREE.DirectionalLight(0xe8ecff, 0.7)
   contraluz.position.set(-5, -2, -4)
   cena.add(contraluz)
 
-  /* O plano de corte é FIXO no mundo, de frente para a câmera: gira-se a
-     célula, não o corte. Por isso a janela aberta fica sempre virada para o
-     aluno, como uma lâmina de microscópio que ele vira com a mão. Corta o
-     que tem z > 0 (o lado da câmera). */
-  const plano = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)
+  /* O CORTE: uma cunha de 90°, fixa no mundo, com a ponta para dentro e a
+     boca virada para a câmera. Gira-se a célula, não o corte — a janela
+     aberta fica sempre de frente para o aluno.
+
+     Um ponto some quando está do lado "de fora" dos DOIS planos
+     (`clipIntersection`): é isso que tira só a cunha, e não meia célula. */
+  const R2 = Math.SQRT1_2
+  const planos = [
+    new THREE.Plane(new THREE.Vector3(-R2, 0, -R2), 0),
+    new THREE.Plane(new THREE.Vector3(R2, 0, -R2), 0),
+  ]
+  const naCunha = (p) => planos.every((pl) => pl.distanceToPoint(p) < 0)
 
   /* ---------- DOM das ferramentas ---------- */
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -213,7 +237,7 @@ export async function criarVisualizador(cfg) {
   }
 
   const bLista = botao('Estruturas', '☰', () => alternarLista())
-  const bRotulos = botao('Rótulos', '🏷', () => { rotulosLigados = !rotulosLigados; atualizarBotoes() })
+  const bRotulos = botao('Rótulos', '🏷', () => { rotulosLigados = !rotulosLigados; jaDecidiuRotulos = true; atualizarBotoes() })
   const bAbrir = botao('Abrir', '✂', () => { aberto = !aberto; aplicarCorte(); atualizarBotoes() })
   const bTeste = botao('Teste-se', '?', () => alternarTeste())
   const bMenos = botao('Afastar', '−', () => mudarZoom(1 / 1.2))
@@ -244,9 +268,13 @@ export async function criarVisualizador(cfg) {
   dica.setAttribute('aria-hidden', 'true')
   palco.append(dica)
 
+  const carregando = el('div', 'carregando')
+  carregando.textContent = 'Carregando o modelo…'
+  palco.append(carregando)
+
   /* ---------- Estado ---------- */
-  let modelo = null // { grupo, raio, partes }
-  let pecas = [] // partes enriquecidas
+  let modelo = null // { grupo, raio }
+  let pecas = []
   let selecionada = null
   let aberto = true
   let teste = false
@@ -254,48 +282,156 @@ export async function criarVisualizador(cfg) {
   let largura = 1, altura = 1
   let zoom = 1
   let rotulosLigados = true
+  let jaDecidiuRotulos = false
   let girandoSozinho = !matchMedia('(prefers-reduced-motion: reduce)').matches
+  let oclusores = []
+  let clicaveis = []
+  let tempoOclusao = 0
 
-  const ROT_INICIAL = { x: 0.32, y: -0.55 }
+  const ROT_INICIAL = { x: 0.38, y: 0.35 }
+  const cache = new Map() // variante -> modelo já carregado
 
-  /* ---------- Montar / trocar variante ---------- */
-  function montar() {
-    if (modelo) {
-      cena.remove(modelo.grupo)
-      modelo.grupo.traverse((o) => {
-        o.geometry?.dispose()
-        const m = o.material
-        if (Array.isArray(m)) m.forEach((x) => x.dispose())
-        else m?.dispose()
-      })
+  /* ---------- Carregar / trocar variante ---------- */
+  let gltf = null
+  async function obterModelo(variante) {
+    if (cache.has(variante)) return cache.get(variante)
+    let m
+    if (cfg.arquivo) {
+      if (!gltf) {
+        gltf = new GLTFLoader()
+        const draco = new DRACOLoader()
+        draco.setDecoderPath(DRACO)
+        gltf.setDRACOLoader(draco)
+      }
+      const dado = await gltf.loadAsync(cfg.arquivo(variante))
+      m = deArquivo(dado.scene)
+    } else {
+      m = cfg.montar(THREE, variante)
     }
+    prepararMateriais(m.grupo)
+    cache.set(variante, m)
+    return m
+  }
+
+  /** Agrupa as malhas do .glb pela `parte` que o Blender gravou em cada uma. */
+  function deArquivo(raiz) {
+    const grupo = new THREE.Group()
+    grupo.add(raiz)
+    // Centraliza: o meio da célula no meio da tela, qualquer que seja a origem do arquivo.
+    const caixa = new THREE.Box3().setFromObject(raiz)
+    const centro = caixa.getCenter(new THREE.Vector3())
+    raiz.position.sub(centro)
+    grupo.updateMatrixWorld(true)
+    // O maior semi-eixo, e não a esfera que envolve a caixa: essa mede até o
+    // canto da caixa, que a célula não tem, e deixava o modelo miúdo.
+    const tam = caixa.getSize(new THREE.Vector3())
+    const raio = Math.max(tam.x, tam.y, tam.z) / 2
+
+    const porParte = new Map()
+    raiz.traverse((o) => {
+      if (!o.isMesh) return
+      // O exportador põe os `extras` no nó; a malha às vezes é filha dele.
+      let n = o, id = null
+      while (n && !id) { id = n.userData?.parte; n = n.parent }
+      if (!id) return
+      if (!porParte.has(id)) porParte.set(id, [])
+      porParte.get(id).push(o)
+    })
+
+    const partes = []
+    for (const meta of cfg.partes) {
+      const malhas = porParte.get(meta.id)
+      if (!malhas) continue
+      partes.push({ ...meta, objetos: malhas, ancoras: ancorasDa(malhas, grupo) })
+    }
+    return { grupo, raio, partes }
+  }
+
+  /** Pontos da superfície, espalhados, para o rótulo prender. Em coordenadas do grupo. */
+  function ancorasDa(malhas, grupo) {
+    const inv = new THREE.Matrix4().copy(grupo.matrixWorld).invert()
+    const pts = []
+    const v = new THREE.Vector3()
+    for (const m of malhas) {
+      const pos = m.geometry.attributes.position
+      const passo = Math.max(1, Math.floor(pos.count / (28 / malhas.length)))
+      for (let i = 0; i < pos.count; i += passo) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).applyMatrix4(inv)
+        pts.push(v.clone())
+      }
+    }
+    return pts
+  }
+
+  function prepararMateriais(grupo) {
+    grupo.traverse((m) => {
+      if (!m.isMesh) return
+      m.geometry.computeBoundsTree?.()
+      const mats = Array.isArray(m.material) ? m.material : [m.material]
+      for (const mat of mats) {
+        if (mat.userData.preparado) continue
+        mat.userData.preparado = true
+        mat.userData.emissiva = mat.emissive?.getHex?.() ?? 0
+        // Os dois lados: com o corte aberto, o que se vê é o AVESSO das superfícies.
+        mat.side = THREE.DoubleSide
+        mat.clipIntersection = true
+        if (mat.transparent) mat.depthWrite = false
+        // O "sheen" (brilho de veludo) sai muito mais forte aqui que no
+        // Blender: com o valor exportado, a parede virava um véu esbranquiçado.
+        if (mat.sheen) mat.sheen = Math.min(mat.sheen, 0.08)
+        /* O avesso sai mais escuro: é o que faz a borda cortada se ler como
+           "fatia", e não como casca oca do mesmo tom. */
+        mat.onBeforeCompile = (sh) => {
+          sh.fragmentShader = sh.fragmentShader.replace(
+            '#include <color_fragment>',
+            '#include <color_fragment>\n  if (!gl_FrontFacing) diffuseColor.rgb *= 0.62;'
+          )
+        }
+      }
+    })
+  }
+
+  async function montar(variante) {
+    carregando.hidden = false
+    let m
+    try {
+      m = await obterModelo(variante)
+    } catch {
+      carregando.hidden = true
+      avisar('Não foi possível abrir o arquivo do modelo. Recarregue a página.')
+      return
+    }
+    carregando.hidden = true
+    /* Cada variante abre no ÂNGULO DELA (`cfg.vista`): na vegetal o núcleo
+       fica na borda, e o ângulo da animal o deixava inteiro dentro da cunha
+       cortada. Por isso trocar de variante volta à vista dela, em vez de
+       manter o giro do aluno. */
+    const ini = vistaDe(variante)
+    const rx = ini.x
+    const ry = ini.y
+    if (modelo) cena.remove(modelo.grupo)
     camadaRotulos.replaceChildren()
     svg.replaceChildren()
-    modelo = cfg.montar(THREE, varianteAtual)
-    const rot = modelo.grupo.rotation
-    rot.x = ROT_INICIAL.x
-    rot.y = ROT_INICIAL.y
+    modelo = m
+    // Trocar de animal para vegetal não desfaz o ângulo que o aluno escolheu.
+    modelo.grupo.rotation.set(rx, ry, 0)
+    zoom = 1
     cena.add(modelo.grupo)
 
-    pecas = modelo.partes.map((p, i) => {
+    pecas = m.partes.map((p, i) => {
       const malhas = []
       for (const o of p.objetos) {
-        o.traverse((m) => {
-          if (!m.isMesh) return
-          m.userData.parte = p.id
-          malhas.push(m)
-          const mats = Array.isArray(m.material) ? m.material : [m.material]
-          for (const mat of mats) {
-            if (mat.userData.emissiva === undefined) mat.userData.emissiva = mat.emissive?.getHex?.() ?? 0
-            if (p.casca) mat.userData.casca = true
-          }
+        o.traverse((x) => {
+          if (!x.isMesh) return
+          x.userData.parteId = p.id
+          malhas.push(x)
+          // Modelo por código: só quem é casca recebe o corte (ver `aplicarCorte`).
+          if (p.casca) for (const mat of [x.material].flat()) mat.userData.casca = true
         })
       }
       const rotulo = el('span', 'rotulo')
       camadaRotulos.append(rotulo)
-      rotulo.addEventListener('click', () => {
-        if (teste) revelar(p.id)
-      })
+      rotulo.addEventListener('click', () => { if (teste) revelar(p.id) })
       const linha = document.createElementNS('http://www.w3.org/2000/svg', 'line')
       const ponto = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       ponto.setAttribute('r', '2.6')
@@ -303,7 +439,7 @@ export async function criarVisualizador(cfg) {
       return { ...p, numero: i + 1, malhas, rotulo, linha, ponto, ancora: null }
     })
 
-    // Cada peça miúda (ribossomo) não esconde as outras do rótulo.
+    // Peça miúda (ribossomo, citoesqueleto) não esconde as outras do rótulo.
     oclusores = pecas.filter((p) => !p.miuda).flatMap((p) => p.malhas)
     clicaveis = pecas.flatMap((p) => p.malhas)
 
@@ -322,12 +458,8 @@ export async function criarVisualizador(cfg) {
   function trocarVariante(id) {
     if (id === varianteAtual) return
     varianteAtual = id
-    const rx = modelo.grupo.rotation.x
-    const ry = modelo.grupo.rotation.y
-    montar()
-    // Trocar de animal para vegetal não deve desfazer o ângulo que o aluno escolheu.
-    modelo.grupo.rotation.x = rx
-    modelo.grupo.rotation.y = ry
+    atualizarBotoes()
+    montar(id)
   }
 
   /* ---------- Corte e destaque ---------- */
@@ -336,8 +468,9 @@ export async function criarVisualizador(cfg) {
       if (!m.isMesh) return
       const mats = Array.isArray(m.material) ? m.material : [m.material]
       for (const mat of mats) {
-        if (!mat.userData.casca) continue
-        mat.clippingPlanes = aberto ? [plano] : []
+        // No modelo por código, só as cascas são cortadas; no arquivo, tudo.
+        if (!cfg.arquivo && !mat.userData.casca) continue
+        mat.clippingPlanes = aberto ? planos : []
         mat.needsUpdate = true
       }
     })
@@ -352,7 +485,7 @@ export async function criarVisualizador(cfg) {
         for (const mat of mats) {
           if (!mat.emissive) continue
           if (acesa) mat.emissive.copy(mat.color).multiplyScalar(0.45)
-          else mat.emissive.setHex(mat.userData.emissiva)
+          else mat.emissive.setHex(mat.userData.emissiva ?? 0)
         }
       }
     }
@@ -466,31 +599,36 @@ export async function criarVisualizador(cfg) {
     altura = palco.clientHeight || 1
     renderer.setSize(largura, altura, false)
     camera.aspect = largura / altura
+    if (!modelo) return
     const tg = Math.tan((camera.fov * Math.PI) / 360)
     // Na janela larga, o modelo cabe ENTRE as duas colunas de rótulos.
     const util = largura >= LARGA ? largura - 2 * COLUNA : largura
     const vertical = altura - 70 // barra de cima e um respiro embaixo
-    const d = (modelo.raio / tg) * Math.max(altura / Math.max(vertical, 1), altura / Math.max(util, 1)) * 1.18
+    const d = (modelo.raio / tg) * Math.max(altura / Math.max(vertical, 1), altura / Math.max(util, 1)) * 1.12
     camera.position.set(0, 0, d / zoom)
+    camera.near = d / 50
+    camera.far = d * 4
     camera.updateProjectionMatrix()
-    // No celular os rótulos abrem desligados: não há onde pôr catorze nomes.
+    // No celular os rótulos abrem desligados: não há onde pôr quinze nomes.
     if (!jaDecidiuRotulos) rotulosLigados = largura >= LARGA
     for (const b of [bLista, bRotulos, bAbrir, bTeste]) b.classList.toggle('so-icone', largura < 470)
     atualizarBotoes()
     tempoOclusao = 0
   }
-  let jaDecidiuRotulos = false
-  bRotulos.addEventListener('click', () => { jaDecidiuRotulos = true })
 
   function mudarZoom(f) {
-    zoom = Math.min(2.6, Math.max(0.6, zoom * f))
+    zoom = Math.min(3, Math.max(0.6, zoom * f))
     ajustarTamanho()
+  }
+
+  function vistaDe(variante) {
+    return cfg.vista?.[variante] ?? ROT_INICIAL
   }
 
   function vistaInicial() {
     zoom = 1
-    modelo.grupo.rotation.x = ROT_INICIAL.x
-    modelo.grupo.rotation.y = ROT_INICIAL.y
+    const ini = vistaDe(varianteAtual)
+    modelo.grupo.rotation.set(ini.x, ini.y, 0)
     ajustarTamanho()
   }
 
@@ -504,8 +642,6 @@ export async function criarVisualizador(cfg) {
   /* ---------- Gestos ---------- */
   const ray = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
-  let oclusores = []
-  let clicaveis = []
   let arrastando = false, moveu = 0, ux = 0, uy = 0
 
   function primeiroGesto() {
@@ -513,22 +649,29 @@ export async function criarVisualizador(cfg) {
     dica.style.opacity = '0'
   }
 
-  /** Primeira peça sob o ponteiro, ignorando o que o plano de corte apagou. */
+  /** O raio do Three não sabe do corte: um ponto cortado continua "sólido" para ele. */
+  function cortado(hit) {
+    const mat = hit.object.material
+    return !!(mat.clippingPlanes?.length && naCunha(hit.point))
+  }
+
+  /** Primeira peça sob o ponteiro, ignorando o que o corte apagou. */
   function pecaEm(cx, cy) {
+    if (!modelo) return null
     const r = tela.getBoundingClientRect()
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
     ray.setFromCamera(ndc, camera)
+    /* Translúcido (vacúolo, citoplasma, estroma) não rouba o clique de quem
+       se vê ATRAVÉS dele: vale o primeiro opaco; o translúcido só ganha se
+       não houver nada opaco atrás. Achado clicando no núcleo da vegetal e
+       acendendo o vacúolo. */
+    let translucido = null
     for (const hit of ray.intersectObjects(clicaveis, false)) {
       if (cortado(hit)) continue
-      return hit.object.userData.parte
+      if (!hit.object.material.transparent) return hit.object.userData.parteId
+      translucido ??= hit.object.userData.parteId
     }
-    return null
-  }
-
-  /** O raio do Three não sabe do recorte: um ponto cortado continua "sólido" para ele. */
-  function cortado(hit) {
-    const mat = hit.object.material
-    return !!(mat.clippingPlanes?.length && plano.distanceToPoint(hit.point) < 0)
+    return translucido
   }
 
   tela.addEventListener('pointerdown', (e) => {
@@ -539,9 +682,15 @@ export async function criarVisualizador(cfg) {
     tela.setPointerCapture(e.pointerId)
     tela.classList.add('arrastando')
   })
+  let ultimoHover = 0
   tela.addEventListener('pointermove', (e) => {
     if (!arrastando) {
-      if (e.pointerType === 'mouse') tela.classList.toggle('sobre-peca', !!pecaEm(e.clientX, e.clientY))
+      // Só o mouse tem "passar por cima"; e com folga de tempo, que o raio custa.
+      const agora = performance.now()
+      if (e.pointerType === 'mouse' && agora - ultimoHover > 60) {
+        ultimoHover = agora
+        tela.classList.toggle('sobre-peca', !!pecaEm(e.clientX, e.clientY))
+      }
       return
     }
     const dx = e.clientX - ux, dy = e.clientY - uy
@@ -577,6 +726,7 @@ export async function criarVisualizador(cfg) {
   })
 
   function girar(ay, ax) {
+    if (!modelo) return
     const r = modelo.grupo.rotation
     r.y += ay
     // Trava o tombo em ±80°, senão a célula vira de cabeça para baixo.
@@ -587,7 +737,6 @@ export async function criarVisualizador(cfg) {
      A escolha da âncora (qual ponto de cada peça está à vista) custa raios, e
      é refeita só a cada poucos quadros. O desenho segue a âncora em todo
      quadro. */
-  let tempoOclusao = 0
   const v = new THREE.Vector3()
   const doCamera = new THREE.Vector3()
 
@@ -598,8 +747,9 @@ export async function criarVisualizador(cfg) {
       // Mais perto da câmera primeiro: é a que o aluno está vendo.
       const candidatas = p.ancoras
         .map((a) => a.clone().applyMatrix4(mundo))
-        .filter((a) => !(p.casca && aberto && plano.distanceToPoint(a) < -0.02))
+        .filter((a) => !(aberto && (cfg.arquivo || p.casca) && naCunha(a)))
         .sort((a, b) => b.z - a.z)
+        .slice(0, 8)
       for (const a of candidatas) {
         if (visivel(a, p.id)) {
           p.ancora = a
@@ -613,14 +763,17 @@ export async function criarVisualizador(cfg) {
     doCamera.copy(ponto).sub(camera.position)
     const dist = doCamera.length()
     ray.set(camera.position, doCamera.normalize())
-    ray.far = dist - 0.12
-    for (const hit of ray.intersectObjects(oclusores, false)) {
-      if (cortado(hit)) continue
+    ray.far = dist - 0.05
+    try {
+      for (const hit of ray.intersectObjects(oclusores, false)) {
+        if (cortado(hit)) continue
+        if (hit.object.material.transparent) continue // gel translúcido não esconde
+        return hit.object.userData.parteId === id
+      }
+      return true
+    } finally {
       ray.far = Infinity
-      return hit.object.userData.parte === id
     }
-    ray.far = Infinity
-    return true
   }
 
   function desenharRotulos() {
@@ -702,18 +855,19 @@ export async function criarVisualizador(cfg) {
      ficaram lá em cima. */
   const relogio = new THREE.Clock()
   function quadro() {
+    if (!modelo) return
     const dt = Math.min(relogio.getDelta(), 0.1)
-    if (girandoSozinho) modelo.grupo.rotation.y += dt * 0.22
+    if (girandoSozinho) modelo.grupo.rotation.y += dt * 0.18
     modelo.grupo.updateMatrixWorld()
     if (tempoOclusao-- <= 0) {
       escolherAncoras()
-      tempoOclusao = arrastando || girandoSozinho ? 5 : 12
+      tempoOclusao = arrastando || girandoSozinho ? 6 : 14
     }
     renderer.render(cena, camera)
     desenharRotulos()
   }
 
-  new ResizeObserver(() => modelo && ajustarTamanho()).observe(palco)
+  new ResizeObserver(() => ajustarTamanho()).observe(palco)
   new IntersectionObserver(([entrada]) => {
     if (entrada.isIntersecting) {
       relogio.getDelta()
@@ -721,7 +875,8 @@ export async function criarVisualizador(cfg) {
     } else renderer.setAnimationLoop(null)
   }).observe(palco)
 
-  montar()
+  atualizarBotoes()
+  await montar(varianteAtual)
 
   /* ---------- auxiliares de DOM ---------- */
   function el(tag, classe) {

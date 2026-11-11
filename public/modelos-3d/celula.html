@@ -5,21 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Célula animal e vegetal em 3D</title>
 <!--
-  Célula eucariótica, nas versões animal e vegetal, feita por código.
+  Célula eucariótica, animal e vegetal, modelada no Blender.
 
-  Feita por código, e não baixada, porque aqui o que ensina são as FERRAMENTAS
-  (corte, rótulos, Teste-se), e elas precisam de cada organela como peça
-  separada e com nome. Um modelo pronto chega como uma malha só, e o trabalho
-  de parti-lo seria maior que o de desenhar.
+  A geometria NÃO mora aqui: está em `celula-animal.glb` e `celula-vegetal.glb`,
+  gerados por `ferramentas/modelos-3d/celula_blender.py` (a receita que monta
+  a célula do zero dentro do Blender e exporta). Para mudar uma forma, muda-se
+  a receita e exporta-se de novo — não se edita o .glb.
 
-  É ESQUEMÁTICA de propósito, como a figura do livro: tamanhos e quantidades
-  fora de escala, para caber tudo e cada estrutura ser reconhecível. As formas
-  seguem a convenção didática (mitocôndria em cápsula, Golgi em pilha de
-  bolsas curvas, RER em lâminas com pontinhos).
+  Aqui ficam só o NOME e o TEXTO de cada estrutura, ligados ao arquivo pelo id
+  que cada malha leva em `extras.parte`.
 
-  Quem desenha os botões, o corte, os rótulos e o Teste-se é `_base.js`.
-  Este arquivo só monta as peças.
+  É esquemática de propósito, como a figura do livro: tamanhos relativos
+  exagerados para cada organela ser reconhecível.
 -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js"
+  }
+}
+</script>
 </head>
 <body>
 <script type="module">
@@ -27,560 +34,94 @@ import { criarVisualizador } from './_base.js'
 
 criarVisualizador({
   titulo: 'Célula animal e vegetal em 3D',
-  dica: 'Arraste para girar · clique numa organela',
+  dica: 'Arraste para girar · clique numa estrutura',
   variantes: [
     { id: 'animal', nome: 'Animal' },
     { id: 'vegetal', nome: 'Vegetal' },
   ],
-  montar,
-})
-
-/* ------------------------------------------------------------------
-   Sorteio com semente: as organelas caem SEMPRE no mesmo lugar. Com
-   `Math.random` a célula mudaria a cada recarga, e o aluno que decorou
-   "a mitocôndria de baixo" não a acharia de novo. */
-function sorteio(semente) {
-  let a = semente >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-function montar(THREE, variante) {
-  const V = (x, y, z) => new THREE.Vector3(x, y, z)
-  const vegetal = variante === 'vegetal'
-  const rnd = sorteio(vegetal ? 7 : 3)
-  const grupo = new THREE.Group()
-  const partes = []
-
-  const mat = (cor, extra = {}) =>
-    new THREE.MeshStandardMaterial({ color: cor, roughness: 0.55, metalness: 0, ...extra })
-
-  function parte(p) {
-    for (const o of p.objetos) if (!o.parent) grupo.add(o)
-    partes.push(p)
-    return p
-  }
-
-  /* ---------- A forma da célula ----------
-     Animal: esfera achatada e levemente ondulada (não tem parede que a
-     prenda). Vegetal: caixa de cantos arredondados, que é o que a parede de
-     celulose faz com ela. As duas são a mesma conta — uma superelipsoide —,
-     com expoente 1 (elipsoide) ou 0,35 (quase caixa). */
-  const forma = vegetal
-    ? { a: 3.5, b: 2.35, c: 2.35, e: 0.35 }
-    : { a: 3.2, b: 2.6, c: 3.2, e: 1 }
-
-  const sinalPot = (x, p) => Math.sign(x) * Math.abs(x) ** p
-
-  /** Esfera unitária → superelipsoide de semi-eixos (a,b,c)·escala. */
-  function casca(escala, segmentos = 96, ondula = 0) {
-    const g = new THREE.SphereGeometry(1, segmentos, Math.round(segmentos * 0.66))
-    const pos = g.attributes.position
-    for (let i = 0; i < pos.count; i++) {
-      let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i)
-      x = sinalPot(x, forma.e); y = sinalPot(y, forma.e); z = sinalPot(z, forma.e)
-      const w = 1 + ondula * Math.sin(3.1 * x + 1.3) * Math.sin(2.3 * y + 0.4) * Math.sin(2.7 * z)
-      pos.setXYZ(i, x * forma.a * escala * w, y * forma.b * escala * w, z * forma.c * escala * w)
-    }
-    g.computeVertexNormals()
-    return g
-  }
-
-  /** O ponto está dentro da célula, com folga? (mesma conta da casca, ao contrário) */
-  function dentro(p, folga) {
-    const k = 2 / forma.e
-    const s =
-      Math.abs(p.x / (forma.a - folga)) ** k +
-      Math.abs(p.y / (forma.b - folga)) ** k +
-      Math.abs(p.z / (forma.c - folga)) ** k
-    return s < 1
-  }
-
-  /* Lista do que já ocupa espaço, para as organelas não se atravessarem. */
-  const ocupado = []
-  const livre = (p, r) => ocupado.every((o) => o.c.distanceTo(p) > o.r + r + 0.08)
-
-  /** Sorteia `n` lugares dentro da célula que respeitem `aceita`. */
-  function lugares(n, r, aceita = () => true, folga = 0.35) {
-    const res = []
-    for (let tent = 0; res.length < n && tent < 4000; tent++) {
-      const p = V((rnd() * 2 - 1) * forma.a, (rnd() * 2 - 1) * forma.b, (rnd() * 2 - 1) * forma.c)
-      if (!dentro(p, r + folga) || !livre(p, r) || !aceita(p)) continue
-      ocupado.push({ c: p, r })
-      res.push(p)
-    }
-    return res
-  }
-
-  /** Pontos sobre a superfície de uma casca, para servir de âncora de rótulo. */
-  function anelDeAncoras(escala, n = 10) {
-    const pts = []
-    for (let i = 0; i < n; i++) {
-      const t = (i / n) * Math.PI * 2
-      const x = Math.cos(t), z = Math.sin(t)
-      pts.push(V(sinalPot(x, forma.e) * forma.a * escala, 0.35 * forma.b, sinalPot(z, forma.e) * forma.c * escala))
-      pts.push(V(sinalPot(x, forma.e) * forma.a * escala * 0.8, -0.55 * forma.b, sinalPot(z, forma.e) * forma.c * escala * 0.8))
-    }
-    return pts
-  }
-
-  /* ================== Parede celular (só vegetal) ================== */
-  if (vegetal) {
-    const m = mat(0x86b85a, { roughness: 0.8, side: THREE.DoubleSide })
-    const fora = new THREE.Mesh(casca(1.0, 96), m)
-    const dentroP = new THREE.Mesh(casca(0.955, 96), m)
-    parte({
-      id: 'parede', nome: 'Parede celular', curto: 'Parede',
-      so: 'Só na vegetal', casca: true,
-      descricao:
-        'Camada rígida de celulose por fora da membrana. Dá forma e proteção e impede que a célula estoure ao absorver água. Na comparação animal × vegetal, só a vegetal tem.',
-      objetos: [fora, dentroP],
-      ancoras: anelDeAncoras(1.0),
-    })
-  }
-
-  /* ================== Membrana plasmática ================== */
-  const escMembrana = vegetal ? 0.94 : 1.0
-  {
-    const m = mat(0xe39ab3, { roughness: 0.5, side: THREE.DoubleSide })
-    const fora = new THREE.Mesh(casca(escMembrana, 96, vegetal ? 0 : 0.025), m)
-    // A segunda camada, um pouco por dentro, é o que dá ESPESSURA à borda do corte.
-    const dentroM = new THREE.Mesh(casca(escMembrana - 0.025, 96, vegetal ? 0 : 0.025), mat(0xc77b98, { side: THREE.DoubleSide }))
-    parte({
+  arquivo: (variante) => `./celula-${variante}.glb`,
+  // Ângulo inicial de cada uma: o corte em cunha atravessa o núcleo ao meio.
+  vista: { animal: { x: 0.38, y: 0.35 }, vegetal: { x: 0.4, y: 0.9 } },
+  // A ordem é a da lista "Estruturas" e a numeração do Teste-se: de fora para dentro.
+  partes: [
+    {
+      id: 'parede', nome: 'Parede celular', curto: 'Parede', so: 'Só na vegetal',
+      descricao: 'Camada rígida de celulose por fora da membrana. Dá forma e proteção e impede que a célula estoure ao absorver água. Na comparação animal × vegetal, só a vegetal tem.',
+    },
+    {
+      id: 'plasmodesmos', nome: 'Plasmodesmos', so: 'Só na vegetal', miuda: true,
+      descricao: 'Canais que atravessam a parede e ligam o citoplasma de células vizinhas, permitindo a troca de água, íons e moléculas entre elas.',
+    },
+    {
       id: 'membrana', nome: 'Membrana plasmática', curto: 'Membrana',
-      casca: true,
-      descricao:
-        'Envoltório de fosfolipídios e proteínas que separa a célula do meio. É semipermeável: controla o que entra e o que sai.',
-      objetos: [fora, dentroM],
-      ancoras: anelDeAncoras(escMembrana),
-    })
-  }
-
-  /* ================== Citoplasma ==================
-     Um gel translúcido desenhado só por DENTRO (BackSide): fechado não se vê;
-     aberto, tinge o fundo da cavidade e dá a sensação de volume cheio. */
-  {
-    const m = mat(0xf2cfa8, { transparent: true, opacity: 0.32, side: THREE.BackSide, depthWrite: false })
-    const gel = new THREE.Mesh(casca(escMembrana - 0.03, 64), m)
-    parte({
-      id: 'citoplasma', nome: 'Citoplasma', casca: true,
-      descricao:
-        'Tudo o que fica entre a membrana e o núcleo: o citosol (líquido gelatinoso, rico em água e proteínas) e as organelas mergulhadas nele.',
-      objetos: [gel],
-      ancoras: [V(-1.2, -1.7, -1.6), V(1.6, 1.4, -1.5), V(0.4, -1.9, -1.4), V(-1.8, 1.0, -1.7)],
-    })
-  }
-
-  /* ================== Vacúolo central (só vegetal) ==================
-     Ocupa o meio e empurra o núcleo para a borda — é a imagem clássica da
-     célula vegetal madura. */
-  const vac = { c: V(0.6, -0.05, 0), a: 2.05, b: 1.2, c3: 1.3 }
-  const noVacuolo = (p, folga = 0) =>
-    vegetal &&
-    ((p.x - vac.c.x) / (vac.a + folga)) ** 2 + ((p.y - vac.c.y) / (vac.b + folga)) ** 2 + ((p.z - vac.c.z) / (vac.c3 + folga)) ** 2 < 1
-  if (vegetal) {
-    const g = new THREE.SphereGeometry(1, 64, 40)
-    g.scale(vac.a, vac.b, vac.c3)
-    const m = mat(0x8fcbed, { transparent: true, opacity: 0.5, roughness: 0.15, depthWrite: false })
-    const bolsa = new THREE.Mesh(g, m)
-    bolsa.position.copy(vac.c)
-    bolsa.renderOrder = 2
-    ocupado.push({ c: vac.c.clone(), r: 0.1 }) // o resto do vacúolo é barrado por `noVacuolo`
-    parte({
-      id: 'vacuolo', nome: 'Vacúolo central', curto: 'Vacúolo',
-      so: 'Grande só na vegetal',
-      descricao:
-        'Grande bolsa cheia de suco celular (água, sais, açúcares e pigmentos), envolta pelo tonoplasto. Ocupa boa parte da célula e mantém a pressão de turgor.',
-      objetos: [bolsa],
-      ancoras: [
-        V(vac.c.x, vac.c.y + vac.b - 0.05, 0), V(vac.c.x + vac.a - 0.1, vac.c.y, 0),
-        V(vac.c.x, vac.c.y, vac.c3 - 0.05), V(vac.c.x, vac.c.y - vac.b + 0.05, 0),
-        V(vac.c.x - vac.a + 0.1, vac.c.y, 0), V(vac.c.x, vac.c.y, -vac.c3 + 0.05),
-      ],
-    })
-  }
-
-  /* ================== Núcleo ==================
-     Carioteca com poros; dentro, cromatina e nucléolo. A carioteca também é
-     casca: ao abrir, o núcleo é cortado junto e mostra o que guarda. */
-  const nuc = vegetal ? { c: V(-2.45, 0.55, -0.35), r: 0.78 } : { c: V(0.1, 0.15, -0.15), r: 1.0 }
-  ocupado.push({ c: nuc.c.clone(), r: nuc.r + 0.05 })
-  {
-    const envelope = new THREE.Mesh(
-      new THREE.SphereGeometry(nuc.r, 64, 40),
-      mat(0x8b78c9, { side: THREE.DoubleSide, roughness: 0.45 })
-    )
-    envelope.position.copy(nuc.c)
-    const nucleoplasma = new THREE.Mesh(
-      new THREE.SphereGeometry(nuc.r * 0.97, 48, 32),
-      mat(0xcdbff0, { transparent: true, opacity: 0.35, side: THREE.BackSide, depthWrite: false })
-    )
-    nucleoplasma.position.copy(nuc.c)
-
-    // Poros nucleares: anéis espalhados pela superfície, apontando para fora.
-    const nPoros = 70
-    const poros = new THREE.InstancedMesh(
-      new THREE.TorusGeometry(0.055, 0.018, 6, 14),
-      mat(0x4c3d8f, { side: THREE.DoubleSide }),
-      nPoros
-    )
-    const q = new THREE.Quaternion(), s = V(1, 1, 1), m4 = new THREE.Matrix4()
-    for (let i = 0; i < nPoros; i++) {
-      // Espiral de Fibonacci: espalha por igual, sem amontoar nos polos.
-      const y = 1 - (2 * (i + 0.5)) / nPoros
-      const r = Math.sqrt(1 - y * y), t = i * 2.39996
-      const n = V(Math.cos(t) * r, y, Math.sin(t) * r)
-      q.setFromUnitVectors(V(0, 0, 1), n)
-      m4.compose(n.clone().multiplyScalar(nuc.r * 1.005).add(nuc.c), q, s)
-      poros.setMatrixAt(i, m4)
-    }
-    // Os poros são cortados junto com a carioteca, senão flutuariam no vazio.
-    poros.material.userData.casca = true
-
-    parte({
-      id: 'nucleo', nome: 'Núcleo (carioteca)', curto: 'Núcleo', casca: true,
-      descricao:
-        'Guarda o DNA e controla a atividade da célula. É envolto pela carioteca, uma membrana dupla com poros por onde passam RNA e proteínas.',
-      objetos: [envelope, nucleoplasma, poros],
-      ancoras: fibonacci(16).map((n) => n.multiplyScalar(nuc.r).add(nuc.c)),
-    })
-
-    // Nucléolo
-    const ncl = new THREE.Mesh(new THREE.SphereGeometry(nuc.r * 0.34, 40, 28), mat(0x4a3a86, { roughness: 0.7 }))
-    ncl.position.copy(nuc.c).add(V(nuc.r * 0.18, nuc.r * 0.12, -nuc.r * 0.05))
-    parte({
+      descricao: 'Bicamada de fosfolipídios com proteínas que separa a célula do meio. É semipermeável: controla o que entra e o que sai.',
+    },
+    {
+      id: 'citoplasma', nome: 'Citoplasma',
+      descricao: 'Tudo o que fica entre a membrana e o núcleo: o citosol (líquido gelatinoso, rico em água e proteínas) e as organelas mergulhadas nele.',
+    },
+    {
+      id: 'nucleo', nome: 'Núcleo (carioteca)', curto: 'Núcleo',
+      descricao: 'Guarda o DNA e controla a atividade da célula. É envolto pela carioteca, uma membrana DUPLA com poros por onde passam RNA e proteínas — repare no corte: são duas camadas.',
+    },
+    {
       id: 'nucleolo', nome: 'Nucléolo',
-      descricao:
-        'Região densa dentro do núcleo onde se produz o RNA ribossômico e se montam as subunidades dos ribossomos. Não tem membrana.',
-      objetos: [ncl],
-      ancoras: fibonacci(10).map((n) => n.multiplyScalar(nuc.r * 0.34).add(ncl.position)),
-    })
-
-    // Cromatina: fios enovelados, presos dentro do núcleo.
-    const fios = []
-    const mCrom = mat(0xb39ce8, { roughness: 0.6 })
-    for (let k = 0; k < 7; k++) {
-      const pts = []
-      let p = V((rnd() - 0.5), (rnd() - 0.5), (rnd() - 0.5)).multiplyScalar(nuc.r * 0.9)
-      for (let i = 0; i < 14; i++) {
-        pts.push(p.clone().add(nuc.c))
-        p.add(V(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(nuc.r * 0.55))
-        if (p.length() > nuc.r * 0.82) p.setLength(nuc.r * 0.82)
-      }
-      const curva = new THREE.CatmullRomCurve3(pts)
-      fios.push(new THREE.Mesh(new THREE.TubeGeometry(curva, 90, nuc.r * 0.028, 6), mCrom))
-    }
-    parte({
+      descricao: 'Região densa dentro do núcleo onde se produz o RNA ribossômico e se montam as subunidades dos ribossomos. Não tem membrana.',
+    },
+    {
       id: 'cromatina', nome: 'Cromatina',
-      descricao:
-        'DNA associado a proteínas (histonas), desenrolado enquanto a célula não se divide. Na divisão celular, condensa-se e forma os cromossomos.',
-      objetos: fios,
-      ancoras: fios.flatMap((f) => [0.2, 0.5, 0.8].map((t) => f.geometry.parameters.path.getPoint(t))),
-    })
-  }
-
-  /* ================== Retículo endoplasmático rugoso ==================
-     Lâminas onduladas que abraçam um lado do núcleo (elas continuam a
-     carioteca), cobertas de ribossomos. */
-  {
-    const m = mat(0x5aa7cc, { side: THREE.DoubleSide, roughness: 0.5 })
-    const laminas = []
-    const pontos = []
-    // Ângulo onde as lâminas começam. Na vegetal o núcleo está encostado na
-    // parede, então o RE fica do lado de DENTRO (+x), e não entre ele e a parede.
-    const ladoRE = vegetal ? Math.PI * 0.6 : Math.PI * 0.85
-    for (let i = 0; i < 4; i++) {
-      const raio = nuc.r * (1.22 + i * 0.17)
-      const g = new THREE.SphereGeometry(raio, 56, 28, ladoRE, Math.PI * 0.8, Math.PI * 0.28, Math.PI * 0.42)
-      const pos = g.attributes.position
-      const n = V(0, 0, 0)
-      for (let j = 0; j < pos.count; j++) {
-        n.set(pos.getX(j), pos.getY(j), pos.getZ(j))
-        const ang = Math.atan2(n.z, n.x)
-        n.multiplyScalar(1 + 0.05 * Math.sin(ang * 9 + i))
-        pos.setXYZ(j, n.x, n.y, n.z)
-        if (j % 5 === 0) pontos.push(n.clone().multiplyScalar(1.02).add(nuc.c))
-      }
-      g.computeVertexNormals()
-      const lam = new THREE.Mesh(g, m)
-      lam.position.copy(nuc.c)
-      laminas.push(lam)
-    }
-    // Ribossomos aderidos: pontinhos sobre as lâminas.
-    const ader = new THREE.InstancedMesh(new THREE.SphereGeometry(0.028, 6, 5), mat(0x1f4f7a), pontos.length)
-    const m4 = new THREE.Matrix4()
-    pontos.forEach((p, i) => ader.setMatrixAt(i, m4.makeTranslation(p.x, p.y, p.z)))
-    // Reserva o espaço das lâminas em pedacinhos, e não numa bola em volta do
-    // núcleo inteiro: o RE só abraça um lado dele.
-    pontos.forEach((p, i) => { if (i % 9 === 0) ocupado.push({ c: p.clone(), r: 0.12 }) })
-    parte({
+      descricao: 'DNA associado a proteínas (histonas), desenrolado enquanto a célula não se divide. Na divisão celular, condensa-se e forma os cromossomos.',
+    },
+    {
       id: 'rer', nome: 'Retículo endoplasmático rugoso', curto: 'RE rugoso',
-      descricao:
-        'Membranas achatadas ligadas à carioteca e cobertas de ribossomos (por isso "rugoso"). Produz proteínas que vão para fora da célula, para a membrana ou para os lisossomos.',
-      objetos: [...laminas, ader],
-      ancoras: pontos.filter((_, i) => i % 40 === 0),
-    })
-  }
-
-  /* ================== Retículo endoplasmático liso ================== */
-  {
-    const m = mat(0x8fd6c4, { roughness: 0.5 })
-    const tubos = []
-    const ancoras = []
-    const base = vegetal ? V(-1.9, -1.3, 0.2) : V(-1.6, -1.1, -1.0)
-    for (let k = 0; k < 5; k++) {
-      const pts = []
-      let p = base.clone().add(V(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(0.6))
-      for (let i = 0; i < 7; i++) {
-        pts.push(p.clone())
-        p.add(V(rnd() - 0.5, (rnd() - 0.5) * 0.7, rnd() - 0.5).multiplyScalar(0.55))
-      }
-      const curva = new THREE.CatmullRomCurve3(pts)
-      tubos.push(new THREE.Mesh(new THREE.TubeGeometry(curva, 48, 0.065, 8), m))
-      ancoras.push(curva.getPoint(0.5))
-    }
-    ocupado.push({ c: base.clone(), r: 0.75 })
-    parte({
+      descricao: 'Sacos achatados que continuam a membrana externa do núcleo, cobertos de ribossomos (por isso "rugoso"). Produz proteínas que vão para fora da célula, para a membrana ou para os lisossomos.',
+    },
+    {
       id: 'rel', nome: 'Retículo endoplasmático liso', curto: 'RE liso',
-      descricao:
-        'Tubos sem ribossomos. Produz lipídios (como os hormônios esteroides) e ajuda a desintoxicar a célula — é abundante nas células do fígado.',
-      objetos: tubos,
-      ancoras,
-    })
-  }
-
-  /* ================== Complexo golgiense ==================
-     Pilha de bolsas achatadas e curvas (cisternas), com vesículas soltando
-     das pontas. */
-  {
-    const m = mat(0xe6ad45, { side: THREE.DoubleSide, roughness: 0.45 })
-    const pilha = new THREE.Group()
-    for (let i = 0; i < 5; i++) {
-      // Cada cisterna é um disco fino, alongado e ENCURVADO (y cresce com x²),
-      // com um vão até a próxima: é o vão que faz a pilha se ler como pilha.
-      const comp = 0.62 - Math.abs(i - 2) * 0.07
-      const g = new THREE.CylinderGeometry(comp, comp, 0.075, 40, 1)
-      g.scale(1, 1, 0.42)
-      const pos = g.attributes.position
-      for (let j = 0; j < pos.count; j++) {
-        const x = pos.getX(j)
-        pos.setY(j, pos.getY(j) + 0.55 * x * x)
-      }
-      g.computeVertexNormals()
-      const c = new THREE.Mesh(g, m)
-      c.position.y = i * 0.15 - 0.3
-      pilha.add(c)
-    }
-    const vesM = mat(0xf2c66d)
-    const pontas = []
-    for (let i = 0; i < 7; i++) {
-      const t = (i / 7) * Math.PI * 2
-      const v = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), vesM)
-      // Vesículas brotando das pontas da pilha (onde ela se curva para cima).
-      const ladoV = i % 2 ? 1 : -1
-      v.position.set(ladoV * (0.72 + (i % 3) * 0.1), 0.25 + (i % 3) * 0.13, Math.sin(t) * 0.22)
-      pilha.add(v)
-      pontas.push(v.position.clone())
-    }
-    const lugar = vegetal ? V(-1.4, -1.55, -1.0) : V(1.75, -0.9, -0.55)
-    pilha.position.copy(lugar)
-    pilha.rotation.set(0.5, 0.4, vegetal ? 0.2 : -0.35)
-    pilha.scale.setScalar(vegetal ? 0.8 : 1)
-    pilha.updateMatrix()
-    ocupado.push({ c: lugar.clone(), r: 0.8 })
-    parte({
+      descricao: 'Rede de túbulos sem ribossomos. Produz lipídios (como os hormônios esteroides) e ajuda a desintoxicar a célula — é abundante nas células do fígado.',
+    },
+    {
       id: 'golgi', nome: 'Complexo golgiense', curto: 'Golgi',
-      descricao:
-        'Pilha de bolsas achatadas (cisternas). Modifica, empacota e endereça as proteínas que chegam do RE rugoso; origina as vesículas de secreção e os lisossomos.',
-      objetos: [pilha],
-      ancoras: [V(0, 0.1, 0), ...pontas].map((p) => p.applyMatrix4(pilha.matrix)),
-    })
-  }
-
-  /* ================== Centríolos (só animal) ==================
-     Dois cilindros perpendiculares, cada um com 9 bastões em anel — os 9
-     trios de microtúbulos que a prova cobra. */
-  if (!vegetal) {
-    const m = mat(0x3f9c74)
-    const centro = V(-0.55, 1.55, -0.9)
-    const par = new THREE.Group()
-    for (let k = 0; k < 2; k++) {
-      const cil = new THREE.Group()
-      for (let i = 0; i < 9; i++) {
-        const t = (i / 9) * Math.PI * 2
-        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.42, 8), m)
-        b.position.set(Math.cos(t) * 0.11, 0, Math.sin(t) * 0.11)
-        cil.add(b)
-      }
-      if (k === 1) {
-        cil.rotation.z = Math.PI / 2
-        cil.position.set(0.18, 0.22, 0)
-      }
-      par.add(cil)
-    }
-    par.position.copy(centro)
-    ocupado.push({ c: centro.clone(), r: 0.45 })
-    parte({
-      id: 'centriolos', nome: 'Centríolos', so: 'Só na animal',
-      descricao:
-        'Par de cilindros perpendiculares, cada um com 9 trios de microtúbulos. Organizam o fuso na divisão das células animais e originam cílios e flagelos.',
-      objetos: [par],
-      ancoras: [centro.clone().add(V(0, 0.25, 0)), centro.clone().add(V(0.2, 0.22, 0)), centro.clone()],
-    })
-  }
-
-  /* ================== Cloroplastos (só vegetal) ==================
-     Translúcidos, para os grana (pilhas de tilacoides) aparecerem dentro.
-     Ficam na faixa entre o vacúolo e a membrana, onde a luz chega. */
-  if (vegetal) {
-    const mFora = mat(0x4f9f3a, { transparent: true, opacity: 0.55, roughness: 0.4, depthWrite: false })
-    const mGrana = mat(0x1f5c1c, { roughness: 0.6 })
-    const cloros = []
-    const ancoras = []
-    const lugaresC = lugares(9, 0.45, (p) => !noVacuolo(p, 0.4), 0.15)
-    for (const p of lugaresC) {
-      const c = new THREE.Group()
-      const g = new THREE.SphereGeometry(1, 32, 20)
-      g.scale(0.52, 0.24, 0.32)
-      const casco = new THREE.Mesh(g, mFora)
-      casco.renderOrder = 3
-      c.add(casco)
-      for (let k = 0; k < 4; k++) {
-        const pilha = new THREE.Group()
-        for (let j = 0; j < 4; j++) {
-          const disco = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.022, 14), mGrana)
-          disco.position.y = j * 0.035 - 0.05
-          pilha.add(disco)
-        }
-        pilha.position.set(-0.3 + k * 0.2, 0, (k % 2 ? 0.06 : -0.06))
-        c.add(pilha)
-      }
-      c.position.copy(p)
-      // Deitados ao longo da parede: o lado largo para fora, que é onde a luz chega.
-      c.lookAt(p.clone().multiplyScalar(2))
-      c.rotateX(Math.PI / 2)
-      cloros.push(c)
-      ancoras.push(p.clone())
-    }
-    parte({
+      descricao: 'Pilha de bolsas achatadas e curvas (cisternas). Modifica, empacota e endereça as proteínas que chegam do RE rugoso; das bordas brotam as vesículas de secreção e os lisossomos.',
+    },
+    {
+      id: 'vacuolo', nome: 'Vacúolo central', curto: 'Vacúolo', so: 'Grande só na vegetal',
+      descricao: 'Grande bolsa cheia de suco celular (água, sais, açúcares e pigmentos), envolta pelo tonoplasto. Ocupa a maior parte da célula madura, empurra o núcleo para a borda e mantém a pressão de turgor.',
+    },
+    {
       id: 'cloroplasto', nome: 'Cloroplasto', so: 'Só na vegetal',
-      descricao:
-        'Faz a fotossíntese: usa luz, gás carbônico e água para produzir glicose e liberar gás oxigênio. Tem clorofila, membrana dupla e DNA próprio. As pilhas escuras dentro são os grana.',
-      objetos: cloros,
-      ancoras,
-    })
-  }
-
-  /* ================== Mitocôndrias ================== */
-  {
-    const m = mat(0xdd6645, { roughness: 0.45 })
-    const cristas = mat(0xf3a283, { side: THREE.DoubleSide })
-    const objs = []
-    const ancoras = []
-    for (const p of lugares(vegetal ? 5 : 7, 0.42, (p) => !noVacuolo(p, 0.45))) {
-      const g = new THREE.Group()
-      g.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.5, 8, 16), m))
-      // Cristas: dobras da membrana interna, que só aparecem pelas pontas.
-      for (let k = 0; k < 4; k++) {
-        const d = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 6, 16, Math.PI), cristas)
-        d.position.y = -0.22 + k * 0.15
-        d.rotation.y = k % 2 ? Math.PI : 0
-        g.add(d)
-      }
-      g.position.copy(p)
-      g.rotation.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI)
-      objs.push(g)
-      ancoras.push(p.clone())
-    }
-    parte({
+      descricao: 'Faz a fotossíntese: usa luz, gás carbônico e água para produzir glicose e liberar gás oxigênio. Tem membrana dupla e DNA próprio; dentro, as pilhas de tilacoides (grana) ligadas pelas lamelas guardam a clorofila.',
+    },
+    {
       id: 'mitocondria', nome: 'Mitocôndria',
-      descricao:
-        'Faz a respiração celular: quebra a glicose usando gás oxigênio e produz ATP, a energia que a célula usa. Tem membrana dupla (a interna dobrada em cristas) e DNA próprio.',
-      objetos: objs,
-      ancoras,
-    })
-  }
-
-  /* ================== Lisossomos (só animal) ================== */
-  if (!vegetal) {
-    const m = mat(0xb07ad6, { roughness: 0.35 })
-    const objs = []
-    for (const p of lugares(5, 0.17)) {
-      const l = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 14), m)
-      l.position.copy(p)
-      objs.push(l)
-    }
-    parte({
-      id: 'lisossomo', nome: 'Lisossomo',
-      so: 'Típico da animal',
-      descricao:
-        'Bolsa com enzimas digestivas. Faz a digestão intracelular: do que a célula englobou e das próprias organelas velhas (autofagia).',
-      objetos: objs,
-      ancoras: objs.map((o) => o.position.clone()),
-    })
-  }
-
-  /* ================== Peroxissomos ================== */
-  {
-    const m = mat(0x9cc04f, { roughness: 0.4 })
-    const objs = []
-    for (const p of lugares(3, 0.14, (p) => !noVacuolo(p, 0.2))) {
-      const l = new THREE.Mesh(new THREE.SphereGeometry(0.14, 18, 12), m)
-      l.position.copy(p)
-      objs.push(l)
-    }
-    parte({
+      descricao: 'Faz a respiração celular: quebra a glicose usando gás oxigênio e produz ATP, a energia que a célula usa. Tem membrana dupla — a interna é dobrada em cristas, visíveis nas que foram cortadas — e DNA próprio.',
+    },
+    {
+      id: 'lisossomo', nome: 'Lisossomo', so: 'Típico da animal',
+      descricao: 'Bolsa com enzimas digestivas. Faz a digestão intracelular: do que a célula englobou e das próprias organelas velhas (autofagia).',
+    },
+    {
       id: 'peroxissomo', nome: 'Peroxissomo',
-      descricao:
-        'Vesícula com enzimas oxidativas, como a catalase, que decompõe a água oxigenada (H₂O₂) em água e gás oxigênio.',
-      objetos: objs,
-      ancoras: objs.map((o) => o.position.clone()),
-    })
-  }
-
-  /* ================== Ribossomos livres ==================
-     Centenas de pontinhos: InstancedMesh desenha todos de uma vez. São
-     "miúdos": não contam como obstáculo na hora de decidir se um rótulo está
-     à vista, senão escondiam tudo. */
-  {
-    const pts = []
-    for (let tent = 0; pts.length < 170 && tent < 8000; tent++) {
-      const p = V((rnd() * 2 - 1) * forma.a, (rnd() * 2 - 1) * forma.b, (rnd() * 2 - 1) * forma.c)
-      if (dentro(p, 0.25) && !noVacuolo(p, 0.05) && p.distanceTo(nuc.c) > nuc.r + 0.1) pts.push(p)
-    }
-    const inst = new THREE.InstancedMesh(new THREE.SphereGeometry(0.032, 6, 5), mat(0x2b5f8c), pts.length)
-    const m4 = new THREE.Matrix4()
-    pts.forEach((p, i) => inst.setMatrixAt(i, m4.makeTranslation(p.x, p.y, p.z)))
-    // Cortados junto com a membrana: os da metade da frente, com a célula
-    // aberta, apareciam flutuando fora do contorno.
-    inst.material.userData.casca = true
-    parte({
+      descricao: 'Vesícula com enzimas oxidativas, como a catalase, que decompõe a água oxigenada (H₂O₂) em água e gás oxigênio. O núcleo escuro é um cristal dessas enzimas.',
+    },
+    {
+      id: 'centriolos', nome: 'Centríolos', so: 'Só na animal',
+      descricao: 'Par de cilindros perpendiculares, cada um com 9 trios de microtúbulos. Organizam o fuso na divisão das células animais e originam cílios e flagelos.',
+    },
+    {
+      id: 'citoesqueleto', nome: 'Citoesqueleto (microtúbulos)', curto: 'Citoesqueleto', miuda: true,
+      descricao: 'Rede de filamentos de proteína que sustenta a forma da célula, ancora as organelas e serve de trilho para as vesículas. Na animal irradia dos centríolos; na vegetal corre em anéis sob a membrana, guiando a deposição de celulose.',
+    },
+    {
+      id: 'vesiculas', nome: 'Vesículas',
+      descricao: 'Pequenas bolsas de membrana que transportam substâncias entre as organelas e para fora da célula (secreção).',
+    },
+    {
       id: 'ribossomo', nome: 'Ribossomos', miuda: true,
-      descricao:
-        'Fabricam proteínas lendo o RNA mensageiro. Não têm membrana; ficam livres no citosol ou presos ao RE rugoso.',
-      objetos: [inst],
-      ancoras: pts.filter((_, i) => i % 13 === 0),
-    })
-  }
-
-  // O que gira é o grupo inteiro; o raio é o que precisa caber na tela.
-  return { grupo, partes, raio: Math.max(forma.a, forma.b, forma.c) * 1.02 }
-
-  function fibonacci(n) {
-    const pts = []
-    for (let i = 0; i < n; i++) {
-      const y = 1 - (2 * (i + 0.5)) / n
-      const r = Math.sqrt(1 - y * y), t = i * 2.39996
-      pts.push(V(Math.cos(t) * r, y, Math.sin(t) * r))
-    }
-    return pts
-  }
-}
+      descricao: 'Fabricam proteínas lendo o RNA mensageiro. Não têm membrana; ficam livres no citosol ou presos ao RE rugoso. Vários lendo o mesmo RNA formam um polissomo — os "colares" de pontinhos.',
+    },
+  ],
+})
 </script>
 </body>
 </html>
