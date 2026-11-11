@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coração humano em 3D</title>
+<!--
+  Modelo 3D autônomo, feito para entrar num resumo por <iframe>.
+  Mesma estrutura de `agua.html`: Three.js do cdnjs, fundo transparente, tema
+  lido do site, giro à mão e laço parado quando o modelo sai da tela.
+
+  COMO O CORAÇÃO É FEITO
+  - A forma de fora é UMA esfera deformada por `deformar()`: base larga, ponta
+    (ápice) puxada para baixo e para a esquerda do paciente, e dois sulcos —
+    o atrioventricular (em volta) e o interventricular (na frente).
+  - A textura de fibras é desenhada pelo próprio código num <canvas>; nada é
+    baixado além do Three.js.
+  - As câmaras são elipsoides desenhados SÓ POR DENTRO (BackSide): fechado o
+    coração, ficam escondidas; com o corte, aparecem como cavidades.
+  - O CORTE é um par de planos de recorte do Three.js com `clipIntersection`:
+    some só o que está ao mesmo tempo NA FRENTE (z > Z_CORTE) e ABAIXO da base
+    dos vasos (y < Y_CORTE). A parte de dentro da casca externa é pintada numa
+    cor lisa de músculo, e é ela que aparece como a "fatia" maciça do corte.
+
+  ORIENTAÇÃO: vista frontal, como num livro de anatomia. O lado ESQUERDO do
+  coração (do paciente) aparece à DIREITA de quem olha. No código, x negativo
+  é o lado direito do coração, y é para cima e z aponta para quem olha.
+-->
+<style>
+  :root {
+    --tinta: #1f2233;
+    --tinta-fraca: #5b6078;
+    --linha: rgba(31, 34, 51, 0.55);
+    --caixa: rgba(255, 255, 255, 0.82);
+    --borda: rgba(31, 34, 51, 0.14);
+    --acento: #6a5cc7;
+    --venoso: #3f6fd8;
+    --arterial: #d8363f;
+    color-scheme: light;
+  }
+  :root[data-tema='escuro'] {
+    --tinta: #e6e8f2;
+    --tinta-fraca: #a3a8c0;
+    --linha: rgba(230, 232, 242, 0.5);
+    --caixa: rgba(30, 28, 40, 0.82);
+    --borda: rgba(230, 232, 242, 0.16);
+    --acento: #a99ef0;
+    --venoso: #6f98f0;
+    --arterial: #f06a70;
+    color-scheme: dark;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: transparent;
+    font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: var(--tinta);
+    overflow: hidden;
+  }
+  #palco { position: relative; width: 100%; height: 100%; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  canvas.arrastando { cursor: grabbing; }
+
+  /* Rótulos em duas colunas, como nas pranchas de anatomia, com uma linha-guia
+     até a estrutura. As linhas moram num SVG por cima do canvas. */
+  svg.guias {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  svg.guias line { stroke: var(--linha); stroke-width: 1; }
+  svg.guias circle { fill: var(--tinta); }
+  .rotulo {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--tinta);
+    text-shadow: 0 0 3px var(--caixa), 0 0 6px var(--caixa);
+    will-change: transform;
+  }
+  .rotulo.interno { font-style: italic; font-weight: 550; color: var(--tinta-fraca); }
+
+  .painel {
+    position: absolute;
+    background: var(--caixa);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+  }
+  .botoes {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+  }
+  /* `.botoes button`, e não só `button`: `.painel` põe `position: absolute`,
+     e uma classe pesa mais que uma tag — os botões se empilhariam. */
+  .botoes button {
+    position: static;
+    padding: 5px 10px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--tinta);
+    cursor: pointer;
+  }
+  .botoes button[aria-pressed='false'] { color: var(--tinta-fraca); }
+  .botoes button:hover { border-color: var(--acento); }
+  .botoes button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+  .dica {
+    top: 10px;
+    left: 10px;
+    padding: 4px 8px;
+    color: var(--tinta-fraca);
+    font-size: 12px;
+  }
+  .fase {
+    top: 44px;
+    right: 10px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  /* No celular: botões só com o ícone (o nome continua no aria-label) e sem a
+     dica, senão a fileira de cima não cabe em 375px. */
+  @media (max-width: 520px) {
+    .dica { display: none; }
+    .botoes button .txt { display: none; }
+    .botoes button { padding: 5px 9px; }
+    .rotulo { font-size: 10.5px; }
+  }
+
+  details.legenda {
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    max-width: min(360px, calc(100% - 20px));
+    padding: 5px 10px;
+  }
+  details.legenda summary { cursor: pointer; font-weight: 600; text-align: center; }
+  .legenda ul { list-style: none; margin: 6px 0 0; padding: 0; }
+  .legenda li { display: flex; align-items: baseline; gap: 7px; }
+  .legenda li + li { margin-top: 3px; }
+  .cor {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex: none;
+    transform: translateY(1px);
+  }
+  .legenda .nota {
+    margin: 6px 0 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--borda);
+    color: var(--tinta-fraca);
+    font-size: 12px;
+  }
+
+  .aviso {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    text-align: center;
+    color: var(--tinta-fraca);
+  }
+</style>
+</head>
+<body>
+<div id="palco">
+  <svg class="guias" id="guias" aria-hidden="true"></svg>
+  <span class="painel dica" aria-hidden="true">Arraste para girar</span>
+  <div class="botoes">
+    <button id="girar" class="painel" type="button" aria-pressed="true" aria-label="Girar">⏸<span class="txt"> Parar</span></button>
+    <button id="cortar" class="painel" type="button" aria-pressed="true" aria-label="Corte frontal">✂<span class="txt"> Corte</span></button>
+    <button id="bater" class="painel" type="button" aria-pressed="true" aria-label="Batimento">♥<span class="txt"> Batimento</span></button>
+    <button id="fluir" class="painel" type="button" aria-pressed="true" aria-label="Fluxo de sangue">⇢<span class="txt"> Fluxo</span></button>
+  </div>
+  <span id="fase" class="painel fase"></span>
+  <details id="legenda" class="painel legenda">
+    <summary>Legenda</summary>
+    <ul>
+      <li><span class="cor" style="background:var(--venoso)"></span><span>Sangue <b>pobre</b> em O₂ (venoso)</span></li>
+      <li><span class="cor" style="background:var(--arterial)"></span><span>Sangue <b>rico</b> em O₂ (arterial)</span></li>
+    </ul>
+    <p class="nota">
+      Vista de frente: o lado <b>esquerdo</b> do coração aparece à <b>direita</b> de quem olha.
+      A cor dos vasos indica o sangue, não o tipo de vaso — a artéria pulmonar leva sangue pobre em O₂.
+      Modelo didático, fora de escala.
+    </p>
+  </details>
+</div>
+
+<script type="module">
+let THREE
+try {
+  THREE = await import('https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/three.module.min.js')
+} catch {
+  avisar('Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.')
+  throw new Error('three.js indisponível')
+}
+
+const palco = document.getElementById('palco')
+const guias = document.getElementById('guias')
+
+function avisar(texto) {
+  const p = document.createElement('p')
+  p.className = 'aviso'
+  p.textContent = texto
+  document.getElementById('palco').append(p)
+}
+
+/* ---------- Tema (igual a agua.html) ---------- */
+const mqEscuro = matchMedia('(prefers-color-scheme: dark)')
+function aplicarTema() {
+  let tema = null
+  if (parent !== window) try { tema = parent.document.documentElement.dataset.tema } catch { /* outra origem */ }
+  if (tema !== 'claro' && tema !== 'escuro') tema = mqEscuro.matches ? 'escuro' : 'claro'
+  // Só escreve se mudou: escrever o mesmo valor ainda conta como mutação.
+  if (document.documentElement.dataset.tema !== tema) document.documentElement.dataset.tema = tema
+}
+aplicarTema()
+mqEscuro.addEventListener('change', aplicarTema)
+/* Só observa o pai quando HÁ um pai. Aberto sozinho, `parent` é a própria
+   janela, e o observador vigiaria o mesmo <html> em que `aplicarTema` escreve. */
+if (parent !== window) try {
+  new MutationObserver(aplicarTema).observe(parent.document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-tema'],
+  })
+} catch { /* sem acesso ao pai */ }
+
+/* ---------- Cena ---------- */
+const cena = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100)
+let renderer
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+} catch {
+  avisar('Este navegador não consegue desenhar em 3D (WebGL desligado).')
+  throw new Error('sem WebGL')
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+renderer.localClippingEnabled = true // liga os planos de recorte por material
+palco.prepend(renderer.domElement)
+
+cena.add(new THREE.HemisphereLight(0xfff4f0, 0x5a3038, 1.3))
+const sol = new THREE.DirectionalLight(0xffffff, 2.4)
+sol.position.set(2.5, 4, 6)
+cena.add(sol)
+const contraluz = new THREE.DirectionalLight(0xffd0c8, 1.2) // realça o contorno
+contraluz.position.set(-4, 2, -5)
+cena.add(contraluz)
+
+/* `giro` é o que o mouse e a animação giram; `modelo` fica dentro dele,
+   deslocado para que o meio do desenho (e não a origem) seja o eixo.
+   `coracao` é só o músculo e o que está dentro dele: é o que bate. */
+const giro = new THREE.Group()
+cena.add(giro)
+const modelo = new THREE.Group()
+giro.add(modelo)
+const coracao = new THREE.Group()
+modelo.add(coracao)
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z)
+
+/* ---------- Textura de fibras ----------
+   Traços curtos e diagonais, claros e escuros, sobre o vermelho do músculo.
+   Na esfera eles viram a espiral das fibras do miocárdio. */
+function texturaMusculo(base, repetir = 1) {
+  const c = document.createElement('canvas')
+  c.width = 1024
+  c.height = 512
+  const g = c.getContext('2d')
+  g.fillStyle = base
+  g.fillRect(0, 0, c.width, c.height)
+  const r = Math.random
+  for (let i = 0; i < 70; i++) {
+    const x = r() * c.width, y = r() * c.height, raio = 30 + r() * 90
+    const grad = g.createRadialGradient(x, y, 0, x, y, raio)
+    grad.addColorStop(0, r() < 0.5 ? 'rgba(90,15,15,0.14)' : 'rgba(235,130,110,0.12)')
+    grad.addColorStop(1, 'rgba(0,0,0,0)')
+    g.fillStyle = grad
+    g.fillRect(x - raio, y - raio, raio * 2, raio * 2)
+  }
+  for (let i = 0; i < 2600; i++) {
+    const x = r() * c.width, y = r() * c.height
+    const tam = 30 + r() * 90
+    const ang = -0.55 + (r() - 0.5) * 0.35
+    const dx = Math.cos(ang) * tam, dy = Math.sin(ang) * tam
+    g.strokeStyle = r() < 0.5
+      ? `rgba(240,150,130,${0.05 + r() * 0.09})`
+      : `rgba(80,10,10,${0.06 + r() * 0.1})`
+    g.lineWidth = 0.6 + r() * 1.3
+    g.beginPath()
+    g.moveTo(x, y)
+    g.quadraticCurveTo(x + dx / 2 + (r() - 0.5) * 12, y + dy / 2 + (r() - 0.5) * 12, x + dx, y + dy)
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.repeat.set(repetir, repetir)
+  t.anisotropy = 4
+  return t
+}
+
+/* ---------- O corte ----------
+   Planos no espaço do coração; a cada quadro são levados para o espaço do
+   mundo, porque o Three.js recorta em coordenadas de mundo e o coração gira. */
+const Z_CORTE = 0.24 // à frente do meio: todas as câmaras abrem, e sobra parede em volta
+const Y_CORTE = 1.0
+const planoZ = new THREE.Plane(V(0, 0, -1), Z_CORTE) // some z > Z_CORTE…
+const planoY = new THREE.Plane(V(0, 1, 0), -Y_CORTE) // …e y < Y_CORTE, ao mesmo tempo
+const planosLocais = [planoZ, planoY]
+const planosMundo = [new THREE.Plane(), new THREE.Plane()]
+
+/* Todo material do coração passa por aqui: entra no recorte. */
+function recortavel(m) {
+  m.clippingPlanes = planosMundo
+  m.clipIntersection = true
+  return m
+}
+
+const fibras = texturaMusculo('#b3453b')
+const matMusculo = recortavel(new THREE.MeshPhysicalMaterial({
+  map: fibras,
+  bumpMap: fibras,
+  bumpScale: 1.2,
+  roughness: 0.42,
+  clearcoat: 0.35,
+  clearcoatRoughness: 0.5,
+}))
+// A face de dentro da casca, sem luz: é o que aparece como a fatia maciça do
+// corte. Leva as fibras num tom mais claro, senão parece papelão.
+const matFatia = recortavel(new THREE.MeshBasicMaterial({ map: texturaMusculo('#c0584c', 3), side: THREE.BackSide }))
+
+/* ---------- Forma de fora ---------- */
+function deformar(p) {
+  let x = p.x * 1.35, y = p.y * 1.6, z = p.z * 1.05
+  if (y < 0) {
+    // metade de baixo: afina até a ponta e puxa a ponta para a esquerda do paciente
+    const t = -y / 1.6
+    const k = 1 - 0.62 * Math.pow(t, 1.5)
+    x *= k
+    z *= k
+    x += 0.55 * t * t
+    y -= 0.3 * t * t
+  } else {
+    y *= 0.8 // base mais achatada
+  }
+  // sulco atrioventricular: uma cintura rasa em volta
+  const s = 1 - 0.05 * Math.exp(-((y - 0.3) ** 2) / 0.006)
+  x *= s
+  z *= s
+  // sulco interventricular anterior: um vinco na frente, da base à ponta
+  if (z > 0 && y < 0.3) {
+    const xg = 0.2 - 0.22 * y
+    z -= 0.07 * Math.exp(-((x - xg) ** 2) / 0.01) * Math.min(1, (0.3 - y) / 0.3)
+  }
+  if (z < 0) z *= 0.9 // a face de trás é mais plana
+  return V(x, y, z)
+}
+
+const geoCorpo = new THREE.SphereGeometry(1, 160, 120)
+geoCorpo.rotateY(-Math.PI / 2) // leva a costura da esfera para trás
+{
+  const pos = geoCorpo.attributes.position
+  const v = new THREE.Vector3()
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize()
+    const d = deformar(v)
+    pos.setXYZ(i, d.x, d.y, d.z)
+  }
+  geoCorpo.computeVertexNormals()
+}
+const corpo = new THREE.Mesh(geoCorpo, matMusculo)
+coracao.add(corpo)
+coracao.add(new THREE.Mesh(geoCorpo, matFatia))
+
+/* Aurículas: as "orelhas" enrugadas dos átrios, que aparecem na frente. */
+function auricula(centro, raios, giroZ) {
+  const geo = new THREE.SphereGeometry(1, 48, 32)
+  const pos = geo.attributes.position
+  const v = new THREE.Vector3()
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i)
+    const rugas = 1 + 0.07 * Math.sin(v.x * 11) * Math.sin(v.y * 9 + v.z * 5)
+    pos.setXYZ(i, v.x * raios.x * rugas, v.y * raios.y * rugas, v.z * raios.z * rugas)
+  }
+  geo.computeVertexNormals()
+  for (const material of [matMusculo, matFatia]) {
+    const m = new THREE.Mesh(geo, material)
+    m.position.copy(centro)
+    m.rotation.z = giroZ
+    coracao.add(m)
+  }
+}
+auricula(V(-0.95, 0.85, 0.5), V(0.45, 0.3, 0.28), 0.5)
+auricula(V(0.95, 0.95, 0.35), V(0.3, 0.18, 0.2), -0.4)
+
+/* ---------- Câmaras (só por dentro) ----------
+   A parede é o que sobra entre a cavidade e a superfície de fora — por isso o
+   ventrículo esquerdo, com a cavidade menor e mais funda, tem a parede grossa. */
+const texDireita = texturaMusculo('#7d3a4a', 2)
+const texEsquerda = texturaMusculo('#933131', 2)
+function cavidade(centro, raios, giroZ, textura) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 64, 48),
+    recortavel(new THREE.MeshStandardMaterial({ map: textura, bumpMap: textura, bumpScale: 2, roughness: 0.6, side: THREE.BackSide }))
+  )
+  m.position.copy(centro)
+  m.scale.copy(raios)
+  m.rotation.z = giroZ
+  coracao.add(m)
+}
+cavidade(V(-0.6, 0.62, 0.02), V(0.4, 0.32, 0.36), 0, texDireita)       // átrio direito
+cavidade(V(0.45, 0.7, -0.05), V(0.38, 0.3, 0.36), 0, texEsquerda)      // átrio esquerdo
+cavidade(V(-0.42, -0.3, 0.12), V(0.38, 0.65, 0.33), 0.15, texDireita)  // ventrículo direito
+cavidade(V(0.45, -0.55, 0.0), V(0.38, 0.8, 0.4), 0.3, texEsquerda)     // ventrículo esquerdo
+
+/* ---------- Valvas, cordas e músculos papilares ---------- */
+const matValva = recortavel(new THREE.MeshStandardMaterial({ color: 0xf0e2c8, roughness: 0.55, side: THREE.DoubleSide }))
+const matCorda = recortavel(new THREE.MeshStandardMaterial({ color: 0xf6ecdc, roughness: 0.5 }))
+const matPapilar = recortavel(new THREE.MeshStandardMaterial({ map: texEsquerda, roughness: 0.55 }))
+
+function cilindro(a, b, raio, material) {
+  const dir = b.clone().sub(a)
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(raio, raio, dir.length(), 6), material)
+  m.quaternion.setFromUnitVectors(V(0, 1, 0), dir.normalize())
+  m.position.copy(a).add(b).multiplyScalar(0.5)
+  coracao.add(m)
+}
+
+function papilar(ponta, altura) {
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.075, altura, 16), matPapilar)
+  cone.position.copy(ponta).add(V(0, -altura / 2, 0))
+  coracao.add(cone)
+  return ponta
+}
+
+/* Valva atrioventricular: um funil aberto partido em cúspides (3 na
+   tricúspide, 2 na mitral), pendurado da passagem entre átrio e ventrículo. Da
+   borda de baixo de cada cúspide saem cordas até a ponta dos papilares. */
+function valvaAV({ pos, giroZ, cuspides, rTopo, rBase, altura, papilares }) {
+  const g = new THREE.Group()
+  g.position.copy(pos)
+  g.rotation.z = giroZ
+  coracao.add(g)
+  const fatia = (Math.PI * 2) / cuspides
+  const bordas = []
+  for (let i = 0; i < cuspides; i++) {
+    const inicio = i * fatia + 0.08
+    const m = new THREE.Mesh(
+      new THREE.CylinderGeometry(rTopo, rBase, altura, 24, 1, true, inicio, fatia - 0.16),
+      matValva
+    )
+    m.position.y = -altura / 2
+    g.add(m)
+    for (const f of [0.25, 0.5, 0.75]) {
+      const th = inicio + (fatia - 0.16) * f
+      bordas.push(V(rBase * Math.sin(th), -altura, rBase * Math.cos(th)))
+    }
+  }
+  const anel = new THREE.Mesh(new THREE.TorusGeometry(rTopo, 0.025, 8, 48), matValva)
+  anel.rotation.x = Math.PI / 2
+  g.add(anel)
+  coracao.updateMatrixWorld(true)
+  for (const b of bordas) {
+    const p = g.localToWorld(b.clone())
+    const alvo = papilares.reduce((a, c) => (c.distanceTo(p) < a.distanceTo(p) ? c : a))
+    cilindro(p, alvo, 0.008, matCorda)
+  }
+}
+
+valvaAV({
+  pos: V(-0.52, 0.24, 0.02), giroZ: 0.1, cuspides: 3, rTopo: 0.24, rBase: 0.15, altura: 0.32,
+  papilares: [papilar(V(-0.6, -0.32, 0.02), 0.4), papilar(V(-0.32, -0.37, -0.08), 0.4)],
+})
+valvaAV({
+  pos: V(0.45, 0.28, -0.02), giroZ: 0.3, cuspides: 2, rTopo: 0.22, rBase: 0.13, altura: 0.34,
+  papilares: [papilar(V(0.42, -0.42, -0.02), 0.45), papilar(V(0.7, -0.47, -0.1), 0.45)],
+})
+
+/* Valvas semilunares (aórtica e pulmonar): três "bolsinhas" em anel na saída
+   de cada ventrículo. */
+function valvaSemilunar(pos, giroZ) {
+  const g = new THREE.Group()
+  g.position.copy(pos)
+  g.rotation.z = giroZ
+  const anel = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.025, 8, 40), matValva)
+  anel.rotation.x = Math.PI / 2
+  g.add(anel)
+  for (let i = 0; i < 3; i++) {
+    const a = (i * Math.PI * 2) / 3
+    const bolsa = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), matValva)
+    bolsa.position.set(Math.cos(a) * 0.08, 0, Math.sin(a) * 0.08)
+    g.add(bolsa)
+  }
+  coracao.add(g)
+}
+valvaSemilunar(V(0.15, 0.45, 0.05), -0.1)  // aórtica
+valvaSemilunar(V(-0.15, 0.52, 0.1), 0.1)   // pulmonar
+
+/* ---------- Vasos da base ----------
+   Fora do corte: continuam inteiros quando o coração é aberto, como na
+   prancha de referência. */
+function matVaso(cor) {
+  return new THREE.MeshPhysicalMaterial({ color: cor, roughness: 0.38, clearcoat: 0.4, clearcoatRoughness: 0.4 })
+}
+const matArteria = matVaso(0xc9463a)
+const matVeia = matVaso(0x3e6fb8)
+function vaso(pontos, raio, material) {
+  const curva = new THREE.CatmullRomCurve3(pontos.map((p) => V(...p)))
+  modelo.add(new THREE.Mesh(new THREE.TubeGeometry(curva, 80, raio, 24, false), material))
+  // tampa a boca do tubo, que ficaria oca vista de frente
+  const fim = curva.getPointAt(1)
+  const tampa = new THREE.Mesh(new THREE.CircleGeometry(raio, 24), material)
+  tampa.position.copy(fim)
+  tampa.lookAt(fim.clone().add(curva.getTangentAt(1)))
+  modelo.add(tampa)
+}
+
+// saem do lado direito (sangue pobre em O₂)
+vaso([[-0.72, 2.95, -0.05], [-0.7, 1.9, -0.05], [-0.66, 1.0, 0.0]], 0.22, matVeia) // cava superior
+vaso([[-0.7, -2.3, -0.75], [-0.7, -1.3, -0.95], [-0.66, -0.1, -0.85], [-0.62, 0.35, -0.3]], 0.22, matVeia) // cava inferior
+vaso([[-0.2, 0.7, 0.6], [-0.12, 1.2, 0.75], [0.05, 1.65, 0.6], [0.4, 1.9, 0.3], [0.5, 1.95, 0.05]], 0.24, matVeia) // tronco pulmonar
+vaso([[0.5, 1.95, 0.05], [0.0, 1.95, -0.6], [-0.8, 1.9, -0.6], [-1.65, 1.8, -0.5]], 0.16, matVeia) // a. pulmonar direita
+vaso([[0.5, 1.95, 0.05], [1.2, 2.0, -0.2], [1.75, 1.85, -0.35]], 0.16, matVeia) // a. pulmonar esquerda
+
+// chegam ao lado esquerdo (sangue rico em O₂)
+vaso([[0.7, 0.85, -0.45], [1.2, 0.95, -0.5], [1.7, 1.0, -0.5]], 0.1, matArteria) // v. pulmonares esquerdas
+vaso([[0.7, 0.6, -0.5], [1.2, 0.55, -0.55], [1.65, 0.5, -0.55]], 0.1, matArteria)
+vaso([[0.3, 0.85, -0.6], [-0.4, 0.9, -0.95], [-1.2, 0.95, -0.85], [-1.65, 1.0, -0.7]], 0.1, matArteria) // v. pulmonares direitas
+vaso([[0.3, 0.6, -0.65], [-0.4, 0.6, -1.0], [-1.2, 0.6, -0.9], [-1.6, 0.55, -0.75]], 0.1, matArteria)
+vaso(
+  [[0.15, 0.45, 0.0], [0.1, 1.2, 0.05], [0.12, 1.9, 0.0], [0.35, 2.45, -0.2], [0.85, 2.6, -0.55], [1.25, 2.2, -0.9], [1.3, 1.2, -1.05], [1.2, -2.3, -1.0]],
+  0.28,
+  matArteria
+) // aorta: sobe, faz o arco e desce por trás
+vaso([[0.38, 2.45, -0.22], [0.3, 2.9, -0.2], [0.2, 3.2, -0.15]], 0.12, matArteria)  // tronco braquiocefálico
+vaso([[0.7, 2.55, -0.45], [0.7, 3.2, -0.45]], 0.1, matArteria)                     // carótida comum esquerda
+vaso([[1.0, 2.45, -0.7], [1.15, 2.9, -0.75], [1.35, 3.15, -0.8]], 0.1, matArteria) // subclávia esquerda
+
+/* ---------- Coronárias ----------
+   Os caminhos são desenhados em vista de frente (x, y); um raio disparado de
+   frente acha onde cada ponto cai na superfície. Assim elas acompanham os
+   sulcos sem ninguém calcular a forma à mão. Entram no corte: aberto o
+   coração, some o pedaço de parede que as carregava. */
+const raio = new THREE.Raycaster()
+coracao.updateMatrixWorld(true)
+function naSuperficie(x, y) {
+  raio.set(V(x, y, 5), V(0, 0, -1))
+  const [hit] = raio.intersectObject(corpo)
+  if (!hit) return null
+  return { ponto: hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.025)), normal: hit.face.normal.clone() }
+}
+const matCoronaria = recortavel(matVaso(0xc0392b))
+const matVeiaCardiaca = recortavel(matVaso(0x3a66b0))
+function coronaria(pontos2d, raioTubo, material) {
+  const plano = new THREE.CatmullRomCurve3(pontos2d.map(([x, y]) => V(x, y, 0)))
+  const pts = plano.getSpacedPoints(40).map((p) => naSuperficie(p.x, p.y)?.ponto).filter(Boolean)
+  if (pts.length < 2) return
+  coracao.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, raioTubo, 8, false), material))
+}
+// artérias
+coronaria([[0.02, 0.4], [0.1, 0.0], [0.3, -0.7], [0.5, -1.3], [0.6, -1.7]], 0.03, matCoronaria)  // interventricular anterior
+coronaria([[0.15, -0.15], [0.45, -0.35], [0.8, -0.55]], 0.022, matCoronaria)
+coronaria([[0.35, -0.75], [0.65, -0.95], [0.85, -1.05]], 0.02, matCoronaria)
+coronaria([[-0.05, 0.35], [-0.5, 0.3], [-0.95, 0.15], [-1.1, -0.15]], 0.03, matCoronaria)   // coronária direita
+coronaria([[-0.9, 0.12], [-0.85, -0.4], [-0.6, -1.0]], 0.022, matCoronaria)
+// veias, como os ramos azuis da prancha
+coronaria([[0.1, 0.35], [0.18, 0.0], [0.38, -0.7], [0.57, -1.3], [0.66, -1.68]], 0.024, matVeiaCardiaca)
+coronaria([[-0.2, 0.2], [-0.35, -0.3], [-0.55, -0.8], [-0.45, -1.2]], 0.022, matVeiaCardiaca)
+coronaria([[-0.4, 0.1], [-0.7, -0.3], [-0.85, -0.7]], 0.02, matVeiaCardiaca)
+coronaria([[-0.3, -0.35], [-0.1, -0.8], [0.05, -1.1]], 0.02, matVeiaCardiaca)
+
+/* ---------- Fluxo ----------
+   Quatro rotas (cava superior ou inferior × pulmão direito ou esquerdo).
+   Cada rota tem a metade venosa (corpo → pulmão, azul) e a arterial
+   (pulmão → corpo, vermelha); a cor troca no pulmão. Só aparece com o corte
+   aberto, que é quando dá para ver o sangue passando pelas câmaras. */
+const entradas = {
+  superior: [[-0.72, 2.95, -0.05], [-0.7, 1.9, -0.05], [-0.66, 1.0, 0.0]],
+  inferior: [[-0.7, -2.3, -0.75], [-0.7, -1.3, -0.95], [-0.66, -0.1, -0.85], [-0.62, 0.35, -0.3]],
+}
+const ladoDireito = [[-0.6, 0.62, 0.05], [-0.52, 0.2, 0.05], [-0.45, -0.45, 0.08], [-0.25, 0.05, 0.1], [-0.15, 0.52, 0.1], [-0.12, 1.2, 0.75], [0.05, 1.65, 0.6], [0.4, 1.9, 0.3], [0.5, 1.95, 0.05]]
+const aoPulmao = {
+  direito: [[0.0, 1.95, -0.6], [-0.8, 1.9, -0.6], [-1.65, 1.8, -0.5]],
+  esquerdo: [[1.2, 2.0, -0.2], [1.75, 1.85, -0.35]],
+}
+const doPulmao = {
+  direito: [[-1.65, 1.0, -0.7], [-1.2, 0.95, -0.85], [-0.4, 0.9, -0.95], [0.3, 0.85, -0.6]],
+  esquerdo: [[1.7, 1.0, -0.5], [1.2, 0.95, -0.5], [0.7, 0.85, -0.45]],
+}
+const ladoEsquerdo = [[0.45, 0.7, 0.0], [0.45, 0.25, 0.0], [0.5, -0.6, 0.02], [0.25, -0.1, 0.05], [0.15, 0.45, 0.05], [0.1, 1.2, 0.05], [0.12, 1.9, 0.0], [0.35, 2.45, -0.2], [0.85, 2.6, -0.55], [1.25, 2.2, -0.9], [1.3, 1.2, -1.05], [1.2, -2.3, -1.0]]
+
+const curvaDe = (pts) => new THREE.CatmullRomCurve3(pts.map((p) => V(...p)))
+const rotas = []
+for (const e of ['superior', 'inferior']) {
+  for (const l of ['direito', 'esquerdo']) {
+    rotas.push({
+      venosa: curvaDe([...entradas[e], ...ladoDireito, ...aoPulmao[l]]),
+      arterial: curvaDe([...doPulmao[l], ...ladoEsquerdo]),
+    })
+  }
+}
+const bolinha = new THREE.SphereGeometry(0.045, 10, 8)
+const matVenoso = new THREE.MeshBasicMaterial({ color: 0x7aa2ff })
+const matArterial = new THREE.MeshBasicMaterial({ color: 0xff6a5a })
+const particulas = []
+const POR_ROTA = 12
+rotas.forEach((rota, r) => {
+  for (let i = 0; i < POR_ROTA; i++) {
+    const m = new THREE.Mesh(bolinha, matVenoso)
+    modelo.add(m)
+    particulas.push({ m, rota, t: ((i + r / rotas.length) / POR_ROTA) * 2 })
+  }
+})
+function moverParticulas(dt) {
+  for (const p of particulas) {
+    p.t = (p.t + dt * 0.1) % 2
+    const venosa = p.t < 1
+    p.m.material = venosa ? matVenoso : matArterial
+    p.m.position.copy((venosa ? p.rota.venosa : p.rota.arterial).getPointAt(venosa ? p.t : p.t - 1))
+  }
+}
+
+/* ---------- Batimento ----------
+   Ciclo de 0,85 s (~70 por minuto): átrios contraem, depois ventrículos,
+   depois tudo relaxa e enche. O coração inteiro encolhe um pouco na sístole. */
+const CICLO = 0.85
+const faseEl = document.getElementById('fase')
+let faseAtual = null
+function bater(tempo) {
+  const p = (tempo % CICLO) / CICLO
+  let sa = 0, sv = 0, fase = 'Diástole'
+  if (p < 0.15) { sa = Math.sin((Math.PI * p) / 0.15); fase = 'Sístole atrial' }
+  else if (p < 0.5) { sv = Math.sin((Math.PI * (p - 0.15)) / 0.35); fase = 'Sístole ventricular' }
+  coracao.scale.setScalar(1 - 0.015 * sa - 0.04 * sv)
+  mostrarFase(fase)
+}
+function mostrarFase(fase) {
+  if (fase === faseAtual) return
+  faseAtual = fase
+  faseEl.textContent = fase
+  faseEl.hidden = !fase
+}
+
+/* ---------- Rótulos ----------
+   `lado`: coluna da esquerda ('e') ou da direita ('d') de quem olha.
+   `p`: ponto de chegada da linha com o coração fechado; `pc`, com o corte.
+   `so`: só aparece com o corte aberto ('corte') ou fechado ('fechado').
+   `essencial`: fica no celular, onde não cabem todos; `curto` é o nome lá. */
+const sup = (x, y) => naSuperficie(x, y)
+const ptAD = sup(-1.0, 0.8), ptVD = sup(-0.5, -0.5), ptVE = sup(0.72, -0.9), ptAE = sup(1.02, 0.95), ptCor = sup(0.3, -0.7)
+const ROTULOS = [
+  { txt: 'Veia cava superior', curto: 'V. cava sup.', lado: 'e', p: V(-0.72, 2.5, 0.17), n: V(-0.3, 0, 1), essencial: true },
+  { txt: 'Átrio direito', curto: 'AD', lado: 'e', p: ptAD?.ponto ?? V(-1, 0.85, 0.7), n: ptAD?.normal, pc: V(-0.62, 0.66, 0.12), essencial: true },
+  { txt: 'Valva pulmonar', lado: 'e', p: V(-0.15, 0.52, 0.12), so: 'corte', interno: true },
+  { txt: 'Valva tricúspide', lado: 'e', p: V(-0.6, 0.12, 0.12), so: 'corte', interno: true },
+  { txt: 'Septo interventricular', lado: 'e', p: V(0.03, -0.55, 0.14), so: 'corte', interno: true },
+  { txt: 'Ventrículo direito', curto: 'VD', lado: 'e', p: ptVD?.ponto ?? V(-0.5, -0.5, 0.8), n: ptVD?.normal, pc: V(-0.42, -0.55, 0.1), essencial: true },
+  { txt: 'Veia cava inferior', curto: 'V. cava inf.', lado: 'e', p: V(-0.72, -1.95, -0.6), n: V(-1, 0, 0.3), essencial: true },
+  { txt: 'Aorta', lado: 'd', p: V(0.75, 2.85, -0.5), n: V(0, 1, 0.4), essencial: true },
+  { txt: 'Tronco pulmonar', curto: 'T. pulmonar', lado: 'd', p: V(0.08, 1.68, 0.84), essencial: true },
+  { txt: 'Veias pulmonares', lado: 'd', p: V(1.55, 0.98, -0.42), n: V(1, 0, 0.3) },
+  { txt: 'Átrio esquerdo', curto: 'AE', lado: 'd', p: ptAE?.ponto ?? V(1.05, 0.95, 0.5), n: ptAE?.normal, pc: V(0.5, 0.75, 0.1), essencial: true },
+  { txt: 'Valva aórtica', lado: 'd', p: V(0.2, 0.45, 0.12), so: 'corte', interno: true },
+  { txt: 'Valva mitral', lado: 'd', p: V(0.55, 0.12, 0.1), so: 'corte', interno: true },
+  { txt: 'Cordas tendíneas', lado: 'd', p: V(0.55, -0.18, 0.06), so: 'corte', interno: true },
+  { txt: 'Artéria coronária', lado: 'd', p: ptCor?.ponto ?? V(0.3, -0.7, 0.8), n: ptCor?.normal, so: 'fechado' },
+  { txt: 'Ventrículo esquerdo', curto: 'VE', lado: 'd', p: ptVE?.ponto ?? V(0.75, -0.9, 0.6), n: ptVE?.normal, pc: V(0.52, -0.75, 0.08), essencial: true },
+].map((r) => {
+  const el = document.createElement('span')
+  el.className = 'rotulo' + (r.interno ? ' interno' : '')
+  el.setAttribute('aria-hidden', 'true')
+  palco.append(el)
+  const ns = 'http://www.w3.org/2000/svg'
+  const linha = document.createElementNS(ns, 'line')
+  const ponto = document.createElementNS(ns, 'circle')
+  ponto.setAttribute('r', '2.2')
+  guias.append(linha, ponto)
+  return { ...r, n: r.n ?? V(0, 0, 1), el, linha, ponto, w: 0 }
+})
+
+/* ---------- Botões ----------
+   Quem pediu menos movimento no sistema abre com tudo parado (o corte fica). */
+const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches
+const estado = { girar: !calmo, cortar: true, bater: !calmo, fluir: !calmo }
+
+let largura = 1, altura = 1, estreito = false
+function prepararRotulos() {
+  estreito = largura < 520
+  for (const r of ROTULOS) {
+    r.el.textContent = estreito && r.curto ? r.curto : r.txt
+    r.w = r.el.offsetWidth
+  }
+}
+const visivel = (r) =>
+  (!estreito || r.essencial) && !(r.so === 'corte' && !estado.cortar) && !(r.so === 'fechado' && estado.cortar)
+
+const MARGEM = 8, FOLGA = 6, PASSO = 17
+const aux = new THREE.Vector3(), nMundo = new THREE.Vector3(), FRENTE = V(0, 0, 1)
+function posicionarRotulos() {
+  const topo = 78, base = altura - 38 // abaixo dos botões e do selo da fase
+  for (const lado of ['e', 'd']) {
+    const itens = []
+    for (const r of ROTULOS) {
+      if (r.lado !== lado) continue // cada passada só mexe na própria coluna
+      const mostra = visivel(r)
+      r.el.style.display = r.linha.style.display = r.ponto.style.display = mostra ? '' : 'none'
+      if (!mostra) continue
+      const aberto = estado.cortar && r.pc
+      aux.copy(aberto ? r.pc : r.p).applyMatrix4(modelo.matrixWorld).project(camera)
+      r.sx = (aux.x * 0.5 + 0.5) * largura
+      r.sy = (-aux.y * 0.5 + 0.5) * altura
+      // Virado para trás (a normal aponta para longe da câmera): esmaece.
+      nMundo.copy(aberto ? FRENTE : r.n).applyQuaternion(giro.quaternion)
+      r.opac = nMundo.z > -0.1 ? 1 : 0.28
+      itens.push(r)
+    }
+    // Cada coluna em ordem de altura, sem dois rótulos no mesmo lugar.
+    itens.sort((a, b) => a.sy - b.sy)
+    let antes = topo - PASSO
+    for (const r of itens) antes = r.y = Math.max(Math.min(r.sy, base), antes + PASSO)
+    for (let i = itens.length - 1; i >= 0; i--) {
+      const depois = i === itens.length - 1 ? base : itens[i + 1].y - PASSO
+      itens[i].y = Math.max(topo, Math.min(itens[i].y, depois))
+    }
+    for (const r of itens) {
+      const x = lado === 'e' ? MARGEM : largura - MARGEM - r.w
+      const inicio = lado === 'e' ? MARGEM + r.w + FOLGA : largura - MARGEM - r.w - FOLGA
+      r.el.style.transform = `translate(${x}px, ${r.y - 8}px)`
+      r.el.style.opacity = r.linha.style.opacity = r.ponto.style.opacity = r.opac
+      r.linha.setAttribute('x1', inicio)
+      r.linha.setAttribute('y1', r.y)
+      r.linha.setAttribute('x2', r.sx)
+      r.linha.setAttribute('y2', r.sy)
+      r.ponto.setAttribute('cx', r.sx)
+      r.ponto.setAttribute('cy', r.sy)
+    }
+  }
+}
+
+/* ---------- Tamanho ----------
+   O coração ocupa o meio, entre as duas colunas de rótulos. A câmera se
+   afasta até ele caber nesse vão e é deslocada de lado quando uma coluna é
+   mais larga que a outra. */
+modelo.position.y = -0.45 // o desenho vai de y -2,3 (cava inferior) a 3,2 (ramos da aorta)
+function ajustarTamanho() {
+  largura = palco.clientWidth || 1
+  altura = palco.clientHeight || 1
+  renderer.setSize(largura, altura, false)
+  camera.aspect = largura / altura
+  prepararRotulos()
+  const col = (lado) => Math.max(0, ...ROTULOS.filter((r) => r.lado === lado && (!estreito || r.essencial)).map((r) => r.w)) + MARGEM + 16
+  const esq = col('e'), dir = col('d')
+  const vao = Math.max(largura - esq - dir, largura * 0.35)
+  const tgV = Math.tan((camera.fov * Math.PI) / 360)
+  const tgH = tgV * camera.aspect
+  const dist = Math.max(2.95 / tgV, 2.0 / (tgH * (vao / largura)))
+  const centroNdc = ((esq + (largura - dir)) / 2 / largura) * 2 - 1
+  camera.position.set(-centroNdc * dist * tgH, 0, dist)
+  camera.updateProjectionMatrix()
+  desenhar()
+}
+
+function aplicarEstado() {
+  planoZ.constant = estado.cortar ? Z_CORTE : 1000 // longe demais = nada some
+  const mostraFluxo = estado.cortar && estado.fluir
+  particulas.forEach((p) => (p.m.visible = mostraFluxo))
+  if (!estado.bater) {
+    coracao.scale.setScalar(1)
+    mostrarFase('')
+  }
+}
+for (const chave of Object.keys(estado)) {
+  const b = document.getElementById(chave)
+  const pintar = () => {
+    b.setAttribute('aria-pressed', String(estado[chave]))
+    if (chave === 'girar') {
+      b.firstChild.textContent = estado.girar ? '⏸' : '▶'
+      b.querySelector('.txt').textContent = ' ' + (estado.girar ? 'Parar' : 'Girar')
+    }
+  }
+  b.addEventListener('click', () => {
+    estado[chave] = !estado[chave]
+    pintar()
+    aplicarEstado()
+  })
+  pintar()
+}
+aplicarEstado()
+
+/* ---------- Girar com o mouse / dedo ----------
+   Girar sozinho é BALANÇAR (±35°), não dar a volta: com o corte na frente,
+   numa volta inteira o aluno passaria metade do tempo vendo as costas. */
+const tela = renderer.domElement
+let arrastando = false, ultimoX = 0, ultimoY = 0
+let base = 0, balanco = 0
+tela.addEventListener('pointerdown', (e) => {
+  arrastando = true
+  ultimoX = e.clientX
+  ultimoY = e.clientY
+  tela.setPointerCapture(e.pointerId)
+  tela.classList.add('arrastando')
+})
+tela.addEventListener('pointermove', (e) => {
+  if (!arrastando) return
+  base += (e.clientX - ultimoX) * 0.01
+  giro.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, giro.rotation.x + (e.clientY - ultimoY) * 0.01))
+  ultimoX = e.clientX
+  ultimoY = e.clientY
+})
+function soltar() {
+  arrastando = false
+  tela.classList.remove('arrastando')
+}
+tela.addEventListener('pointerup', soltar)
+tela.addEventListener('pointercancel', soltar)
+
+/* ---------- Laço ---------- */
+const relogio = new THREE.Clock()
+let tempoBatida = 0
+function desenhar() {
+  giro.rotation.y = base + Math.sin(balanco) * 0.6
+  giro.updateMatrixWorld(true)
+  planosLocais.forEach((p, i) => planosMundo[i].copy(p).applyMatrix4(coracao.matrixWorld))
+  renderer.render(cena, camera)
+  posicionarRotulos()
+}
+function quadro() {
+  const dt = Math.min(relogio.getDelta(), 0.1)
+  if (estado.girar && !arrastando) balanco += dt * 0.45
+  if (estado.bater) bater((tempoBatida += dt))
+  if (estado.cortar && estado.fluir) moverParticulas(dt)
+  desenhar()
+}
+moverParticulas(0)
+new ResizeObserver(ajustarTamanho).observe(palco)
+
+new IntersectionObserver(([entrada]) => {
+  if (entrada.isIntersecting) {
+    relogio.getDelta()
+    renderer.setAnimationLoop(quadro)
+  } else {
+    renderer.setAnimationLoop(null)
+  }
+}).observe(palco)
+</script>
+</body>
+</html>

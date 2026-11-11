@@ -66,6 +66,6 @@ export const config = {
   /* O `$` solto na alternância é o que exclui a própria raiz: nela o trecho
      depois da barra é vazio, então só um `$` casa ali. */
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login$|$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login$|$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|js)$).*)',
   ],
 }

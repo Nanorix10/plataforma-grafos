@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Molécula de água em 3D</title>
+<!--
+  Modelo 3D autônomo, feito para entrar num resumo por <iframe>.
+
+  Nada aqui depende do site: o Three.js vem do cdnjs, e o arquivo abre
+  sozinho no navegador. É isso que deixa cada modelo ser escrito, testado e
+  trocado sem tocar no código do Next.
+
+  O fundo é TRANSPARENTE de propósito: quem aparece atrás é a folha do resumo,
+  nos dois temas. O tema do texto (legenda, rótulos) é lido do site quando o
+  arquivo está dentro dele, e do aparelho quando está aberto sozinho.
+-->
+<style>
+  :root {
+    --tinta: #1f2233;
+    --tinta-fraca: #5b6078;
+    --caixa: rgba(255, 255, 255, 0.78);
+    --borda: rgba(31, 34, 51, 0.14);
+    --acento: #6a5cc7;
+    color-scheme: light;
+  }
+  :root[data-tema='escuro'] {
+    --tinta: #e6e8f2;
+    --tinta-fraca: #a3a8c0;
+    --caixa: rgba(30, 28, 40, 0.78);
+    --borda: rgba(230, 232, 242, 0.16);
+    --acento: #a99ef0;
+    color-scheme: dark;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: transparent;
+    font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color: var(--tinta);
+    overflow: hidden;
+  }
+  #palco {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    /* O dedo continua rolando o resumo na vertical; só o gesto horizontal
+       gira a molécula. Com `none`, quem tocasse no modelo ficaria preso nele. */
+    touch-action: pan-y;
+  }
+  canvas.arrastando { cursor: grabbing; }
+
+  /* Rótulos presos aos átomos: são HTML por cima do canvas, reposicionados a
+     cada quadro. Texto de verdade fica nítido em qualquer zoom. */
+  .rotulo {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--tinta);
+    text-shadow: 0 0 3px var(--caixa), 0 0 6px var(--caixa);
+    white-space: nowrap;
+    will-change: transform;
+  }
+  .rotulo.angulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--acento);
+  }
+
+  .painel {
+    position: absolute;
+    background: var(--caixa);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+  }
+  .legenda {
+    left: 10px;
+    bottom: 10px;
+    padding: 8px 10px;
+    margin: 0;
+    list-style: none;
+  }
+  .legenda li { display: flex; align-items: center; gap: 7px; }
+  .legenda li + li { margin-top: 3px; }
+  .bolinha {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--borda);
+    flex: none;
+  }
+  .traco {
+    width: 12px;
+    height: 0;
+    border-top: 2px solid var(--acento);
+    flex: none;
+  }
+  .legenda small { color: var(--tinta-fraca); }
+
+  button {
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--tinta);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--acento); }
+  button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+  .dica {
+    top: 10px;
+    left: 10px;
+    padding: 4px 8px;
+    color: var(--tinta-fraca);
+    font-size: 12px;
+  }
+
+  .aviso {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    text-align: center;
+    color: var(--tinta-fraca);
+  }
+</style>
+</head>
+<body>
+<div id="palco">
+  <span class="painel dica" aria-hidden="true">Arraste para girar</span>
+  <button id="girar" class="painel" type="button" aria-pressed="true">⏸ Parar</button>
+  <ul class="painel legenda" aria-label="Legenda">
+    <li><span class="bolinha" style="background:#e0474c"></span><span><b>O</b> Oxigênio</span></li>
+    <li><span class="bolinha" style="background:#f4f4f4"></span><span><b>H</b> Hidrogênio</span></li>
+    <li><span class="traco"></span><span>Ângulo H–O–H ≈ 104,5° <small>(geometria angular)</small></span></li>
+  </ul>
+</div>
+
+<script type="module">
+/* Se o Three.js não carregar (sem internet, CDN fora do ar), a janela mostra
+   um aviso em vez de ficar em branco. */
+let THREE
+try {
+  THREE = await import('https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/three.module.min.js')
+} catch {
+  avisar('Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.')
+  throw new Error('three.js indisponível')
+}
+
+const palco = document.getElementById('palco')
+const botao = document.getElementById('girar')
+
+function avisar(texto) {
+  const p = document.createElement('p')
+  p.className = 'aviso'
+  p.textContent = texto
+  document.getElementById('palco').append(p)
+}
+
+/* ---------- Tema ----------
+   Dentro do site, o iframe tem a MESMA origem que a página do resumo, então
+   pode ler o `data-tema` que o botão de tema grava no <html> de lá. Aberto
+   sozinho (ou sem escolha do aluno), segue o aparelho. */
+const mqEscuro = matchMedia('(prefers-color-scheme: dark)')
+function aplicarTema() {
+  let tema = null
+  if (parent !== window) try { tema = parent.document.documentElement.dataset.tema } catch { /* outra origem */ }
+  if (tema !== 'claro' && tema !== 'escuro') tema = mqEscuro.matches ? 'escuro' : 'claro'
+  // Só escreve se mudou: escrever o mesmo valor ainda conta como mutação.
+  if (document.documentElement.dataset.tema !== tema) document.documentElement.dataset.tema = tema
+}
+aplicarTema()
+mqEscuro.addEventListener('change', aplicarTema)
+/* Só observa o pai quando HÁ um pai. Aberto sozinho, `parent` é a própria
+   janela, e o observador vigiaria o mesmo <html> em que `aplicarTema` escreve. */
+if (parent !== window) try {
+  new MutationObserver(aplicarTema).observe(parent.document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-tema'],
+  })
+} catch { /* sem acesso ao pai: fica só o aparelho */ }
+
+/* ---------- Cena, câmera e renderizador ---------- */
+const cena = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100)
+
+let renderer
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+} catch {
+  avisar('Este navegador não consegue desenhar em 3D (WebGL desligado).')
+  throw new Error('sem WebGL')
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+palco.prepend(renderer.domElement)
+
+// Luz ambiente clareia tudo por igual; a direcional dá o volume das esferas.
+cena.add(new THREE.HemisphereLight(0xffffff, 0x8088a0, 1.6))
+const sol = new THREE.DirectionalLight(0xffffff, 2.2)
+sol.position.set(3, 4, 5)
+cena.add(sol)
+
+/* ---------- A molécula ----------
+   Tudo o que gira fica dentro de `molecula`: girar o grupo gira os átomos, as
+   ligações e o arco juntos. */
+const molecula = new THREE.Group()
+cena.add(molecula)
+
+const ANGULO = 104.5 * Math.PI / 180   // ângulo H–O–H
+const LIGACAO = 1.7                     // comprimento O–H (fora de escala, para caber)
+const RAIO_O = 0.55
+const RAIO_H = 0.35
+const COR_O = 0xe0474c
+const COR_H = 0xf4f4f4
+
+// Oxigênio na origem; cada H sai a metade do ângulo para cada lado do eixo -Y.
+const meio = ANGULO / 2
+const posO = new THREE.Vector3(0, 0, 0)
+const posH1 = new THREE.Vector3(Math.sin(meio), -Math.cos(meio), 0).multiplyScalar(LIGACAO)
+const posH2 = new THREE.Vector3(-Math.sin(meio), -Math.cos(meio), 0).multiplyScalar(LIGACAO)
+
+function esfera(raio, cor, pos) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(raio, 48, 32),
+    new THREE.MeshStandardMaterial({ color: cor, roughness: 0.35, metalness: 0.05 })
+  )
+  m.position.copy(pos)
+  molecula.add(m)
+}
+
+/* Ligação desenhada em duas metades, cada uma na cor do átomo em que encosta —
+   é a convenção dos modelos de bola e vareta. */
+function ligacao(de, ate, corDe, corAte) {
+  const metade = de.clone().lerp(ate, 0.5)
+  for (const [a, b, cor] of [[de, metade, corDe], [metade, ate, corAte]]) {
+    const dir = b.clone().sub(a)
+    const cilindro = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.11, dir.length(), 24),
+      new THREE.MeshStandardMaterial({ color: cor, roughness: 0.5 })
+    )
+    // O cilindro nasce em pé (eixo Y); gira até apontar de `a` para `b`.
+    cilindro.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize())
+    cilindro.position.copy(a).add(b).multiplyScalar(0.5)
+    molecula.add(cilindro)
+  }
+}
+
+esfera(RAIO_O, COR_O, posO)
+esfera(RAIO_H, COR_H, posH1)
+esfera(RAIO_H, COR_H, posH2)
+ligacao(posO, posH1, COR_O, COR_H)
+ligacao(posO, posH2, COR_O, COR_H)
+
+/* Arco do ângulo: pontos numa circunferência de raio 1, entre as duas
+   ligações. Raio 1 fica fora da esfera do O (0,55) e antes da do H. */
+const RAIO_ARCO = 1.0
+const pontosArco = []
+for (let i = 0; i <= 40; i++) {
+  const t = -meio + (ANGULO * i) / 40
+  pontosArco.push(new THREE.Vector3(Math.sin(t), -Math.cos(t), 0).multiplyScalar(RAIO_ARCO))
+}
+const arco = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(pontosArco),
+  new THREE.LineBasicMaterial({ color: 0x8a7de0 })
+)
+molecula.add(arco)
+
+// Centraliza: o meio da molécula (e não o O) fica no centro da tela.
+const centro = posO.clone().add(posH1).add(posH2).divideScalar(3)
+molecula.children.forEach((filho) => filho.position.sub(centro))
+
+/* ---------- Rótulos ----------
+   Cada rótulo tem um ponto 3D; a cada quadro esse ponto é projetado na tela
+   e o <span> é movido para lá. */
+const rotulos = [
+  { texto: 'O', ponto: posO.clone().add(new THREE.Vector3(0, RAIO_O + 0.25, 0)) },
+  { texto: 'H', ponto: posH1.clone().add(new THREE.Vector3(0.35, -0.3, 0)) },
+  { texto: 'H', ponto: posH2.clone().add(new THREE.Vector3(-0.35, -0.3, 0)) },
+  { texto: '104,5°', ponto: new THREE.Vector3(0, -RAIO_ARCO - 0.28, 0), classe: 'angulo' },
+].map((r) => {
+  const el = document.createElement('span')
+  el.className = 'rotulo ' + (r.classe ?? '')
+  el.textContent = r.texto
+  el.setAttribute('aria-hidden', 'true')
+  palco.append(el)
+  return { el, ponto: r.ponto.sub(centro) }
+})
+
+const aux = new THREE.Vector3()
+function posicionarRotulos(largura, altura) {
+  for (const r of rotulos) {
+    // local → mundo (aplica o giro do grupo) → tela (-1..1) → pixels
+    aux.copy(r.ponto).applyMatrix4(molecula.matrixWorld).project(camera)
+    const x = (aux.x * 0.5 + 0.5) * largura
+    const y = (-aux.y * 0.5 + 0.5) * altura
+    r.el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`
+  }
+}
+
+/* ---------- Tamanho ----------
+   A câmera se afasta o bastante para a molécula caber na LARGURA também:
+   num celular em pé a tela é estreita, e sem isso os H sairiam pelas bordas. */
+let largura = 1, altura = 1
+function ajustarTamanho() {
+  largura = palco.clientWidth || 1
+  altura = palco.clientHeight || 1
+  renderer.setSize(largura, altura, false)
+  camera.aspect = largura / altura
+  const meiaVertical = Math.tan((camera.fov * Math.PI) / 360)
+  const meiaHorizontal = meiaVertical * camera.aspect
+  const precisa = 2.1 // metade do tamanho da molécula, com folga
+  camera.position.set(0, 0, Math.max(precisa / meiaVertical, precisa / meiaHorizontal))
+  camera.updateProjectionMatrix()
+  desenhar()
+}
+new ResizeObserver(ajustarTamanho).observe(palco)
+
+/* ---------- Girar sozinho ----------
+   Quem pediu menos movimento no sistema abre com a molécula parada. */
+let girando = !matchMedia('(prefers-reduced-motion: reduce)').matches
+function atualizarBotao() {
+  botao.textContent = girando ? '⏸ Parar' : '▶ Girar'
+  botao.setAttribute('aria-pressed', String(girando))
+}
+botao.addEventListener('click', () => {
+  girando = !girando
+  atualizarBotao()
+})
+atualizarBotao()
+
+/* ---------- Girar com o mouse / dedo ----------
+   Arrastar na horizontal gira em torno do eixo vertical (y); na vertical,
+   em torno do eixo horizontal (x). 0,01 radiano por pixel. */
+const tela = renderer.domElement
+let arrastando = false, ultimoX = 0, ultimoY = 0
+
+tela.addEventListener('pointerdown', (e) => {
+  arrastando = true
+  ultimoX = e.clientX
+  ultimoY = e.clientY
+  tela.setPointerCapture(e.pointerId) // continua valendo mesmo se o ponteiro sair do canvas
+  tela.classList.add('arrastando')
+})
+tela.addEventListener('pointermove', (e) => {
+  if (!arrastando) return
+  molecula.rotation.y += (e.clientX - ultimoX) * 0.01
+  molecula.rotation.x += (e.clientY - ultimoY) * 0.01
+  // trava o tombo em ±90°, senão a molécula vira de cabeça para baixo
+  molecula.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, molecula.rotation.x))
+  ultimoX = e.clientX
+  ultimoY = e.clientY
+})
+function soltar() {
+  arrastando = false
+  tela.classList.remove('arrastando')
+}
+tela.addEventListener('pointerup', soltar)
+tela.addEventListener('pointercancel', soltar)
+
+/* ---------- Laço de animação ----------
+   Só roda enquanto o modelo está visível na tela: um resumo com três modelos
+   não pode gastar bateria desenhando os que ficaram lá em cima. */
+const relogio = new THREE.Clock()
+function desenhar() {
+  molecula.updateMatrixWorld()
+  renderer.render(cena, camera)
+  posicionarRotulos(largura, altura)
+}
+function quadro() {
+  const dt = relogio.getDelta()
+  if (girando && !arrastando) molecula.rotation.y += dt * 0.6
+  desenhar()
+}
+
+new IntersectionObserver(([entrada]) => {
+  if (entrada.isIntersecting) {
+    relogio.getDelta() // descarta o tempo parado, senão ela daria um salto
+    renderer.setAnimationLoop(quadro)
+  } else {
+    renderer.setAnimationLoop(null)
+  }
+}).observe(palco)
+</script>
+</body>
+</html>
