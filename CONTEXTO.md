@@ -31,6 +31,7 @@ src/lib/
   questoes.ts     gavetas da resolução e prepararQuestoes (decisões 9b e 22)
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
+  modelos3d.ts    lista do seletor "🧊 Modelo 3D"; os arquivos moram em public/modelos-3d/ (decisão 28)
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
   wikilinks.ts    converte [[Título]] em <a href="/resumos/slug">
   supabase/       clientes browser e server (@supabase/ssr)
@@ -57,6 +58,7 @@ src/app/
       Mapa3D.tsx              aba 3D: moldura, ficha e controles (decisão 26)
       motor3d.ts              cena Three.js, arranjos, rótulos e Teste-se
     admin/editor/             CRUD de resumos (só admin)
+      modelo3d.ts             nó que guarda o <iframe> do modelo 3D (decisão 28)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
       wikilinkSuggestion.ts   autocomplete do `[[`
       actions.ts              salvarResumo, excluirResumo, salvarCorpoAuto
@@ -3013,6 +3015,120 @@ Antes da migration, `anon` lia 0 da própria amostra. `amostra_contexto` devolve
 Dentro de `.amostra` os títulos voltam à fonte do `(app)`: o layout do `(site)`
 põe `.titulo-display` em volta de tudo, e a Gabarito pintaria o `h1` e os
 subtítulos do resumo.
+
+## 28. Modelo 3D entra no resumo como `<iframe>`, e as ferramentas moram num visualizador comum
+
+**24/09/2026, retomada em 10/11/2026.** Modelos 3D interativos dentro do resumo,
+para o aluno girar, abrir e se testar. A primeira leva (água e coração) ficou
+numa branch que nunca virou PR; ela entrou junto com o visualizador comum e o
+primeiro modelo que o usa, a **Célula** (`celula.html`, animal e vegetal).
+
+A régua é a da decisão 26: **3D só entra onde codifica algo.** Célula, mitose,
+membrana, embrião, vírus — onde a posição no espaço é o conteúdo. Mendel,
+heredograma e ecologia não ganham 3D; se ganharem ferramenta, é outra.
+
+**Cada modelo é um `.html` autônomo em `public/modelos-3d/`**, com o Three.js
+vindo do cdnjs, e entra no corpo como
+`<iframe src="/modelos-3d/celula.html" …>`. Autônomo porque o modelo é escrito,
+testado e trocado sem tocar no Next, e o Three.js (~700 KB) só é baixado por
+quem abre um resumo que tem modelo — o `loading="lazy"` adia até ele chegar
+perto da tela.
+
+**A página do aluno mostra o iframe sem nada especial** — o corpo é HTML cru,
+sem sanitização. **Quem o apagaria é o editor:** o TipTap descarta nó que não
+conhece, e o autosave gravaria o corpo sem o modelo na primeira edição do
+resumo, em silêncio. Por isso existe `admin/editor/modelo3d.ts`, um nó átomo
+que casa só `iframe[src^="/modelos-3d/"]` — iframe de outro endereço continua
+sendo descartado, como sempre foi. O que ele grava é o iframe comum, com
+`allowfullscreen` (sem ele o botão ⛶ nem aparece) e sem `data-*`.
+
+**`lib/modelos3d.ts` é a lista do seletor "🧊 Modelo 3D" da barra**, com a
+altura de cada um. Arquivo novo na pasta só aparece para o autor depois de
+entrar nela.
+
+**`.html` e `.js` saíram do `proxy.ts`.** Sem isso, cada iframe carregado era
+uma execução de função com `getClaims()` para servir um arquivo estático — e o
+resumo `celula` é a amostra grátis (decisão 27), aberta para quem nem tem conta.
+
+### `_base.js`: o modelo descreve as peças, o visualizador faz o resto
+
+Antes, cada modelo copiava ~150 linhas de encanamento (tema, giro, laço) — e
+foi copiando que o bug abaixo passou de um arquivo para outro. Agora o modelo
+chama `criarVisualizador({ titulo, variantes, montar })`, e `montar` devolve só
+as peças: nome, texto do cartão, objetos 3D e pontos onde o rótulo pode
+prender. Tudo o que é ferramenta é igual em todo modelo novo:
+
+| ferramenta | por quê |
+|---|---|
+| gira sozinho devagar até o primeiro gesto | rotação é o que torna o 3D legível (decisão 26); `prefers-reduced-motion` abre parado |
+| **Abrir/Fechar**: plano de corte nas cascas | membrana, parede e carioteca são cortadas; o que está dentro fica inteiro |
+| rótulos com linha-guia, em duas colunas | como na prancha de anatomia; somem quando a peça fica escondida atrás de outra |
+| clicar acende a peça e abre o cartão | o cartão diz o que a estrutura FAZ, não só o nome |
+| **Estruturas**: a lista de peças | é o caminho do teclado e do leitor de tela, e serve de legenda |
+| **Teste-se**: nomes viram "? N" | prática de recuperação; a lista some no modo, porque entregaria as respostas |
+| variantes (Animal / Vegetal) | trocar mantém o ângulo que o aluno escolheu |
+
+Cinco escolhas que não se adivinham:
+
+- **O plano de corte é fixo no MUNDO, não na célula.** Gira-se a célula, e a
+  janela aberta continua virada para o aluno — como uma lâmina que ele vira
+  com a mão. As organelas não são cortadas (só quem tem `casca: true`), senão
+  cada mitocôndria virava meia cápsula oca.
+- **O raio do Three.js não sabe do corte.** Para ele a metade da membrana que
+  sumiu continua sólida: todo clique cairia nela. `cortado()` descarta o
+  acerto que está do lado apagado do plano, no clique E no teste de rótulo.
+- **O rótulo prende no ponto mais próximo da câmera que está à vista.** Cada
+  peça declara várias âncoras; a cada poucos quadros um raio da câmera até
+  cada uma diz se outra peça está na frente. Ribossomo é `miuda`: não conta
+  como obstáculo, senão escondia tudo.
+- **Coluna de rótulo só a partir de 560px, e nome inteiro só a partir de
+  760px.** Na coluna do resumo (620px) "Retículo endoplasmático rugoso"
+  invadia a célula — vale o `curto` ("RE rugoso"), e o cartão diz o nome
+  todo. Abaixo de 560px os rótulos abrem desligados e o nome fica ao lado da
+  peça.
+- **Organela cai sempre no mesmo lugar** (sorteio com semente). Com
+  `Math.random` a célula mudaria a cada recarga, e o aluno que lembrou "a
+  mitocôndria de baixo" não a acharia de novo.
+
+**A Célula é feita por código, e é esquemática de propósito**, como a figura do
+livro: fora de escala, para caber tudo. Feita por código porque as
+ferramentas precisam de cada organela como peça separada e com nome — um
+modelo pronto de terceiros chega como malha única. Para anatomia e espécimes
+reais, a fonte de fora continua sendo o caminho (Smithsonian CC0, NIH 3D,
+Z-Anatomy CC BY-SA), e o crédito vai junto do modelo.
+
+Água e coração continuam com o encanamento próprio de antes; migrá-los para o
+`_base.js` é trabalho separado e não muda o que o aluno vê.
+
+> [!bug] O observador de tema travava o arquivo aberto SOZINHO
+> Fora de um iframe, `parent` é a própria janela: o observador vigiava o mesmo
+> `<html>` em que `aplicarTema` escreve, e escrever o MESMO valor num atributo
+> ainda conta como mutação. Laço sem fim de microtarefas, e a aba não saía mais
+> da página. Dentro do site não acontecia, porque lá o pai é outro documento —
+> por isso passou despercebido no primeiro modelo. Hoje as duas pontas têm
+> trava: só lê e observa o pai se `parent !== window`, e só escreve se mudou.
+> No `_base.js` isso mora num lugar só (`vigiarTema`).
+
+**`[hidden] { display: none !important }` no CSS do visualizador.** Sem ele, a
+lista de estruturas (que é `display: grid`) ignorava o `hidden` e abria
+sozinha — achado no primeiro teste no navegador.
+
+**O coração (`coracao.html`) é feito por código, sem arquivo 3D de fora**, e não
+está em resumo nenhum: o acervo não tem sistema cardiovascular. Ele fica no
+seletor esperando. O que a versão atual faz:
+
+- **A forma é uma esfera deformada** (`deformar()`): ápice puxado para baixo e
+  para a esquerda do paciente, sulcos atrioventricular e interventricular,
+  aurículas enrugadas.
+- **O corte são dois planos de recorte com `clipIntersection`**: some só o que
+  está na frente E abaixo da base dos vasos, então os vasos ficam inteiros.
+- **Coronárias acham a superfície por raio**: o caminho é escrito em vista de
+  frente (x, y), e um `Raycaster` disparado de frente diz onde cada ponto cai.
+- **Vista frontal de livro:** o lado esquerdo do coração fica à direita de quem
+  olha, e a legenda diz isso. **A cor é do SANGUE, não do vaso**: artéria
+  pulmonar azul, veias pulmonares vermelhas.
+- **A prancha de referência tinha rótulos errados** ("válvula pulmonar" duas
+  vezes). O modelo copiou o visual, não os nomes — mesma regra da 9c.
 
 ## O que a lista do boletim ainda deve
 

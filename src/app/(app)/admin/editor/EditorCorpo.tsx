@@ -35,6 +35,8 @@ import { ItemComFigura } from './itemComFigura'
 import { BLOCOS } from './blocos'
 import { otimizarImagem } from './otimizarImagem'
 import { avisosDeEstilo } from './avisosEstilo'
+import { Modelo3D } from './modelo3d'
+import { MODELOS_3D } from '@/lib/modelos3d'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
 import { estiloDaPagina } from '@/lib/pagina'
@@ -707,6 +709,28 @@ function Barra({
         🖼 Imagem
       </Bt>
       <MenuBlocos editor={editor} />
+      {/* Um <select> e não um botão: cada modelo é um arquivo, e a lista cresce
+          (DNA, átomo de Bohr…). Escolher insere e volta ao rótulo, então o
+          campo funciona como menu, não como estado. */}
+      <select
+        value=""
+        onChange={(e) => {
+          const modelo = MODELOS_3D.find((m) => m.arquivo === e.target.value)
+          if (modelo) editor.chain().focus().inserirModelo3D(modelo.arquivo, modelo.titulo, modelo.altura).run()
+        }}
+        aria-label="Inserir modelo 3D"
+        title="Inserir modelo 3D interativo — o aluno gira com o mouse"
+        className="h-[28px] text-[12.5px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
+      >
+        <option value="" disabled>
+          🧊 Modelo 3D
+        </option>
+        {MODELOS_3D.map((m) => (
+          <option key={m.arquivo} value={m.arquivo}>
+            {m.titulo}
+          </option>
+        ))}
+      </select>
       <Bt title="Link para outro resumo" largo onClick={() => editor.chain().focus().insertContent('[[').run()}>
         [[ ]]
       </Bt>
@@ -1137,6 +1161,9 @@ export default function EditorCorpo({
       // `inserirQuestao` cria dentro da moldura.
       Questao,
       Resolucao,
+      // Sem este nó o TipTap descartaria o <iframe> do modelo ao abrir o resumo,
+      // e o autosave gravaria o corpo já sem ele (ver `modelo3d.ts`).
+      Modelo3D,
       // `resizable` deixa arrastar a divisa entre colunas: uma linha do tempo
       // quer a coluna do ano estreita, e um glossário quer o termo estreito.
       /* `table: false` desliga a tabela que vem no kit, e `TabelaLivre` entra
