@@ -9,8 +9,9 @@ import { getSessao } from '@/lib/sessao'
  * `modelos3d_partes`. O iframe tem a mesma origem do site, então o cookie da
  * sessão vem junto e dá para saber se quem pede é admin.
  *
- * GET  — os textos gravados e `podeEditar`. Qualquer um lê: a Célula está na
- *        amostra grátis, aberta a quem nem tem conta.
+ * GET  — os textos gravados e `podeEditar`. Qualquer um lê, inclusive sem
+ *        conta: texto de rótulo não é segredo, e um modelo pode entrar na
+ *        amostra grátis (decisão 27).
  * POST — grava uma estrutura. Só admin; e quem tem a palavra final é a policy
  *        do banco (`eh_admin()`), não esta conferência — rota é endereço
  *        público, como server action (decisão 10c).

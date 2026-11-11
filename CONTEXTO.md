@@ -3047,8 +3047,15 @@ altura de cada um. Arquivo novo na pasta só aparece para o autor depois de
 entrar nela.
 
 **`.html` e `.js` saíram do `proxy.ts`.** Sem isso, cada iframe carregado era
-uma execução de função com `getClaims()` para servir um arquivo estático — e o
-resumo `celula` é a amostra grátis (decisão 27), aberta para quem nem tem conta.
+uma execução de função com `getClaims()` para servir um arquivo estático.
+
+> [!bug] A Célula NÃO é a amostra grátis
+> Este parágrafo e a tabela abaixo diziam que o resumo `celula` era a amostra
+> da decisão 27. Não é: a amostra é `funcoes-inorganicas` (conferido no banco,
+> `amostra = true`, em 11/11). O modelo aparece para quem tem plano que cobre
+> o resumo, como o resto do texto. Ler sem conta continua certo por outro
+> motivo: o modelo pode entrar na amostra um dia, e texto de rótulo não é
+> segredo.
 
 ### `_base.js`: o modelo descreve as peças, o visualizador faz o resto
 
@@ -3151,7 +3158,7 @@ para onde a linha aponta, por variante.
 | peça | papel |
 |---|---|
 | tabela `modelos3d_partes` (`modelo`, `parte`) | o que o autor gravou; campo nulo = vale a fábrica |
-| `/api/modelos-3d/[modelo]` | GET para todos (a Célula está na amostra, sem conta), POST só admin |
+| `/api/modelos-3d/[modelo]` | GET para todos (texto de rótulo não é segredo), POST só admin |
 | `cfg.id` no `.html` do modelo | a chave na tabela |
 
 Quatro escolhas que não se adivinham:
