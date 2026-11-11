@@ -3131,14 +3131,55 @@ Quatro coisas que não se adivinham:
   o núcleo fica na borda, e o ângulo da animal o deixava inteiro dentro da
   cunha. Por isso trocar de variante volta à vista dela.
 
-O nome e o texto de cada estrutura moram no `celula.html`, ligados pelo id.
-A página carrega `three`, os addons e o `three-mesh-bvh` (raios rápidos numa
+O nome e o texto **de fábrica** de cada estrutura moram no `celula.html`,
+ligados pelo id (o que o autor edita fica no banco — ver abaixo). A página carrega `three`, os addons e o `three-mesh-bvh` (raios rápidos numa
 malha de 290 mil triângulos) por **importmap**: o GLTFLoader importa `three`
 pelo nome, e os dois precisam ser o mesmo módulo.
 
 Para anatomia e espécimes reais, a fonte de fora continua sendo o caminho
 (Smithsonian CC0, NIH 3D, Z-Anatomy CC BY-SA), e o crédito vai junto do
 modelo. `.glb` também saiu do `proxy.ts`.
+
+### O autor edita nome, texto e ponto do rótulo dentro do modelo (11/11/2026)
+
+Pedido do autor: a indicação dos nomes e os detalhes têm de ser modificáveis
+por ele, sem PR. Para o admin o modelo ganha **✎ Editar textos**: com ele
+ligado, clicar numa estrutura vira formulário (nome, nome curto, selo, texto)
+e **📍 Escolher ponto do rótulo** faz o próximo clique na célula ser o ponto
+para onde a linha aponta, por variante.
+
+| peça | papel |
+|---|---|
+| tabela `modelos3d_partes` (`modelo`, `parte`) | o que o autor gravou; campo nulo = vale a fábrica |
+| `/api/modelos-3d/[modelo]` | GET para todos (a Célula está na amostra, sem conta), POST só admin |
+| `cfg.id` no `.html` do modelo | a chave na tabela |
+
+Quatro escolhas que não se adivinham:
+
+- **Três camadas de texto, e quem lê passa por `info(id)`:** gravado → fábrica
+  → o próprio id. Nunca ler nome/texto do objeto da peça: é o que faz salvar
+  atualizar rótulo, lista e cartão na hora, nas duas variantes.
+- **Não existe DELETE.** "Restaurar original" é um UPDATE que anula os campos
+  — mesma regra de só acrescentar do resto do acervo. E o formulário vem
+  PREENCHIDO com o texto em vigor (corrigir uma palavra não pode exigir
+  redigitar o parágrafo); o que ficar igual à fábrica é gravado como nulo, para
+  uma melhoria futura do texto de fábrica continuar chegando.
+- **Duas travas, de propósito:** a rota confere `isAdmin` e o banco confere
+  `eh_admin()` na policy. Conferido com JWT simulado: admin grava, aluno leva
+  `violates row-level security policy`. A rota também filtra o que entra
+  (ids por regex, textos com teto, âncora só `[x, y, z]` finitos).
+- **Ponto escolhido que fica escondido ou cortado neste ângulo cai no
+  automático**, em vez de o rótulo sumir. E ele pode cair em OUTRA peça (o
+  autor aponta para onde quiser): basta não haver nada na frente.
+
+Dois defeitos que o teste pegou: o formulário cobria a célula justo quando
+era preciso clicar nela (agora encolhe para uma barra durante a escolha), e o
+texto digitado sumia ao entrar em "escolher ponto" (o formulário é redesenhado;
+o rascunho agora é guardado).
+
+**Como foi testado sem a senha do admin:** a tela de edição rodou numa aba com
+a resposta da rota simulada; a rota e as policies foram testadas de verdade
+(403 para não-admin; RLS com JWT simulado).
 
 Água e coração continuam com o encanamento próprio de antes; migrá-los para o
 `_base.js` é trabalho separado e não muda o que o aluno vê.
