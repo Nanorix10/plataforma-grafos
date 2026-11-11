@@ -95,6 +95,16 @@ button:disabled { opacity: .45; cursor: default; }
   color: var(--acento); border: 1px solid var(--acento); border-radius: 99px; padding: 0 6px;
   vertical-align: 1px; }
 .cartao .fechar { position: absolute; top: 5px; right: 5px; padding: 1px 7px; }
+.cartao.editor { max-height: calc(100% - 60px); overflow: auto; }
+.cartao.editor label { display: grid; gap: 2px; margin-top: 6px; font-size: 12px; color: var(--tinta-fraca); }
+.cartao.editor input, .cartao.editor textarea { font: inherit; font-size: 13px; color: var(--tinta);
+  background: transparent; border: 1px solid var(--borda); border-radius: 6px; padding: 4px 6px; resize: vertical; }
+.cartao.editor input:focus-visible, .cartao.editor textarea:focus-visible { outline: 2px solid var(--acento); }
+.cartao.editor .status { margin-top: 6px; font-size: 12px; color: var(--acento); }
+.cartao.editor .acoes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.cartao.editor.compacto { display: flex; gap: 8px; align-items: center; padding: 6px 10px; }
+.cartao.editor.compacto .status { margin: 0; flex: 1; }
+.cartao.editor .principal { background: var(--acento); color: #fff; border-color: var(--acento); }
 .lista { top: 46px; right: 8px; max-height: calc(100% - 60px); overflow: auto; padding: 6px;
   display: grid; gap: 3px; min-width: 170px; }
 .lista button { text-align: left; border-color: transparent; background: transparent; }
@@ -290,6 +300,44 @@ export async function criarVisualizador(cfg) {
 
   const ROT_INICIAL = { x: 0.38, y: 0.35 }
   const cache = new Map() // variante -> modelo já carregado
+
+  /* ---------- Textos: fábrica + o que o admin editou ----------
+     A fábrica é o que está escrito no .html do modelo. O que o admin grava
+     mora na tabela `modelos3d_partes` e chega pela rota /api/modelos-3d/<id>;
+     campo nulo lá = vale a fábrica. Quem lê nome/texto/selo passa SEMPRE por
+     `info(id)`, nunca pelo objeto da peça: assim salvar atualiza tudo na hora. */
+  const fabrica = new Map((cfg.partes ?? []).map((p) => [p.id, p]))
+  const gravado = new Map()
+  let podeEditar = false
+  let editando = false
+  let marcandoPonto = false
+  let pontoNovo = null // { parte, ponto: Vector3 local | null } ainda não salvo
+  // O que foi digitado e não salvo. O formulário é redesenhado ao entrar e
+  // sair de "escolher ponto"; sem isto, o texto digitado sumia (achado no teste).
+  let rascunho = null // { parte, nome, curto, so, descricao }
+
+  function info(id) {
+    const f = fabrica.get(id) ?? {}
+    const g = gravado.get(id) ?? {}
+    return {
+      nome: g.nome ?? f.nome ?? id,
+      curto: g.curto ?? f.curto ?? null,
+      so: g.so ?? f.so ?? null,
+      descricao: g.descricao ?? f.descricao ?? '',
+      ancoras: g.ancoras ?? {},
+    }
+  }
+
+  async function carregarTextos() {
+    if (!cfg.id) return
+    try {
+      const r = await fetch(`/api/modelos-3d/${cfg.id}`, { credentials: 'same-origin' })
+      if (!r.ok) return
+      const dado = await r.json()
+      podeEditar = dado.podeEditar === true
+      for (const linha of dado.partes ?? []) gravado.set(linha.parte, linha)
+    } catch { /* aberto fora do site, ou sem rede: fica a fábrica */ }
+  }
 
   /* ---------- Carregar / trocar variante ---------- */
   let gltf = null
@@ -493,6 +541,10 @@ export async function criarVisualizador(cfg) {
 
   function selecionar(id) {
     selecionada = selecionada === id ? null : id
+    // Trocar de estrutura descarta o que não foi salvo da anterior.
+    marcandoPonto = false
+    if (rascunho?.parte !== selecionada) rascunho = null
+    if (pontoNovo?.parte !== selecionada) pontoNovo = null
     if (teste && id) revelar(id)
     aplicarDestaque()
     mostrarCartao()
@@ -507,20 +559,146 @@ export async function criarVisualizador(cfg) {
       cartao.hidden = true
       return
     }
+    if (editando) return formulario(p)
+    const t = info(p.id)
+    cartao.classList.remove('editor')
     cartao.replaceChildren()
     const h = document.createElement('h2')
-    h.textContent = p.nome
-    if (p.so) {
+    h.textContent = t.nome
+    if (t.so) {
       const s = el('span', 'so')
-      s.textContent = p.so
+      s.textContent = t.so
       h.append(s)
     }
     const d = document.createElement('p')
-    d.textContent = p.descricao
+    d.textContent = t.descricao
     const f = botao('Fechar', '×', () => selecionar(null))
     f.classList.add('fechar', 'so-icone')
     cartao.append(h, d, f)
     cartao.hidden = false
+  }
+
+  /* ---------- Modo de edição (só admin) ----------
+     O cartão vira formulário. "Escolher ponto" faz o PRÓXIMO clique na célula
+     marcar para onde o rótulo aponta, nesta variante. Salvar grava na tabela
+     pela rota; o banco confere de novo se quem grava é admin. */
+  function formulario(p) {
+    const t = info(p.id)
+    const f0 = fabrica.get(p.id) ?? {}
+    cartao.classList.add('editor')
+    cartao.replaceChildren()
+
+    // Escolhendo o ponto, o cartão encolhe: o formulário cobria a célula
+    // justamente quando era preciso clicar nela.
+    if (marcandoPonto) {
+      cartao.classList.add('compacto')
+      const m = el('p', 'status')
+      m.textContent = `Clique na célula, no ponto para onde o rótulo de "${t.nome}" deve apontar.`
+      const c = botao('Cancelar', '', () => { marcandoPonto = false; formulario(p) })
+      cartao.append(m, c)
+      cartao.hidden = false
+      return
+    }
+    cartao.classList.remove('compacto')
+
+    const titulo = document.createElement('h2')
+    titulo.textContent = `Editar: ${t.nome}`
+    const campo = (rotulo, valor, padrao, tipo = 'input', max = 80) => {
+      const l = document.createElement('label')
+      const s = document.createElement('span')
+      s.textContent = rotulo
+      const i = document.createElement(tipo)
+      i.value = valor ?? ''
+      i.placeholder = padrao ?? ''
+      i.maxLength = max
+      if (tipo === 'textarea') i.rows = 4
+      l.append(s, i)
+      return { l, i }
+    }
+    // Preenchidos com o texto EM VIGOR: corrigir uma palavra não pode exigir
+    // redigitar o parágrafo. Ao salvar, o que ficou igual à fábrica vira null.
+    const r0 = rascunho?.parte === p.id ? rascunho : t
+    const nome = campo('Nome', r0.nome, f0.nome)
+    const curto = campo('Nome curto (rótulo em tela estreita)', r0.curto, f0.curto, 'input', 40)
+    const so = campo('Selo (ex.: Só na vegetal)', r0.so, '', 'input', 40)
+    const desc = campo('Texto do cartão', r0.descricao, f0.descricao, 'textarea', 1500)
+    const igualFabrica = (v, f) => (v.trim() === (f ?? '').trim() ? '' : v)
+    const guardarRascunho = () => {
+      rascunho = { parte: p.id, nome: nome.i.value, curto: curto.i.value, so: so.i.value, descricao: desc.i.value }
+    }
+    for (const c of [nome, curto, so, desc]) c.i.addEventListener('input', guardarRascunho)
+
+    const fixado = pontoNovo?.parte === p.id ? pontoNovo.ponto : t.ancoras[varianteAtual]
+    const status = el('p', 'status')
+    status.textContent = marcandoPonto
+      ? 'Clique na célula, no ponto para onde o rótulo deve apontar.'
+      : fixado ? `Rótulo preso num ponto escolhido (${varianteAtual}).` : 'Rótulo em posição automática.'
+
+    const acoes = el('div', 'acoes')
+    const bPonto = botao(marcandoPonto ? 'Cancelar ponto' : 'Escolher ponto do rótulo', '📍', () => {
+      marcandoPonto = !marcandoPonto
+      formulario(p)
+    })
+    const bAuto = botao('Ponto automático', '', () => {
+      pontoNovo = { parte: p.id, ponto: null }
+      formulario(p)
+    })
+    const bSalvar = botao('Salvar', '', async () => {
+      const anc = { ...t.ancoras }
+      if (pontoNovo?.parte === p.id) {
+        if (pontoNovo.ponto) anc[varianteAtual] = pontoNovo.ponto.toArray()
+        else delete anc[varianteAtual]
+      }
+      await salvar(p.id, {
+        nome: igualFabrica(nome.i.value, f0.nome),
+        curto: igualFabrica(curto.i.value, f0.curto),
+        so: igualFabrica(so.i.value, f0.so),
+        descricao: igualFabrica(desc.i.value, f0.descricao),
+        ancoras: anc,
+      }, status)
+    })
+    const bOriginal = botao('Restaurar original', '', async () => {
+      await salvar(p.id, { nome: '', curto: '', so: '', descricao: '', ancoras: {} }, status)
+    })
+    bSalvar.classList.add('principal')
+    acoes.append(bPonto, bAuto, bSalvar, bOriginal)
+    const fechar = botao('Fechar', '×', () => selecionar(null))
+    fechar.classList.add('fechar', 'so-icone')
+    cartao.append(titulo, nome.l, curto.l, so.l, desc.l, status, acoes, fechar)
+    cartao.hidden = false
+  }
+
+  async function salvar(id, campos, status) {
+    status.textContent = 'Salvando…'
+    try {
+      const r = await fetch(`/api/modelos-3d/${cfg.id}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parte: id, ...campos }),
+      })
+      const dado = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(dado.erro ?? 'erro')
+      gravado.set(id, dado.parte)
+      pontoNovo = null
+      rascunho = null
+      marcandoPonto = false
+      montarLista()
+      tempoOclusao = 0
+      mostrarCartao()
+      cartao.querySelector('.status').textContent = 'Salvo. O aluno já vê assim.'
+    } catch (e) {
+      status.textContent = `Não salvou: ${e.message}. Confira se você está logado como admin.`
+    }
+  }
+
+  function alternarEdicao() {
+    editando = !editando
+    marcandoPonto = false
+    pontoNovo = null
+    if (editando && teste) alternarTeste()
+    bEditar.setAttribute('aria-pressed', String(editando))
+    mostrarCartao()
   }
 
   function montarLista() {
@@ -530,10 +708,11 @@ export async function criarVisualizador(cfg) {
       b.type = 'button'
       b.dataset.id = p.id
       b.setAttribute('role', 'listitem')
-      b.textContent = p.nome
-      if (p.so) {
+      const t = info(p.id)
+      b.textContent = t.nome
+      if (t.so) {
         const s = document.createElement('small')
-        s.textContent = ' · ' + p.so.toLowerCase()
+        s.textContent = ' · ' + t.so.toLowerCase()
         b.append(s)
       }
       b.addEventListener('click', () => selecionar(p.id))
@@ -550,6 +729,7 @@ export async function criarVisualizador(cfg) {
   function alternarTeste() {
     teste = !teste
     revelados = new Set()
+    if (teste && editando) alternarEdicao()
     if (teste) {
       alternarLista(false) // a lista entregaria as respostas
       selecionada = null
@@ -655,6 +835,19 @@ export async function criarVisualizador(cfg) {
     return !!(mat.clippingPlanes?.length && naCunha(hit.point))
   }
 
+  /** Ponto da superfície sob o ponteiro (opaco, fora do corte), para marcar o rótulo. */
+  function pontoEm(cx, cy) {
+    if (!modelo) return null
+    const r = tela.getBoundingClientRect()
+    ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
+    ray.setFromCamera(ndc, camera)
+    for (const hit of ray.intersectObjects(clicaveis, false)) {
+      if (cortado(hit) || hit.object.material.transparent) continue
+      return hit.point.clone()
+    }
+    return null
+  }
+
   /** Primeira peça sob o ponteiro, ignorando o que o corte apagou. */
   function pecaEm(cx, cy) {
     if (!modelo) return null
@@ -707,6 +900,17 @@ export async function criarVisualizador(cfg) {
     // Soltar sem ter arrastado é um clique: escolhe a peça.
     if (moveu <= 4 && e.type === 'pointerup') {
       primeiroGesto()
+      // Modo "escolher ponto": este clique marca o rótulo, não troca de peça.
+      if (marcandoPonto && selecionada) {
+        const p = pontoEm(e.clientX, e.clientY)
+        if (p) {
+          pontoNovo = { parte: selecionada, ponto: modelo.grupo.worldToLocal(p) }
+          marcandoPonto = false
+          tempoOclusao = 0
+          mostrarCartao()
+        }
+        return
+      }
       // Clicar na peça acesa (ou no vazio) apaga; `selecionar` alterna sozinho.
       selecionar(pecaEm(e.clientX, e.clientY))
     }
@@ -744,6 +948,17 @@ export async function criarVisualizador(cfg) {
     const mundo = modelo.grupo.matrixWorld
     for (const p of pecas) {
       p.ancora = null
+      /* Ponto escolhido pelo admin vem primeiro; se ele estiver escondido ou
+         cortado neste ângulo, o rótulo cai no automático em vez de sumir. */
+      const novo = pontoNovo?.parte === p.id ? pontoNovo.ponto : undefined
+      const fixo = novo !== undefined ? novo : info(p.id).ancoras[varianteAtual]
+      if (fixo) {
+        const a = new THREE.Vector3().fromArray(Array.isArray(fixo) ? fixo : fixo.toArray()).applyMatrix4(mundo)
+        if (!(aberto && naCunha(a)) && visivel(a, p.id, true)) {
+          p.ancora = a
+          continue
+        }
+      }
       // Mais perto da câmera primeiro: é a que o aluno está vendo.
       const candidatas = p.ancoras
         .map((a) => a.clone().applyMatrix4(mundo))
@@ -759,7 +974,9 @@ export async function criarVisualizador(cfg) {
     }
   }
 
-  function visivel(ponto, id) {
+  /** `escolhido`: o ponto foi marcado à mão, e pode cair em OUTRA peça (o
+   *  admin aponta para onde quiser) — aí basta não haver nada na frente. */
+  function visivel(ponto, id, escolhido = false) {
     doCamera.copy(ponto).sub(camera.position)
     const dist = doCamera.length()
     ray.set(camera.position, doCamera.normalize())
@@ -768,6 +985,7 @@ export async function criarVisualizador(cfg) {
       for (const hit of ray.intersectObjects(oclusores, false)) {
         if (cortado(hit)) continue
         if (hit.object.material.transparent) continue // gel translúcido não esconde
+        if (escolhido) return hit.distance > dist - 0.12
         return hit.object.userData.parteId === id
       }
       return true
@@ -814,7 +1032,8 @@ export async function criarVisualizador(cfg) {
       // O nome inteiro só cabe na coluna com folga; na coluna do resumo (620px)
       // "Retículo endoplasmático rugoso" invadia a célula. O cartão diz o nome todo.
       const inteiro = largura >= 760
-      r.textContent = revelado ? (inteiro ? p.nome : (p.curto ?? p.nome)) : `? ${p.numero}`
+      const t = info(p.id)
+      r.textContent = revelado ? (inteiro ? t.nome : (t.curto ?? t.nome)) : `? ${p.numero}`
       r.className = 'rotulo' + (p.id === selecionada ? ' ativo' : '') +
         (teste ? (revelado ? ' revelado' : ' pergunta') : '')
       r.style.display = ''
@@ -876,6 +1095,10 @@ export async function criarVisualizador(cfg) {
   }).observe(palco)
 
   atualizarBotoes()
+  await carregarTextos()
+  // O lápis só existe para o admin (quem salva de verdade é conferido no banco).
+  const bEditar = botao('Editar textos', '✎', () => alternarEdicao())
+  if (podeEditar) direita.prepend(bEditar)
   await montar(varianteAtual)
 
   /* ---------- auxiliares de DOM ---------- */
