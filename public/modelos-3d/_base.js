@@ -302,6 +302,10 @@ export async function criarVisualizador(cfg) {
   let revelados = new Set()
   let largura = 1, altura = 1
   let zoom = 1
+  // Até 6×: nas lupas, chegar numa ATP sintase pede bem mais que os 3× de antes.
+  const ZOOM_MIN = 0.6, ZOOM_MAX = 6
+  const desvio = new THREE.Vector2() // deslize lateral da câmera (zoom no cursor)
+  let distBase = 1
   let rotulosLigados = true
   let jaDecidiuRotulos = false
   let girandoSozinho = !matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -475,6 +479,7 @@ export async function criarVisualizador(cfg) {
     // Trocar de animal para vegetal não desfaz o ângulo que o aluno escolheu.
     modelo.grupo.rotation.set(rx, ry, 0)
     zoom = 1
+    desvio.set(0, 0)
     cena.add(modelo.grupo)
 
     pecas = m.partes.map((p, i) => {
@@ -799,7 +804,8 @@ export async function criarVisualizador(cfg) {
     const util = largura >= LARGA ? largura - 2 * COLUNA : largura
     const vertical = altura - 70 // barra de cima e um respiro embaixo
     const d = (modelo.raio / tg) * Math.max(altura / Math.max(vertical, 1), altura / Math.max(util, 1)) * 1.12
-    camera.position.set(0, 0, d / zoom)
+    distBase = d
+    camera.position.set(desvio.x, desvio.y, d / zoom)
     camera.near = d / 50
     camera.far = d * 4
     camera.updateProjectionMatrix()
@@ -810,8 +816,32 @@ export async function criarVisualizador(cfg) {
     tempoOclusao = 0
   }
 
-  function mudarZoom(f) {
-    zoom = Math.min(3, Math.max(0.6, zoom * f))
+  /* Zoom em direção a um ponto da tela (`nx`, `ny` de -1 a 1; 0,0 = centro,
+     que é o que os botões + e − usam).
+
+     A câmera olha sempre reto para -z. O ponto do plano z=0 que está sob o
+     cursor fica em  câmera.xy + n · dist · tg · (aspecto, 1). Para ele
+     continuar sob o cursor depois do zoom, a câmera desliza (`desvio`) na
+     mesma proporção em que se aproxima — é o "aproximar onde o mouse está"
+     dos mapas. */
+  function mudarZoom(f, nx = 0, ny = 0) {
+    if (!modelo) return
+    const antes = zoom
+    zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom * f))
+    if (zoom <= 1) {
+      // Do tamanho inicial para trás, volta ao centro: sem modelo perdido no canto.
+      desvio.set(0, 0)
+    } else {
+      const tg = Math.tan((camera.fov * Math.PI) / 360)
+      const meia = (distBase / antes) * tg
+      const px = desvio.x + nx * meia * camera.aspect
+      const py = desvio.y + ny * meia
+      const k = antes / zoom
+      desvio.set(px - (px - desvio.x) * k, py - (py - desvio.y) * k)
+      // O modelo nunca sai inteiro da tela.
+      const lim = modelo.raio
+      desvio.set(Math.max(-lim, Math.min(lim, desvio.x)), Math.max(-lim, Math.min(lim, desvio.y)))
+    }
     ajustarTamanho()
   }
 
@@ -821,6 +851,7 @@ export async function criarVisualizador(cfg) {
 
   function vistaInicial() {
     zoom = 1
+    desvio.set(0, 0)
     const ini = vistaDe(varianteAtual)
     modelo.grupo.rotation.set(ini.x, ini.y, 0)
     ajustarTamanho()
@@ -942,6 +973,47 @@ export async function criarVisualizador(cfg) {
     } else if (e.key === '+' || e.key === '=') mudarZoom(1.2)
     else if (e.key === '-') mudarZoom(1 / 1.2)
   })
+
+  /* ---------- Rodinha do mouse ----------
+     O modelo mora num <iframe> no meio de um resumo comprido. Se a rodinha
+     desse zoom sempre, quem só está rolando o texto e passa o mouse por cima
+     ficaria "preso" no modelo. Então ela só dá zoom quando o aluno mostrou
+     que quer mexer aqui: depois de clicar no modelo (até clicar fora dele),
+     em tela cheia, ou com a página do modelo aberta sozinha. Antes disso a
+     rodinha rola a página, e a dica avisa como ligar o zoom. */
+  const dentroDeIframe = window.self !== window.top
+  let rodinhaLigada = !dentroDeIframe
+  tela.addEventListener('pointerdown', () => { rodinhaLigada = true }, true)
+  // Clicar fora do iframe tira o foco desta janela: a rodinha volta a rolar a página.
+  window.addEventListener('blur', () => { rodinhaLigada = !dentroDeIframe })
+
+  const textoDica = dica.textContent
+  let tempoDica = 0
+  function avisarRodinha() {
+    dica.textContent = 'Clique no modelo para dar zoom com a rodinha'
+    dica.style.opacity = '1'
+    clearTimeout(tempoDica)
+    tempoDica = setTimeout(() => {
+      dica.style.opacity = '0'
+      setTimeout(() => { dica.textContent = textoDica }, 450)
+    }, 1600)
+  }
+
+  tela.addEventListener('wheel', (e) => {
+    if (!rodinhaLigada && !document.fullscreenElement) {
+      avisarRodinha()
+      return // sem preventDefault: a rolagem segue para a página do resumo
+    }
+    e.preventDefault()
+    primeiroGesto()
+    // deltaMode 1 = linhas (Firefox): ~16px cada. Passo suave e proporcional
+    // ao giro, para o touchpad (passos miúdos) e a rodinha (passos de ~100).
+    const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1)
+    const r = tela.getBoundingClientRect()
+    const nx = ((e.clientX - r.left) / r.width) * 2 - 1
+    const ny = -(((e.clientY - r.top) / r.height) * 2 - 1)
+    mudarZoom(Math.exp(-Math.max(-300, Math.min(300, px)) * 0.0015), nx, ny)
+  }, { passive: false })
 
   function girar(ay, ax) {
     if (!modelo) return
