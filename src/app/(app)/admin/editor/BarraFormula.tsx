@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import katex from 'katex'
 import 'katex/dist/contrib/mhchem.mjs'
 import {
@@ -15,6 +15,10 @@ import {
 // `getSessao` → `next/headers`, e um import de valor arrastaria isso para o
 // pacote do navegador. Como tipo, ele é apagado na compilação.
 import type { FormulaSalva } from '@/lib/formulas'
+import { TAMANHO_PADRAO, TAMANHO_MIN, TAMANHO_MAX, lerTamanho } from '@/lib/formula-tamanho'
+
+/** Quanto cada clique em − / + muda o tamanho, em px. */
+const PASSO_TAMANHO = 2
 
 /**
  * Barra de equação no espírito do Google Docs: paletas de símbolos clicáveis,
@@ -45,7 +49,7 @@ import type { FormulaSalva } from '@/lib/formulas'
 
 export type Alvo =
   | { modo: 'novo'; emBloco: boolean }
-  | { modo: 'editar'; pos: number; emBloco: boolean; latex: string }
+  | { modo: 'editar'; pos: number; emBloco: boolean; latex: string; tamanho: number | null }
 
 /** A aba do autor. Não sai de `PALETAS` porque o conteúdo dela vem do banco. */
 const ABA_MINHAS = 'minhas'
@@ -179,7 +183,7 @@ export default function BarraFormula({
 }: {
   alvo: Alvo
   formulas: FormulaSalva[]
-  aoConfirmar: (latex: string, emBloco: boolean) => void
+  aoConfirmar: (latex: string, emBloco: boolean, tamanho: number | null) => void
   aoRemover: () => void
   aoCancelar: () => void
   aoSalvarFormula: (nome: string, latex: string, emBloco: boolean) => Promise<void>
@@ -187,6 +191,18 @@ export default function BarraFormula({
 }) {
   const [latex, setLatex] = useState(alvo.modo === 'editar' ? alvo.latex : '')
   const [emBloco, setEmBloco] = useState(alvo.emBloco)
+  // o número que o campo MOSTRA; fórmula sem tamanho próprio abre no padrão
+  const [tamanho, setTamanho] = useState(
+    (alvo.modo === 'editar' ? alvo.tamanho : null) ?? TAMANHO_PADRAO,
+  )
+  // texto cru do campo, para o autor poder apagar e digitar "30" sem o campo
+  // brigar no meio (com "3" sozinho fora da faixa)
+  const [tamanhoDigitado, setTamanhoDigitado] = useState(String(tamanho))
+  function mudarTamanho(n: number) {
+    const t = Math.min(TAMANHO_MAX, Math.max(TAMANHO_MIN, Math.round(n)))
+    setTamanho(t)
+    setTamanhoDigitado(String(t))
+  }
   const [paleta, setPaleta] = useState(ABA_MINHAS)
   const [busca, setBusca] = useState('')
   // nomeando: null = a fileira de ações normal; string = a caixa de salvar
@@ -232,7 +248,9 @@ export default function BarraFormula({
 
   function confirmar() {
     if (!latex.trim()) return aoCancelar()
-    aoConfirmar(latex.trim(), emBloco)
+    // escolher exatamente o padrão grava "sem tamanho": assim a fórmula
+    // acompanha o padrão se ele mudar um dia (ver `lib/formula-tamanho.ts`)
+    aoConfirmar(latex.trim(), emBloco, tamanho === TAMANHO_PADRAO ? null : tamanho)
   }
 
   const procurando = busca.trim().length > 0
@@ -341,7 +359,71 @@ export default function BarraFormula({
           </button>
         ))}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          {/* Tamanho desta fórmula, em px. Abre no padrão (22) e só vira
+              atributo do nó se sair dele — ver `lib/formula-tamanho.ts`. */}
+          <div
+            role="group"
+            aria-label="Tamanho da fórmula"
+            className="flex items-center gap-1 text-[12px] text-[var(--ink-dim)]"
+          >
+            <span>Tamanho</span>
+            <button
+              type="button"
+              aria-label="Diminuir tamanho"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => mudarTamanho(tamanho - PASSO_TAMANHO)}
+              disabled={tamanho <= TAMANHO_MIN}
+              className="w-6 h-6 rounded border border-[var(--line)] hover:bg-[var(--sel)] disabled:opacity-40 leading-none"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputMode="numeric"
+              aria-label="Tamanho da fórmula em pixels"
+              min={TAMANHO_MIN}
+              max={TAMANHO_MAX}
+              value={tamanhoDigitado}
+              onChange={(e) => {
+                setTamanhoDigitado(e.target.value)
+                const t = lerTamanho(e.target.value)
+                if (t !== null) setTamanho(t)
+              }}
+              // ao sair do campo, um valor fora da faixa volta ao que vale
+              onBlur={() => setTamanhoDigitado(String(tamanho))}
+              onKeyDown={(e) => {
+                // Enter aqui confirma a fórmula, como no campo do LaTeX
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  confirmar()
+                }
+              }}
+              className="w-12 h-6 px-1 rounded border border-[var(--line)] bg-[var(--raised)] text-[var(--ink)] text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              aria-label="Aumentar tamanho"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => mudarTamanho(tamanho + PASSO_TAMANHO)}
+              disabled={tamanho >= TAMANHO_MAX}
+              className="w-6 h-6 rounded border border-[var(--line)] hover:bg-[var(--sel)] disabled:opacity-40 leading-none"
+            >
+              +
+            </button>
+            <span>px</span>
+            {tamanho !== TAMANHO_PADRAO ? (
+              <button
+                type="button"
+                title={`Voltar ao padrão (${TAMANHO_PADRAO}px)`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => mudarTamanho(TAMANHO_PADRAO)}
+                className="ml-0.5 px-1.5 h-6 rounded hover:bg-[var(--sel)] underline underline-offset-2"
+              >
+                padrão
+              </button>
+            ) : null}
+          </div>
           <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-dim)] cursor-pointer">
             <input
               type="checkbox"
@@ -447,7 +529,13 @@ export default function BarraFormula({
             {erro ? (
               <span className="text-[11.5px] text-[var(--stamp)] font-mono-plex">{erro}</span>
             ) : html ? (
-              <span dangerouslySetInnerHTML={{ __html: html }} />
+              // `previa-formula` aplica a mesma regra de tamanho do resumo, e a
+              // variável é o tamanho escolhido: a prévia sai do tamanho real
+              <span
+                className="previa-formula"
+                style={{ '--formula-tam': `${tamanho}px` } as CSSProperties}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
             ) : (
               <span className="text-[11.5px] text-[var(--ink-dim)]">
                 A fórmula aparece aqui enquanto você monta.

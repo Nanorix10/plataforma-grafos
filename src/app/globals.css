@@ -195,6 +195,11 @@
   --t-base: 0.9375rem; /* 15px — interface */
   --t-medio: 1.0625rem; /* 17px — corpo do resumo */
   --t-grande: 1.375rem; /* 22px — título de seção */
+  /* Fórmula do KaTeX. Em px, e não em `em`: o autor pediu um tamanho só para
+     toda fórmula, em parágrafo, título ou tabela. O editor deixa ajustar uma
+     a uma (`data-tamanho` no nó); `lib/formula-tamanho.ts` repete este
+     número para a barra de equação saber de onde parte o ajuste. */
+  --t-formula: 22px;
   --t-titulo: 1.75rem; /* 28px — título de página */
   /* Sétimo degrau, e o único que escala com a tela. Existe só para o h1 da
      landing, que é a primeira coisa que um desconhecido lê do produto — nas
@@ -1868,10 +1873,14 @@ h3 {
   padding-bottom: 2px;
 }
 
-.conteudo-resumo .katex {
-  /* o KaTeX herda o tamanho do texto; 1.05 compensa a fonte de leitura ser
-     pequena ao lado do desenho matemático do KaTeX */
-  font-size: 1.05em;
+.conteudo-resumo .katex,
+.previa-formula .katex {
+  /* Tamanho fixo (`--t-formula`, 22px), e não mais 1.05em do texto em volta.
+     `--formula-tam` é o ajuste de UMA fórmula: o servidor e o editor o
+     penduram num ancestral quando o nó traz `data-tamanho`, e ele desce por
+     herança. A prévia da barra de equação usa a mesma regra, para mostrar o
+     tamanho que vai sair. */
+  font-size: var(--formula-tam, var(--t-formula));
 }
 
 /* Fórmula com erro de digitação: fica visível e vermelha, mas não quebra nada */
