@@ -11,7 +11,9 @@ import { Highlight } from '@tiptap/extension-highlight'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { CharacterCount } from '@tiptap/extension-character-count'
-import { InlineMath, BlockMath } from '@tiptap/extension-mathematics'
+// as fórmulas do TipTap com o atributo `tamanho` (ver o cabeçalho de lá)
+import { FormulaEmLinha as InlineMath, FormulaEmBloco as BlockMath } from './formulaComTamanho'
+import { lerTamanho } from '@/lib/formula-tamanho'
 import { TableKit } from '@tiptap/extension-table'
 import { Subscript } from '@tiptap/extension-subscript'
 import { Superscript } from '@tiptap/extension-superscript'
@@ -1185,6 +1187,7 @@ export default function EditorCorpo({
             pos,
             latex: String(node.attrs.latex ?? ''),
             emBloco: false,
+            tamanho: lerTamanho(node.attrs.tamanho),
           }),
       }),
       BlockMath.configure({
@@ -1195,6 +1198,7 @@ export default function EditorCorpo({
             pos,
             latex: String(node.attrs.latex ?? ''),
             emBloco: true,
+            tamanho: lerTamanho(node.attrs.tamanho),
           }),
       }),
       WikilinkSuggestion.configure({
@@ -1260,15 +1264,25 @@ export default function EditorCorpo({
    * Grava a fórmula. Editar sempre apaga o nó antigo e insere outro, em vez de
    * usar updateInlineMath: assim trocar entre "em linha" e "linha própria"
    * funciona pelo mesmo caminho, sem um segundo ramo de código.
+   *
+   * `insertContentAt` no lugar de `insertInlineMath`/`insertBlockMath`
+   * porque os comandos da extensão só sabem passar o `latex`, e o `tamanho`
+   * se perderia. É a mesma posição que eles usavam: o início da seleção.
+   * `tamanho` nulo = segue o padrão do CSS (ver `lib/formula-tamanho.ts`).
    */
-  function confirmarFormula(latex: string, emBloco: boolean) {
+  function confirmarFormula(latex: string, emBloco: boolean, tamanho: number | null) {
     if (!editor) return
     if (alvoFormula?.modo === 'editar') {
       editor.chain().focus().setNodeSelection(alvoFormula.pos).deleteSelection().run()
     }
-    const c = editor.chain().focus()
-    if (emBloco) c.insertBlockMath({ latex }).run()
-    else c.insertInlineMath({ latex }).run()
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(editor.state.selection.from, {
+        type: emBloco ? 'blockMath' : 'inlineMath',
+        attrs: { latex, tamanho },
+      })
+      .run()
     setAlvoFormula(null)
   }
 

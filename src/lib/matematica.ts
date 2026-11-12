@@ -2,6 +2,7 @@ import katex from 'katex'
 // carrega o mhchem, que ensina o KaTeX a entender \ce{...} — reações químicas.
 // É import por efeito colateral: ele se registra dentro do próprio KaTeX.
 import 'katex/dist/contrib/mhchem.mjs'
+import { lerTamanho, estiloTamanho } from './formula-tamanho'
 
 /**
  * Transforma as fórmulas gravadas no corpo em HTML já renderizado.
@@ -58,6 +59,20 @@ function renderizar(tex: string, emBloco: boolean) {
 /** Nós de fórmula gravados pelo editor. */
 const NO_FORMULA = /<(span|div)\b([^>]*?\bdata-type="(inline|block)-math"[^>]*?)>\s*(?:<\/\1>)?/gi
 const ATRIBUTO_LATEX = /\bdata-latex="([^"]*)"/i
+const ATRIBUTO_TAMANHO = /\bdata-tamanho="([^"]*)"/i
+
+/**
+ * Pendura o tamanho escolhido no editor (ver `lib/formula-tamanho.ts`) no
+ * elemento mais de fora do que o KaTeX gerou — `.katex` na fórmula em linha,
+ * `.katex-display` na de linha própria. É uma variável CSS, e ela desce por
+ * herança até o `.katex`, que é quem a lê. Sem `data-tamanho`, nada muda no
+ * HTML e a fórmula segue o padrão do CSS.
+ */
+function comTamanho(html: string, tamanho: number | null) {
+  const estilo = estiloTamanho(tamanho)
+  if (!estilo || !html) return html
+  return html.replace(/^<(span|code)\b/, `<$1 style="${estilo}"`)
+}
 
 export function renderizarMatematica(html: string): string {
   if (!html) return html
@@ -65,7 +80,8 @@ export function renderizarMatematica(html: string): string {
   const comNos = html.replace(NO_FORMULA, (original, _tag, atributos: string, tipo: string) => {
     const tex = ATRIBUTO_LATEX.exec(atributos)?.[1]
     if (tex === undefined) return original
-    return renderizar(tex, tipo.toLowerCase() === 'block')
+    const tamanho = lerTamanho(ATRIBUTO_TAMANHO.exec(atributos)?.[1])
+    return comTamanho(renderizar(tex, tipo.toLowerCase() === 'block'), tamanho)
   })
 
   return comNos.includes('$') ? renderizarDelimitadores(comNos) : comNos
