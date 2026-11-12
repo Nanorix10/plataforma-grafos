@@ -3069,10 +3069,10 @@ prender. Tudo o que é ferramenta é igual em todo modelo novo:
 |---|---|
 | gira sozinho devagar até o primeiro gesto | rotação é o que torna o 3D legível (decisão 26); `prefers-reduced-motion` abre parado |
 | **Abrir/Fechar**: plano de corte nas cascas | membrana, parede e carioteca são cortadas; o que está dentro fica inteiro |
-| rótulos com linha-guia, em duas colunas | como na prancha de anatomia; somem quando a peça fica escondida atrás de outra |
+| **pinos** (ponto liso) presos em cada estrutura; o nome aparece ao passar o mouse | desde 12/11: as linhas-guia em duas colunas viravam uma teia com 20 estruturas. Somem quando a peça fica escondida atrás de outra |
 | clicar acende a peça e abre o cartão | o cartão diz o que a estrutura FAZ, não só o nome |
 | **Estruturas**: a lista de peças | é o caminho do teclado e do leitor de tela, e serve de legenda |
-| **Teste-se**: nomes viram "? N" | prática de recuperação; a lista some no modo, porque entregaria as respostas |
+| **Teste-se**: pinos viram "?", clicar revela o nome | prática de recuperação; a lista some no modo, porque entregaria as respostas |
 | variantes (Animal / Vegetal) | trocar mantém o ângulo que o aluno escolheu |
 
 Cinco escolhas que não se adivinham:
@@ -3092,11 +3092,13 @@ Cinco escolhas que não se adivinham:
   âncoras saem da própria malha; a cada poucos quadros um raio da câmera até
   cada uma diz se outra peça está na frente. Ribossomo e citoesqueleto são
   `miuda`: não contam como obstáculo, senão escondiam tudo.
-- **Coluna de rótulo só a partir de 560px, e nome inteiro só a partir de
-  760px.** Na coluna do resumo (620px) "Retículo endoplasmático rugoso"
-  invadia a célula — vale o `curto` ("RE rugoso"), e o cartão diz o nome
-  todo. Abaixo de 560px os rótulos abrem desligados e o nome fica ao lado da
-  peça.
+- **Pino, não rótulo com linha (12/11/2026).** Pedido do autor: rótulos
+  como botões na própria estrutura, para não poluir a imagem. O nome só
+  aparece com o mouse em cima (do pino OU da estrutura), na selecionada e nas
+  reveladas do Teste-se. Sem colunas, o modelo usa a largura toda, e os pinos
+  abrem ligados até no celular (antes os rótulos vinham desligados ali, por
+  falta de espaço). Abaixo de 760px a etiqueta usa o `curto` ("RE rugoso").
+  O pino é `tabIndex=-1`: pelo teclado, o caminho é a lista.
 - **Organela cai sempre no mesmo lugar** (sorteio com semente). Com
   `Math.random` a célula mudaria a cada recarga, e o aluno que lembrou "a
   mitocôndria de baixo" não a acharia de novo.

@@ -8,7 +8,7 @@
  *   - girar arrastando (e pelo teclado), zoom por botão, voltar à vista;
  *   - "Abrir": um corte em CUNHA, fixo no mundo e virado para o aluno, tira
  *     um quarto da célula e mostra o interior de tudo o que atravessa;
- *   - rótulos com linha-guia, que somem quando a peça fica escondida;
+ *   - pinos em cada estrutura (nome ao passar o mouse), que somem quando ela fica escondida;
  *   - clicar numa peça acende ela e abre o cartão com o que ela FAZ;
  *   - "Estruturas": a lista de peças (caminho do teclado e do leitor de tela);
  *   - "Teste-se": os nomes viram "?", o aluno lembra e revela;
@@ -31,12 +31,6 @@
 
 const DRACO = 'https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/libs/draco/gltf/'
 
-/** Largura da coluna de rótulos de cada lado, quando a janela é larga. */
-const COLUNA = 128
-/** Abaixo disto não há colunas: o rótulo fica perto da peça. */
-const LARGA = 560
-/** Espaço vertical mínimo entre dois rótulos da mesma coluna. */
-const PASSO = 21
 
 const CSS = `
 :root {
@@ -79,16 +73,24 @@ button:disabled { opacity: .45; cursor: default; }
 /* Com 4 vistas (célula + lupas), a fileira não cabia num celular de 375px. */
 @media (max-width: 480px) { .variantes button { padding: 5px 6px; font-size: 12px; } }
 .so-icone .txt { display: none; }
-.linhas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.linhas line { stroke: var(--tinta-fraca); stroke-width: 1; opacity: .7; }
-.linhas circle { fill: var(--tinta); stroke: var(--caixa); stroke-width: 1.5; }
+/* O pino: área de toque de 24px (dedo), com o ponto de 11px no meio. */
+.pino { position: absolute; left: 0; top: 0; width: 24px; height: 24px; padding: 0; margin: 0;
+  border: 0; border-radius: 50%; background: transparent; cursor: pointer; will-change: transform; }
+.pino::after { content: ''; position: absolute; inset: 6.5px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--acento); box-sizing: border-box;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45); transition: transform .12s; }
+.pino:hover::after, .pino.ativo::after { transform: scale(1.35); }
+.pino.ativo::after { background: var(--acento); border-color: #fff; }
+.pino:focus-visible { outline: 2px solid var(--acento); outline-offset: 0; }
+/* Teste-se: o pino ainda não revelado é uma pergunta. */
+.pino.pergunta::after { content: '?'; inset: 3px; display: grid; place-items: center;
+  font: 700 11px/1 system-ui, sans-serif; color: var(--acento); border-style: dashed; }
+.pino.revelado::after { background: var(--tinta-fraca); border-color: #fff; }
 .rotulo { position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap;
-  font-size: 12px; font-weight: 600; padding: 1px 5px; border-radius: 5px;
-  text-shadow: 0 0 3px var(--caixa), 0 0 6px var(--caixa); will-change: transform; }
-.rotulo.ativo { background: var(--acento); color: #fff; text-shadow: none; }
-.rotulo.pergunta { pointer-events: auto; cursor: pointer; background: var(--caixa);
-  border: 1px dashed var(--acento); text-shadow: none; }
-.rotulo.revelado { border: 1px solid var(--borda); background: var(--caixa); text-shadow: none; }
+  font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px;
+  background: var(--caixa); border: 1px solid var(--borda);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25); will-change: transform; }
+.rotulo.ativo { background: var(--acento); border-color: var(--acento); color: #fff; }
 .cartao { left: 8px; right: 8px; bottom: 8px; padding: 9px 34px 10px 12px; max-width: 520px;
   margin: 0 auto; }
 .cartao h2 { margin: 0 0 2px; font-size: 14px; }
@@ -227,10 +229,11 @@ export async function criarVisualizador(cfg) {
   const naCunha = (p) => planos.length > 0 && planos.every((pl) => pl.distanceToPoint(p) < 0)
 
   /* ---------- DOM das ferramentas ---------- */
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.classList.add('linhas')
-  svg.setAttribute('aria-hidden', 'true')
-  palco.append(svg)
+  /* Rótulos são PINOS: um ponto liso preso em cada estrutura, sem linha nem
+     coluna de nomes (com 20 estruturas, as linhas viravam uma teia por cima
+     do modelo). O nome aparece só ao passar o mouse, na estrutura
+     selecionada e nas reveladas do Teste-se. A camada é aria-hidden: o
+     caminho acessível é a lista "Estruturas". */
   const camadaRotulos = document.createElement('div')
   camadaRotulos.setAttribute('aria-hidden', 'true')
   palco.append(camadaRotulos)
@@ -258,7 +261,7 @@ export async function criarVisualizador(cfg) {
   }
 
   const bLista = botao('Estruturas', '☰', () => alternarLista())
-  const bRotulos = botao('Rótulos', '🏷', () => { rotulosLigados = !rotulosLigados; jaDecidiuRotulos = true; atualizarBotoes() })
+  const bRotulos = botao('Rótulos', '🏷', () => { rotulosLigados = !rotulosLigados; atualizarBotoes() })
   const bAbrir = botao('Abrir', '✂', () => { aberto = !aberto; aplicarCorte(); atualizarBotoes() })
   const bTeste = botao('Teste-se', '?', () => alternarTeste())
   const bMenos = botao('Afastar', '−', () => mudarZoom(1 / 1.2))
@@ -307,7 +310,8 @@ export async function criarVisualizador(cfg) {
   const desvio = new THREE.Vector2() // deslize lateral da câmera (zoom no cursor)
   let distBase = 1
   let rotulosLigados = true
-  let jaDecidiuRotulos = false
+  let sobrePino = null // pino sob o mouse
+  let sobrePeca = null // estrutura sob o mouse, no próprio modelo
   let girandoSozinho = !matchMedia('(prefers-reduced-motion: reduce)').matches
   let oclusores = []
   let clicaveis = []
@@ -474,7 +478,6 @@ export async function criarVisualizador(cfg) {
     const ry = ini.y
     if (modelo) cena.remove(modelo.grupo)
     camadaRotulos.replaceChildren()
-    svg.replaceChildren()
     modelo = m
     // Trocar de animal para vegetal não desfaz o ângulo que o aluno escolheu.
     modelo.grupo.rotation.set(rx, ry, 0)
@@ -493,14 +496,21 @@ export async function criarVisualizador(cfg) {
           if (p.casca) for (const mat of [x.material].flat()) mat.userData.casca = true
         })
       }
+      const pino = document.createElement('button')
+      pino.type = 'button'
+      pino.className = 'pino'
+      pino.tabIndex = -1 // pelo teclado, o caminho é a lista "Estruturas"
+      pino.addEventListener('click', () => {
+        primeiroGesto()
+        // No Teste-se, clicar no "?" revela; selecionar abre o cartão.
+        if (teste) revelar(p.id)
+        if (selecionada !== p.id) selecionar(p.id)
+      })
+      pino.addEventListener('pointerenter', () => { sobrePino = p.id })
+      pino.addEventListener('pointerleave', () => { if (sobrePino === p.id) sobrePino = null })
       const rotulo = el('span', 'rotulo')
-      camadaRotulos.append(rotulo)
-      rotulo.addEventListener('click', () => { if (teste) revelar(p.id) })
-      const linha = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-      const ponto = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      ponto.setAttribute('r', '2.6')
-      svg.append(linha, ponto)
-      return { ...p, numero: i + 1, malhas, rotulo, linha, ponto, ancora: null }
+      camadaRotulos.append(pino, rotulo)
+      return { ...p, numero: i + 1, malhas, rotulo, pino, ancora: null }
     })
 
     // Peça miúda (ribossomo, citoesqueleto) não esconde as outras do rótulo.
@@ -610,7 +620,7 @@ export async function criarVisualizador(cfg) {
     if (marcandoPonto) {
       cartao.classList.add('compacto')
       const m = el('p', 'status')
-      m.textContent = `Clique na célula, no ponto para onde o rótulo de "${t.nome}" deve apontar.`
+      m.textContent = `Clique na célula, no lugar onde o pino de "${t.nome}" deve ficar.`
       const c = botao('Cancelar', '', () => { marcandoPonto = false; formulario(p) })
       cartao.append(m, c)
       cartao.hidden = false
@@ -648,11 +658,11 @@ export async function criarVisualizador(cfg) {
     const fixado = pontoNovo?.parte === p.id ? pontoNovo.ponto : t.ancoras[varianteAtual]
     const status = el('p', 'status')
     status.textContent = marcandoPonto
-      ? 'Clique na célula, no ponto para onde o rótulo deve apontar.'
-      : fixado ? `Rótulo preso num ponto escolhido (${varianteAtual}).` : 'Rótulo em posição automática.'
+      ? 'Clique na célula, no lugar onde o pino deve ficar.'
+      : fixado ? `Pino num lugar escolhido (${varianteAtual}).` : 'Pino em posição automática.'
 
     const acoes = el('div', 'acoes')
-    const bPonto = botao(marcandoPonto ? 'Cancelar ponto' : 'Escolher ponto do rótulo', '📍', () => {
+    const bPonto = botao(marcandoPonto ? 'Cancelar ponto' : 'Escolher lugar do pino', '📍', () => {
       marcandoPonto = !marcandoPonto
       formulario(p)
     })
@@ -800,8 +810,8 @@ export async function criarVisualizador(cfg) {
     camera.aspect = largura / altura
     if (!modelo) return
     const tg = Math.tan((camera.fov * Math.PI) / 360)
-    // Na janela larga, o modelo cabe ENTRE as duas colunas de rótulos.
-    const util = largura >= LARGA ? largura - 2 * COLUNA : largura
+    // Sem colunas de nomes, o modelo usa a largura toda.
+    const util = largura
     const vertical = altura - 70 // barra de cima e um respiro embaixo
     const d = (modelo.raio / tg) * Math.max(altura / Math.max(vertical, 1), altura / Math.max(util, 1)) * 1.12
     distBase = d
@@ -809,8 +819,6 @@ export async function criarVisualizador(cfg) {
     camera.near = d / 50
     camera.far = d * 4
     camera.updateProjectionMatrix()
-    // No celular os rótulos abrem desligados: não há onde pôr quinze nomes.
-    if (!jaDecidiuRotulos) rotulosLigados = largura >= LARGA
     for (const b of [bLista, bRotulos, bAbrir, bTeste]) b.classList.toggle('so-icone', largura < 470)
     atualizarBotoes()
     tempoOclusao = 0
@@ -927,7 +935,8 @@ export async function criarVisualizador(cfg) {
       const agora = performance.now()
       if (e.pointerType === 'mouse' && agora - ultimoHover > 60) {
         ultimoHover = agora
-        tela.classList.toggle('sobre-peca', !!pecaEm(e.clientX, e.clientY))
+        sobrePeca = pecaEm(e.clientX, e.clientY)
+        tela.classList.toggle('sobre-peca', !!sobrePeca)
       }
       return
     }
@@ -937,6 +946,10 @@ export async function criarVisualizador(cfg) {
     girar(dx * 0.008, dy * 0.008)
     ux = e.clientX
     uy = e.clientY
+  })
+  tela.addEventListener('pointerleave', () => {
+    sobrePeca = null
+    tela.classList.remove('sobre-peca')
   })
   function soltar(e) {
     if (!arrastando) return
@@ -1081,8 +1094,8 @@ export async function criarVisualizador(cfg) {
   }
 
   function desenharRotulos() {
-    const larga = largura >= LARGA
-    const mostrar = []
+    const curto = largura < 760 // "Retículo endoplasmático rugoso" não cabe no resumo estreito
+    const realce = sobrePino ?? sobrePeca
     for (const p of pecas) {
       const quer = teste || rotulosLigados || p.id === selecionada
       if (!quer || !p.ancora) {
@@ -1096,61 +1109,39 @@ export async function criarVisualizador(cfg) {
       }
       const sx = (v.x * 0.5 + 0.5) * largura
       const sy = (-v.y * 0.5 + 0.5) * altura
-      mostrar.push({ p, sx, sy, lado: sx < largura / 2 ? -1 : 1, y: sy })
-    }
+      const ativo = p.id === selecionada
+      const revelado = revelados.has(p.id)
 
-    // Cada coluna é ordenada por altura e empurra os vizinhos, para não encavalar.
-    const topoUtil = 50, baseUtil = altura - (cartao.hidden ? 14 : cartao.offsetHeight + 16)
-    for (const lado of [-1, 1]) {
-      const col = mostrar.filter((m) => m.lado === lado).sort((a, b) => a.y - b.y)
-      for (let i = 0; i < col.length; i++) {
-        col[i].y = Math.max(col[i].y, topoUtil, i ? col[i - 1].y + PASSO : -Infinity)
-      }
-      for (let i = col.length - 1; i >= 0; i--) {
-        col[i].y = Math.min(col[i].y, baseUtil, i < col.length - 1 ? col[i + 1].y - PASSO : Infinity)
-      }
-    }
-
-    for (const m of mostrar) {
-      const { p, sx, sy, lado } = m
-      const r = p.rotulo
-      const revelado = !teste || revelados.has(p.id)
-      // O nome inteiro só cabe na coluna com folga; na coluna do resumo (620px)
-      // "Retículo endoplasmático rugoso" invadia a célula. O cartão diz o nome todo.
-      const inteiro = largura >= 760
-      const t = info(p.id)
-      r.textContent = revelado ? (inteiro ? t.nome : (t.curto ?? t.nome)) : `? ${p.numero}`
-      r.className = 'rotulo' + (p.id === selecionada ? ' ativo' : '') +
+      p.pino.className = 'pino' + (ativo ? ' ativo' : '') +
         (teste ? (revelado ? ' revelado' : ' pergunta') : '')
-      r.style.display = ''
-      let x
-      if (larga) {
-        // Coluna fixa na borda, como numa prancha de anatomia.
-        x = lado < 0 ? 8 : largura - 8
-        r.style.transform = `translate(${lado < 0 ? '0' : '-100%'}, -50%) translate(${x}px, ${m.y}px)`
-      } else {
-        // Sem colunas: o nome fica ao lado da peça, preso dentro da janela.
-        const w = r.offsetWidth
-        x = sx + lado * 22
-        const esq = lado < 0 ? x - w : x
-        const desloc = Math.max(4, Math.min(largura - 4 - w, esq)) - esq
-        x += desloc
-        r.style.transform = `translate(${lado < 0 ? '-100%' : '0'}, -50%) translate(${x}px, ${m.y}px)`
+      p.pino.setAttribute('aria-label', teste && !revelado ? 'Estrutura a descobrir' : info(p.id).nome)
+      p.pino.style.transform = `translate(-50%, -50%) translate(${sx}px, ${sy}px)`
+      p.pino.style.display = ''
+
+      // O NOME só aparece quando pedido: mouse em cima (do pino ou da
+      // estrutura), selecionada, ou já revelada no Teste-se.
+      const nome = teste ? revelado : ativo || realce === p.id
+      if (!nome) {
+        p.rotulo.style.display = 'none'
+        continue
       }
-      const fimLinha = larga ? (lado < 0 ? 8 + r.offsetWidth + 3 : largura - 8 - r.offsetWidth - 3) : x
-      p.linha.setAttribute('x1', sx)
-      p.linha.setAttribute('y1', sy)
-      p.linha.setAttribute('x2', fimLinha)
-      p.linha.setAttribute('y2', m.y)
-      p.ponto.setAttribute('cx', sx)
-      p.ponto.setAttribute('cy', sy)
-      p.linha.style.display = p.ponto.style.display = ''
+      const t = info(p.id)
+      const r = p.rotulo
+      r.textContent = curto ? (t.curto ?? t.nome) : t.nome
+      r.className = 'rotulo' + (ativo ? ' ativo' : '')
+      r.style.display = ''
+      // Ao lado do pino, do lado que tiver mais espaço, e sempre dentro da janela.
+      const w = r.offsetWidth
+      const direita = sx < largura / 2
+      let x = direita ? sx + 15 : sx - 15 - w
+      x = Math.max(4, Math.min(largura - 4 - w, x))
+      r.style.transform = `translate(${x}px, ${sy}px) translateY(-50%)`
     }
   }
 
   function esconder(p) {
     p.rotulo.style.display = 'none'
-    p.linha.style.display = p.ponto.style.display = 'none'
+    p.pino.style.display = 'none'
   }
 
   /* ---------- Laço ----------
