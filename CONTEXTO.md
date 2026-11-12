@@ -3170,6 +3170,14 @@ quando o aluno clica.
   Abrir (a lupa da membrana já é um retalho aberto). Padrão: `'em-pe'`.
 - Os sorteios das peças novas usam geradores à parte (`Random(3)`,
   `Random(11)`), para não mexer na posição das organelas que já existiam.
+- **Rodinha do mouse dá zoom (12/11/2026), mas só depois de clicar no
+  modelo.** O modelo é um iframe no meio de um resumo comprido: com a rodinha
+  sempre ligada, quem só rola o texto ficava preso nele. Antes do clique, a
+  rodinha rola a página e a dica avisa "Clique no modelo…"; clicar fora
+  (o iframe perde o foco, `blur`) desliga de novo. Em tela cheia ou com a
+  página do modelo aberta sozinha, vale direto. O zoom vai **na direção do
+  cursor** (a câmera desliza — `desvio` — na mesma proporção em que se
+  aproxima) e vai até 6×; do tamanho inicial para trás, recentra.
 - **Exportar é `exportar_tudo(pasta)`**, só a coleção `Celula`. Com
   `use_selection`, o cubo padrão de um arquivo novo do Blender entrava junto.
 
