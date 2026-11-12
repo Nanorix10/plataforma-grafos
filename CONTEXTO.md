@@ -3106,7 +3106,7 @@ Cinco escolhas que não se adivinham:
 A primeira Célula, montada com primitivas no navegador, foi recusada pelo
 autor: formas de brinquedo, cor chapada, pouco detalhe interno. A atual é
 modelada no **Blender** e chega ao site como `.glb` (`celula-animal.glb`,
-`celula-vegetal.glb`, 0,4 e 0,7 MB com Draco).
+`celula-vegetal.glb`, 0,6 e 0,85 MB com Draco).
 
 **A fonte da verdade é a RECEITA, não o .glb:**
 `ferramentas/modelos-3d/celula_blender.py` monta a célula do zero dentro do
@@ -3142,6 +3142,36 @@ O nome e o texto **de fábrica** de cada estrutura moram no `celula.html`,
 ligados pelo id (o que o autor edita fica no banco — ver abaixo). A página carrega `three`, os addons e o `three-mesh-bvh` (raios rápidos numa
 malha de 290 mil triângulos) por **importmap**: o GLTFLoader importa `three`
 pelo nome, e os dois precisam ser o mesmo módulo.
+
+#### Lupas: membrana e mitocôndria ampliadas (12/11/2026)
+
+Pedido do autor: todos os detalhes possíveis na membrana e na mitocôndria.
+Na escala da célula (membrana de ~0,1 num objeto de ~6), fosfolipídio por
+fosfolipídio não se vê. A saída é a dos livros, um quadro "de lupa": duas
+variantes a mais no mesmo visualizador, cada uma no seu `.glb`, que só baixa
+quando o aluno clica.
+
+- **🔍 Membrana** (`celula-lupa_membrana.glb`, 0,23 MB): mosaico fluido, com
+  fosfolipídios (cauda dobrada = insaturada), colesterol, proteína integral
+  (globular e em α-hélices), canal com íons, periférica, glicoproteína,
+  glicolipídio e filamentos de actina. +z do Blender é o lado de FORA.
+- **🔍 Mitocôndria** (`celula-lupa_mitocondria.glb`, 0,10 MB): externa com
+  porinas, espaço intermembranas, interna, cristas, ATP sintase, matriz, DNA
+  circular, ribossomos e grânulos. **Fica em pé de propósito**: o modelo gira
+  sozinho em torno da vertical e a cunha é vertical, então em pé a abertura
+  pega sempre o comprimento inteiro. Deitada, ficava de ponta para a câmera a
+  cada meia volta (testado e desfeito).
+- **Na célula inteira**: a membrana virou 3 camadas (cabeças, caudas,
+  cabeças), que aparecem como faixas na borda do corte; mais proteínas;
+  glicocálix na animal; uma exocitose e uma endocitose (a membrana tem um FURO
+  onde a vesícula se funde — `FUSOES` na receita); mitocôndrias com espaço
+  intermembranas maior, DNA em anel e grânulos.
+- **`cfg.corte`** por variante: `'nenhum'` desliga a cunha e esconde o botão
+  Abrir (a lupa da membrana já é um retalho aberto). Padrão: `'em-pe'`.
+- Os sorteios das peças novas usam geradores à parte (`Random(3)`,
+  `Random(11)`), para não mexer na posição das organelas que já existiam.
+- **Exportar é `exportar_tudo(pasta)`**, só a coleção `Celula`. Com
+  `use_selection`, o cubo padrão de um arquivo novo do Blender entrava junto.
 
 Para anatomia e espécimes reais, a fonte de fora continua sendo o caminho
 (Smithsonian CC0, NIH 3D, Z-Anatomy CC BY-SA), e o crédito vai junto do

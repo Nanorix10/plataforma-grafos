@@ -41,10 +41,18 @@ criarVisualizador({
   variantes: [
     { id: 'animal', nome: 'Animal' },
     { id: 'vegetal', nome: 'Vegetal' },
+    // Lupas: um pedaço ampliado, no tamanho em que se veem as moléculas.
+    { id: 'lupa_membrana', nome: '🔍 Membrana' },
+    { id: 'lupa_mitocondria', nome: '🔍 Mitocôndria' },
   ],
   arquivo: (variante) => `./celula-${variante}.glb`,
   // Ângulo inicial de cada uma: o corte em cunha atravessa o núcleo ao meio.
-  vista: { animal: { x: 0.38, y: 0.35 }, vegetal: { x: 0.4, y: 0.9 } },
+  vista: {
+    animal: { x: 0.38, y: 0.35 }, vegetal: { x: 0.4, y: 0.9 },
+    lupa_membrana: { x: 0.5, y: 0.35 }, lupa_mitocondria: { x: 0.15, y: 0.5 },
+  },
+  // A membrana ampliada já é um retalho aberto: não tem o que cortar.
+  corte: { lupa_membrana: 'nenhum' },
   // A ordem é a da lista "Estruturas" e a numeração do Teste-se: de fora para dentro.
   partes: [
     {
@@ -57,7 +65,15 @@ criarVisualizador({
     },
     {
       id: 'membrana', nome: 'Membrana plasmática', curto: 'Membrana',
-      descricao: 'Bicamada de fosfolipídios com proteínas que separa a célula do meio. É semipermeável: controla o que entra e o que sai.',
+      descricao: 'Bicamada de fosfolipídios com proteínas que separa a célula do meio. É semipermeável: controla o que entra e o que sai. No corte aparecem as duas camadas de "cabeças" (rosa) com as "caudas" (amarelo) no meio. Para ver as moléculas, abra a 🔍 Membrana.',
+    },
+    {
+      id: 'proteinas_membrana', nome: 'Proteínas de membrana', curto: 'Proteínas',
+      descricao: 'Proteínas mergulhadas na bicamada: umas a atravessam de lado a lado (integrais), outras ficam só encostadas (periféricas). Transportam substâncias, recebem sinais e prendem a célula às vizinhas. Como elas se deslocam na bicamada, o modelo se chama mosaico fluido.',
+    },
+    {
+      id: 'glicocalix', nome: 'Glicocálix', so: 'Típico da animal',
+      descricao: 'Camada de cadeias de açúcar presas a proteínas e lipídios da face EXTERNA da membrana. Funciona como "crachá" da célula (reconhecimento entre células), protege e retém nutrientes.',
     },
     {
       id: 'citoplasma', nome: 'Citoplasma',
@@ -97,7 +113,7 @@ criarVisualizador({
     },
     {
       id: 'mitocondria', nome: 'Mitocôndria',
-      descricao: 'Faz a respiração celular: quebra a glicose usando gás oxigênio e produz ATP, a energia que a célula usa. Tem membrana dupla — a interna é dobrada em cristas, visíveis nas que foram cortadas — e DNA próprio.',
+      descricao: 'Faz a respiração celular: quebra a glicose usando gás oxigênio e produz ATP, a energia que a célula usa. Tem membrana dupla — a interna é dobrada em cristas, visíveis nas que foram cortadas — e DNA próprio, circular como o das bactérias. Para ver por dentro, abra a 🔍 Mitocôndria.',
     },
     {
       id: 'lisossomo', nome: 'Lisossomo', so: 'Típico da animal',
@@ -117,11 +133,85 @@ criarVisualizador({
     },
     {
       id: 'vesiculas', nome: 'Vesículas',
-      descricao: 'Pequenas bolsas de membrana que transportam substâncias entre as organelas e para fora da célula (secreção).',
+      descricao: 'Pequenas bolsas de membrana que transportam substâncias entre as organelas. Na borda da célula animal há duas em ação: uma se fundindo à membrana e soltando o conteúdo para fora (exocitose) e outra se formando de uma dobra revestida, para dentro (endocitose).',
     },
     {
       id: 'ribossomo', nome: 'Ribossomos', miuda: true,
       descricao: 'Fabricam proteínas lendo o RNA mensageiro. Não têm membrana; ficam livres no citosol ou presos ao RE rugoso. Vários lendo o mesmo RNA formam um polissomo — os "colares" de pontinhos.',
+    },
+    // ---------- 🔍 Membrana (mosaico fluido) ----------
+    {
+      id: 'fosfolipidio', nome: 'Fosfolipídios', so: 'Base da bicamada',
+      descricao: 'Cada um tem uma cabeça hidrofílica (atraída pela água, em rosa) e duas caudas hidrofóbicas (que fogem da água, em amarelo). Por isso se arrumam em DUAS camadas: cabeças para fora, voltadas à água do meio e do citosol, e caudas escondidas no meio. A cauda dobrada é insaturada e deixa a membrana mais fluida.',
+    },
+    {
+      id: 'colesterol', nome: 'Colesterol', so: 'Típico da animal',
+      descricao: 'Lipídio rígido encaixado entre os fosfolipídios. Regula a fluidez: impede que a membrana fique mole demais no calor ou dura demais no frio. Nas plantas, outros esteróis fazem esse papel.',
+    },
+    {
+      id: 'proteina_integral', nome: 'Proteína integral (transmembrana)', curto: 'Integral',
+      descricao: 'Atravessa a bicamada de lado a lado. A parte que fica no meio das caudas é hidrofóbica; muitas cruzam a membrana em várias α-hélices (os bastões em roda). Funcionam como transportadoras, receptores e pontos de adesão.',
+    },
+    {
+      id: 'proteina_canal', nome: 'Proteína canal', curto: 'Canal',
+      descricao: 'Proteína integral com um poro no meio, por onde passam íons ou água (as aquaporinas) a favor do gradiente de concentração, sem gasto de energia: é a difusão facilitada.',
+    },
+    {
+      id: 'proteina_periferica', nome: 'Proteína periférica', curto: 'Periférica',
+      descricao: 'Fica só encostada numa das faces, presa a proteínas integrais ou às cabeças dos fosfolipídios, sem entrar na bicamada. Muitas ligam a membrana ao citoesqueleto ou atuam como enzimas.',
+    },
+    {
+      id: 'glicoproteina', nome: 'Glicoproteína', so: 'Lado de fora',
+      descricao: 'Proteína com uma cadeia ramificada de açúcares (as contas laranja) voltada para FORA da célula. É parte do glicocálix: reconhecimento celular, sistema ABO do sangue, receptores.',
+    },
+    {
+      id: 'glicolipidio', nome: 'Glicolipídio', so: 'Lado de fora',
+      descricao: 'Lipídio da camada externa com uma cadeia de açúcares (as contas verde-limão). Junto com as glicoproteínas, forma o glicocálix. Os açúcares ficam sempre do lado de fora: a membrana é assimétrica.',
+    },
+    {
+      id: 'filamentos', nome: 'Filamentos do citoesqueleto', curto: 'Citoesqueleto',
+      descricao: 'Logo abaixo da face interna, filamentos de proteína (actina) dão sustentação à membrana e permitem que ela mude de forma, como nos pseudópodes e na fagocitose.',
+    },
+    // ---------- 🔍 Mitocôndria ----------
+    {
+      id: 'membrana_externa', nome: 'Membrana externa', curto: 'M. externa',
+      descricao: 'Lisa e bem permeável: as porinas deixam passar moléculas pequenas. Junto com a interna, forma a membrana DUPLA da mitocôndria, uma das pistas da teoria endossimbiótica.',
+    },
+    {
+      id: 'porina', nome: 'Porinas',
+      descricao: 'Proteínas em forma de canal que furam a membrana externa. Por causa delas, o espaço intermembranas tem composição parecida com a do citosol.',
+    },
+    {
+      id: 'espaco_intermembranas', nome: 'Espaço intermembranas', curto: 'Intermembranas',
+      descricao: 'Faixa entre as duas membranas. Na respiração, a cadeia respiratória bombeia íons H⁺ da matriz para cá; é esse acúmulo que depois move a ATP sintase.',
+    },
+    {
+      id: 'membrana_interna', nome: 'Membrana interna', curto: 'M. interna',
+      descricao: 'Pouco permeável e muito rica em proteínas. Abriga a cadeia respiratória (cadeia transportadora de elétrons) e a ATP sintase. Dobra-se em cristas para caber mais área.',
+    },
+    {
+      id: 'cristas', nome: 'Cristas mitocondriais', curto: 'Cristas',
+      descricao: 'Dobras da membrana interna. Mais cristas = mais área para a cadeia respiratória e mais ATP: células que gastam muita energia, como as musculares, têm mitocôndrias cheias de cristas.',
+    },
+    {
+      id: 'atp_sintase', nome: 'ATP sintase',
+      descricao: 'Enzima em forma de "pirulito" na membrana interna. Os íons H⁺ voltam do espaço intermembranas para a matriz passando por ela, como água numa turbina; essa passagem a faz girar e juntar ADP + fosfato em ATP (fosforilação oxidativa).',
+    },
+    {
+      id: 'matriz', nome: 'Matriz mitocondrial', curto: 'Matriz',
+      descricao: 'O "recheio" gelatinoso dentro da membrana interna. Ali acontece o ciclo de Krebs, que libera CO₂ e entrega elétrons à cadeia respiratória.',
+    },
+    {
+      id: 'dna_mito', nome: 'DNA mitocondrial', curto: 'DNA',
+      descricao: 'DNA próprio, circular e sem histonas, como o das bactérias. Por isso a mitocôndria se divide sozinha. Vem só da mãe, pelo óvulo (herança materna).',
+    },
+    {
+      id: 'ribossomo_mito', nome: 'Ribossomos mitocondriais', curto: 'Ribossomos', miuda: true,
+      descricao: 'Ribossomos próprios, menores que os do citosol e parecidos com os das bactérias: produzem parte das proteínas da mitocôndria.',
+    },
+    {
+      id: 'granulos', nome: 'Grânulos da matriz', curto: 'Grânulos',
+      descricao: 'Pontos densos que armazenam íons, principalmente cálcio. A mitocôndria ajuda a controlar o cálcio da célula.',
     },
   ],
 })

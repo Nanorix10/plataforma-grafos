@@ -76,6 +76,8 @@ button:disabled { opacity: .45; cursor: default; }
 .variantes button:first-child { border-radius: 7px 0 0 7px; }
 .variantes button:last-child { border-radius: 0 7px 7px 0; }
 .variantes button + button { margin-left: -1px; }
+/* Com 4 vistas (célula + lupas), a fileira não cabia num celular de 375px. */
+@media (max-width: 480px) { .variantes button { padding: 5px 6px; font-size: 12px; } }
 .so-icone .txt { display: none; }
 .linhas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .linhas line { stroke: var(--tinta-fraca); stroke-width: 1; opacity: .7; }
@@ -209,11 +211,20 @@ export async function criarVisualizador(cfg) {
      Um ponto some quando está do lado "de fora" dos DOIS planos
      (`clipIntersection`): é isso que tira só a cunha, e não meia célula. */
   const R2 = Math.SQRT1_2
-  const planos = [
-    new THREE.Plane(new THREE.Vector3(-R2, 0, -R2), 0),
-    new THREE.Plane(new THREE.Vector3(R2, 0, -R2), 0),
-  ]
-  const naCunha = (p) => planos.every((pl) => pl.distanceToPoint(p) < 0)
+  /* Cada variante escolhe o corte em `cfg.corte`:
+     - 'em-pe' (padrão) → a cunha vertical descrita acima;
+     - 'nenhum'         → sem corte (a lupa da membrana já é um retalho
+                          aberto); o botão Abrir some. */
+  const CORTES = {
+    'em-pe': [
+      new THREE.Plane(new THREE.Vector3(-R2, 0, -R2), 0),
+      new THREE.Plane(new THREE.Vector3(R2, 0, -R2), 0),
+    ],
+    nenhum: [],
+  }
+  const corteDe = (variante) => CORTES[cfg.corte?.[variante] ?? 'em-pe'] ?? CORTES['em-pe']
+  let planos = CORTES['em-pe']
+  const naCunha = (p) => planos.length > 0 && planos.every((pl) => pl.distanceToPoint(p) < 0)
 
   /* ---------- DOM das ferramentas ---------- */
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -493,6 +504,7 @@ export async function criarVisualizador(cfg) {
 
     if (selecionada && !pecas.some((p) => p.id === selecionada)) selecionada = null
     revelados = new Set([...revelados].filter((id) => pecas.some((p) => p.id === id)))
+    planos = corteDe(variante)
     aplicarCorte()
     aplicarDestaque()
     montarLista()
@@ -765,6 +777,8 @@ export async function criarVisualizador(cfg) {
   function atualizarBotoes() {
     bRotulos.setAttribute('aria-pressed', String(rotulosLigados || teste))
     bRotulos.disabled = teste
+    // Sem corte nesta variante, o botão não tem o que fazer.
+    bAbrir.hidden = planos.length === 0
     bAbrir.setAttribute('aria-pressed', String(aberto))
     bAbrir.querySelector('.txt').textContent = aberto ? ' Fechar' : ' Abrir'
     bTeste.setAttribute('aria-pressed', String(teste))

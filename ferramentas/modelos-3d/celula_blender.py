@@ -146,8 +146,9 @@ def casca_dupla(bm, espessura):
     return bm
 
 
-def tubo(pontos, raio, res=6, lados=6):
-    """Curva suave com espessura, devolvida como malha."""
+def tubo(pontos, raio, res=6, lados=6, ciclico=False):
+    """Curva suave com espessura, devolvida como malha. `ciclico` fecha a
+    curva num anel (o DNA circular da mitocôndria)."""
     sc = bpy.context.scene
     cu = bpy.data.curves.new("_c", "CURVE")
     cu.dimensions = "3D"
@@ -159,7 +160,8 @@ def tubo(pontos, raio, res=6, lados=6):
     sp.points.add(len(pontos) - 1)
     for p, c in zip(sp.points, pontos):
         p.co = (*c, 1)
-    sp.use_endpoint_u = True
+    sp.use_endpoint_u = not ciclico
+    sp.use_cyclic_u = ciclico
     sp.order_u = min(4, len(pontos))
     ob = bpy.data.objects.new("_c", cu)
     sc.collection.objects.link(ob)
@@ -235,22 +237,171 @@ def aleatoria(rnd):
 
 # ----------------------------------------------------------------- estruturas
 
-def membrana_e_citoplasma(vegetal=False):
-    # Na vegetal a membrana fica colada por DENTRO da parede, e é lisa: quem
-    # dá a forma é a parede. Na animal ela é livre, e ondula.
+def _superficie_membrana(vegetal, sub):
+    """A face EXTERNA da membrana: a forma da célula, ondulada. Todas as
+    camadas e proteínas partem desta mesma superfície."""
     esc = 0.93 if vegetal else 1.0
     amp = 0.05 if vegetal else 0.22
-    bm = esfera(1.0, 6)
+    bm = esfera(1.0, sub)
     superficie(bm, esc)
     ondular(bm, amp, 0.45, (3.1, 1.7, 0.2), 3)
     ondular(bm, 0.03, 2.4, (8, 2, 5), 2)
-    casca_dupla(bm, 0.07 if vegetal else 0.09)
-    novo("membrana", bm, mat("Membrana", "#e9a9b8", rough=0.4, sss=0.35, coat=0.3, sheen=0.25), "membrana")
+    return bm
 
+
+def deslocar(bm, d):
+    """Empurra cada vértice ao longo da normal (d < 0 = para dentro)."""
+    bm.normal_update()
+    for v in bm.verts:
+        v.co += v.normal * d
+
+
+def membrana_e_citoplasma(vegetal=False, rnd=None):
+    """BICAMADA: duas faixas de cabeças (rosa) com as caudas (amarelo) entre
+    elas — no corte, a borda mostra as três faixas, como no esquema do
+    mosaico fluido. Por cima, proteínas atravessando e, na animal, o
+    glicocálix. Na vegetal a membrana fica colada por DENTRO da parede, e é
+    lisa: quem dá a forma é a parede. Na animal ela é livre, e ondula."""
+    rnd = rnd or random.Random(3)
+    T = 0.07 if vegetal else 0.09
+    cabeca = mat("Membrana", "#e9a9b8", rough=0.4, sss=0.35, coat=0.3, sheen=0.25)
+    cauda = mat("Membrana_caudas", "#f3d98a", rough=0.55, sss=0.2)
+    # Onde as vesículas se fundem, a membrana tem uma ABERTURA: a da
+    # vesícula vira parte da membrana da célula (ver `endo_exocitose`).
+    furos = [] if vegetal else [(_ponto_da_membrana(d)[0], r) for d, r in FUSOES]
+    fora = _superficie_membrana(vegetal, 6)
+    furar(fora, furos)
+    casca_dupla(fora, T * 0.3)
+    dentro_ = _superficie_membrana(vegetal, 6)
+    furar(dentro_, furos)
+    deslocar(dentro_, -T * 0.7)
+    casca_dupla(dentro_, T * 0.3)
+    novo("membrana", juntar([fora, dentro_]), cabeca, "membrana")
+    meio = _superficie_membrana(vegetal, 5)
+    furar(meio, furos)
+    deslocar(meio, -T * 0.3)
+    casca_dupla(meio, T * 0.4)
+    novo("membrana_caudas", meio, cauda, "membrana")
+
+    # Proteínas: pontos sorteados na própria superfície, cada uma alongada na
+    # direção da normal, atravessando as duas camadas (integrais) ou só
+    # encostadas por dentro (periféricas).
+    base = _superficie_membrana(vegetal, 5)
+    base.normal_update()
+    vs = list(base.verts)
+    prot, acucar = [], []
+    for _ in range(420 if not vegetal else 260):
+        v = vs[rnd.randrange(len(vs))]
+        p, n = v.co.copy(), v.normal.copy()
+        if any((p - c).length < r + 0.06 for c, r in furos):
+            continue
+        q = Vector((0, 0, 1)).rotation_difference(n)
+        integral = rnd.random() < 0.75
+        b = esfera(1.0, 2)
+        if integral:
+            escalar(b, (rnd.uniform(0.045, 0.065), rnd.uniform(0.045, 0.065), T * 0.5 + 0.055))
+            ondular(b, 0.008, 30, (p.x, p.y, p.z), 2)
+            mover(b, p - n * T * 0.5, q)
+        else:
+            escalar(b, (0.04, 0.035, 0.025))
+            mover(b, p - n * (T + 0.02), q)
+        prot.append(b)
+        # Glicocálix (só animal): cadeias de açúcar presas às proteínas, do
+        # lado de FORA — é ele que marca qual face é a externa.
+        if integral and not vegetal and rnd.random() < 0.6:
+            d = n.copy()
+            ponto = p + n * 0.05
+            for k in range(rnd.randint(3, 5)):
+                d = (d + Vector([rnd.uniform(-0.5, 0.5) for _ in range(3)])).normalized()
+                if d.dot(n) < 0.3:
+                    d = (d + n).normalized()
+                ponto = ponto + d * 0.036
+                s = esfera(0.02, 1)
+                mover(s, ponto)
+                acucar.append(s)
+                if k == 1:  # um galho
+                    g = ponto + (d.cross(n).normalized() + n).normalized() * 0.036
+                    s = esfera(0.02, 1)
+                    mover(s, g)
+                    acucar.append(s)
+    base.free()
+    novo("proteinas_membrana", juntar(prot), mat("ProteinaMembrana", "#4a90d9", rough=0.4, sss=0.2, coat=0.2), "proteinas_membrana")
+    if acucar:
+        novo("glicocalix", juntar(acucar), mat("Glicocalix", "#f0a33a", rough=0.5), "glicocalix")
+
+    if not vegetal:
+        endo_exocitose(rnd, T)
+
+    esc = 0.93 if vegetal else 1.0
+    amp = 0.05 if vegetal else 0.22
     bm = esfera(1.0, 4)
     superficie(bm, esc * 0.96)
     ondular(bm, amp, 0.45, (3.1, 1.7, 0.2), 3)
     novo("citoplasma", bm, mat("Citoplasma", "#f7dfcc", rough=0.3, alpha=0.16), "citoplasma")
+
+
+# (direção, raio da abertura): exocitose e endocitose, na célula animal.
+FUSOES = [((0.55, -0.75, 0.35), 0.085), ((-0.6, -0.7, -0.4), 0.07)]
+
+
+def furar(bm, furos):
+    """Apaga a membrana em volta de cada ponto de fusão."""
+    fora = [v for v in bm.verts if any((v.co - c).length < r for c, r in furos)]
+    if fora:
+        bmesh.ops.delete(bm, geom=fora, context="VERTS")
+
+
+def _ponto_da_membrana(direcao):
+    """O ponto da face externa mais próximo de uma direção, e a normal ali."""
+    base = _superficie_membrana(False, 5)
+    base.normal_update()
+    d = Vector(direcao).normalized()
+    v = max(base.verts, key=lambda v: v.co.normalized().dot(d))
+    p, n = v.co.copy(), v.normal.copy()
+    base.free()
+    return p, n
+
+
+def _taca(r, abertura):
+    """Esfera oca com uma boca virada para +z (a vesícula que se abre na
+    membrana). `abertura` = cosseno do ângulo da boca."""
+    b = uvesfera(r, 24, 12)
+    fora = [v for v in b.verts if v.co.normalized().z > abertura]
+    bmesh.ops.delete(b, geom=fora, context="VERTS")
+    casca_dupla(b, 0.012)
+    return b
+
+
+def endo_exocitose(rnd, T):
+    """Duas vesículas no ato: uma se FUNDINDO à membrana e despejando o
+    conteúdo para fora (exocitose), outra se formando a partir de uma
+    dobra para dentro, revestida (endocitose)."""
+    pecas, conteudo = [], []
+    p, n = _ponto_da_membrana(FUSOES[0][0])
+    q = Vector((0, 0, 1)).rotation_difference(n)
+    b = _taca(0.14, 0.55)
+    mover(b, p - n * 0.1, q)
+    pecas.append(b)
+    for k in range(6):  # o conteúdo saindo
+        s = esfera(0.022, 1)
+        off = Vector((rnd.uniform(-0.08, 0.08), rnd.uniform(-0.08, 0.08), rnd.uniform(0.0, 0.12)))
+        mover(s, p - n * 0.05 + q @ off)
+        conteudo.append(s)
+
+    p, n = _ponto_da_membrana(FUSOES[1][0])
+    q = Vector((0, 0, 1)).rotation_difference(n)
+    b = _taca(0.13, 0.7)
+    mover(b, p - n * 0.16, q)
+    pecas.append(b)
+    for i in range(40):  # o revestimento (clatrina), por fora da dobra
+        a = Vector([rnd.uniform(-1, 1) for _ in range(3)]).normalized()
+        if a.z > 0.6:
+            continue
+        s = esfera(0.016, 1)
+        mover(s, p - n * 0.16 + q @ (a * 0.155))
+        conteudo.append(s)
+    novo("vesiculas_membrana", juntar(pecas), mat("Vesicula", "#f3cf78", rough=0.3, sss=0.2, alpha=0.85), "vesiculas")
+    novo("vesiculas_conteudo", juntar(conteudo), mat("VesiculaConteudo", "#c98a2e", rough=0.4), "vesiculas")
 
 
 def parede():
@@ -505,7 +656,8 @@ def mitocondrias(rnd, esp):
     """Membrana externa lisa, membrana interna dobrada em cristas (placas que
     saem alternadamente de cada lado), matriz por dentro. As cristas só
     aparecem quando a mitocôndria é cortada — como no livro."""
-    pecas, matriz_l, cristas_l = [], [], []
+    pecas, matriz_l, cristas_l, dna_l = [], [], [], []
+    rg = random.Random(11)
     for c in esp.sortear(8, 0.6, folga=0.2):
         comp = rnd.uniform(0.5, 0.68)
         q = aleatoria(rnd)
@@ -513,7 +665,7 @@ def mitocondrias(rnd, esp):
         escalar(ext, (comp, 0.25, 0.25))
         ondular(ext, 0.02, 3, (c.x, c.y, c.z), 2)
         inn = uvesfera(1.0, 32, 16)
-        escalar(inn, (comp - 0.04, 0.21, 0.21))
+        escalar(inn, (comp - 0.05, 0.195, 0.195))  # folga = espaço intermembranas
         casca_dupla(ext, 0.018)
         casca_dupla(inn, 0.015)
         cr = []
@@ -531,12 +683,25 @@ def mitocondrias(rnd, esp):
         for b in (ext, inn, cristas):
             mover(b, c, q)
         mz = uvesfera(1.0, 24, 12)
-        escalar(mz, (comp - 0.06, 0.19, 0.19))
+        escalar(mz, (comp - 0.07, 0.178, 0.178))
         mover(mz, c, q)
         pecas += [ext, inn]
         cristas_l.append(cristas)
         matriz_l.append(mz)
+        # Na matriz: o DNA próprio (anel) e grânulos densos, entre as cristas.
+        for j in range(2):
+            x0 = -comp * 0.5 + j * comp
+            anel = [Vector((x0 + 0.05 * math.cos(a), 0.05 * math.sin(a) + 0.07 * (1 if j else -1),
+                            0.02 * math.sin(3 * a))) for a in (k * 2 * math.pi / 8 for k in range(8))]
+            d = tubo(anel, 0.005, 4, 4, ciclico=True)
+            mover(d, c, q)
+            dna_l.append(d)
+        for _ in range(4):  # sorteio à parte: não mexe no lugar das outras organelas
+            g = esfera(0.016, 1)
+            mover(g, c + q @ Vector((rg.uniform(-comp * 0.7, comp * 0.7), rg.uniform(-0.1, 0.1), rg.uniform(-0.1, 0.1))))
+            dna_l.append(g)
     novo("mitocondria", juntar(pecas), mat("Mitocondria", "#dc6a4c", rough=0.42, sss=0.3, coat=0.3), "mitocondria")
+    novo("mitocondria_dna", juntar(dna_l), mat("DNAMito", "#1f6f8b", rough=0.5), "mitocondria")
     novo("mitocondria_cristas", juntar(cristas_l), mat("Cristas", "#f2a582", rough=0.5, sss=0.2), "mitocondria")
     novo("mitocondria_matriz", juntar(matriz_l), mat("Matriz", "#f6c3a6", rough=0.4, alpha=0.45), "mitocondria")
 
@@ -781,3 +946,322 @@ def construir(variante="animal", semente=7):
     for me in [m for m in bpy.data.meshes if m.users == 0]:
         bpy.data.meshes.remove(me)
     return {o.name: len(o.data.polygons) for o in col.objects}
+
+
+# ----------------------------------------------------------------- lupas
+#
+# Duas vistas AMPLIADAS, cada uma num .glb próprio. Na célula inteira a
+# membrana tem ~0,1 de espessura num objeto de ~6: fosfolipídio por
+# fosfolipídio, ninguém veria. Os livros resolvem com um quadro "de lupa" ao
+# lado da célula; aqui é o mesmo, em 3D.
+
+def _limpar_colecao():
+    cena()
+    for ob in list(colecao().objects):
+        bpy.data.objects.remove(ob, do_unlink=True)
+
+
+def _bastao(a, b, r, lados=8):
+    """Cilindro de a até b (as caudas, as hélices, os pedúnculos)."""
+    a, b = Vector(a), Vector(b)
+    d = b - a
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=lados, radius1=r, radius2=r, depth=d.length)
+    mover(bm, (a + b) / 2, Vector((0, 0, 1)).rotation_difference(d.normalized()))
+    return bm
+
+
+def _contas(pontos, r, sub=1):
+    """Contas de colar: cadeias de açúcar, íons, ribossomos."""
+    out = []
+    for p in pontos:
+        s = esfera(r, sub)
+        mover(s, p)
+        out.append(s)
+    return out
+
+
+def _fim_da_lupa(cam_loc, alvo=(0, 0, 0)):
+    estudio()
+    cam = bpy.data.objects["CamCelula"]
+    cam.location = cam_loc
+    cam.rotation_euler = (Vector(alvo) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    for me in [m for m in bpy.data.meshes if m.users == 0]:
+        bpy.data.meshes.remove(me)
+    return {o.name: len(o.data.polygons) for o in colecao().objects}
+
+
+def lupa_membrana(semente=5):
+    """Mosaico fluido: um retalho de membrana visto de lado e de cima.
+    +z é o lado de FORA da célula (onde fica o glicocálix); -z, o citosol."""
+    _limpar_colecao()
+    rnd = random.Random(semente)
+    LX, LY = 3.4, 2.2           # meio-tamanho do retalho
+    H = 0.5                     # altura das cabeças em relação ao meio da bicamada
+    onda = lambda x, y: 0.14 * math.sin(0.62 * x + 0.4) + 0.08 * math.cos(0.85 * y)
+
+    # Onde ficam as proteínas: os fosfolipídios abrem espaço para elas.
+    integrais = [(-1.9, 0.6, 0.5), (0.45, -0.9, 0.55), (2.3, 0.9, 0.45)]
+    canal = (-0.4, 1.1, 0.38)
+    helices = (1.25, -0.05)
+    perifericas = [(0.45, -0.9), (-1.2, -1.2)]
+    ocupados = [(x, y, r + 0.05) for x, y, r in integrais] + [(canal[0], canal[1], canal[2] + 0.05), (*helices, 0.42)]
+    livre = lambda x, y: all((x - a) ** 2 + (y - b) ** 2 > r * r for a, b, r in ocupados)
+
+    cabecas, caudas, glicolip_cab, chol = [], [], [], []
+    acucar_lip = []
+    passo = 0.25
+    nx, ny = int(2 * LX / passo), int(2 * LY / (passo * 0.87))
+    for lado in (1, -1):        # camada externa (+1) e interna (-1)
+        for i in range(nx + 1):
+            for j in range(ny + 1):
+                x = -LX + i * passo + rnd.uniform(-0.04, 0.04) + (passo / 2 if j % 2 else 0)
+                y = -LY + j * passo * 0.87 + rnd.uniform(-0.04, 0.04)
+                if abs(x) > LX or abs(y) > LY or not livre(x, y):
+                    continue
+                z0 = onda(x, y)
+                topo = Vector((x, y, z0 + lado * H))
+                # Colesterol: rígido, entre as caudas, com a "cabeça" (OH)
+                # na altura das cabeças dos fosfolipídios.
+                if rnd.random() < 0.09:
+                    c = topo - Vector((0, 0, lado * 0.12))
+                    chol.append(_bastao(c, c - Vector((0, 0, lado * 0.26)), 0.045, 6))
+                    s = esfera(0.045, 1)
+                    mover(s, topo - Vector((0, 0, lado * 0.06)))
+                    chol.append(s)
+                    continue
+                glico = lado == 1 and rnd.random() < 0.035
+                s = esfera(0.1, 2)
+                mover(s, topo)
+                (glicolip_cab if glico else cabecas).append(s)
+                # Duas caudas; uma delas com a "dobra" da ligação dupla
+                # (insaturada), que é o que deixa a membrana fluida.
+                for k, dx in enumerate((-0.045, 0.045)):
+                    a = topo + Vector((dx, 0, -lado * 0.08))
+                    if k == 1 and rnd.random() < 0.5:
+                        m = a + Vector((0, 0, -lado * 0.2))
+                        b = m + Vector((dx * 1.6, 0.04, -lado * 0.18))
+                        caudas += [_bastao(a, m, 0.022, 5), _bastao(m, b, 0.022, 5)]
+                    else:
+                        caudas.append(_bastao(a, a + Vector((rnd.uniform(-0.02, 0.02), 0, -lado * 0.38)), 0.022, 5))
+                if glico:
+                    p, d = topo + Vector((0, 0, 0.12)), Vector((0, 0, 1))
+                    cadeia = []
+                    for _ in range(rnd.randint(3, 5)):
+                        d = (d + Vector((rnd.uniform(-0.4, 0.4), rnd.uniform(-0.4, 0.4), 0))).normalized()
+                        p = p + d * 0.13
+                        cadeia.append(p.copy())
+                    acucar_lip += _contas(cadeia, 0.06)
+
+    cab = mat("Lupa_cabeca", "#e7798d", rough=0.35, sss=0.2, coat=0.3)
+    novo("fosfolipidio_cabecas", juntar(cabecas), cab, "fosfolipidio")
+    novo("fosfolipidio_caudas", juntar(caudas), mat("Lupa_cauda", "#f5d784", rough=0.5), "fosfolipidio")
+    novo("colesterol", juntar(chol), mat("Colesterol", "#5d6b8f", rough=0.35, coat=0.2), "colesterol")
+    novo("glicolipidio_cabecas", juntar(glicolip_cab), cab, "glicolipidio")
+    novo("glicolipidio_acucar", juntar(acucar_lip), mat("Glicolipidio", "#c7d64a", rough=0.45), "glicolipidio")
+
+    # Proteínas integrais globulares: atravessam as duas camadas.
+    integ, acucar_prot = [], []
+    for k, (x, y, r) in enumerate(integrais):
+        b = esfera(1.0, 4)
+        escalar(b, (r, r * 0.85, 0.82))
+        ondular(b, 0.07, 2.2, (x, y, k), 3)
+        mover(b, (x, y, onda(x, y) + 0.05))
+        integ.append(b)
+        if k != 1:  # glicoproteína: cadeia de açúcar ramificada, do lado de fora
+            base = Vector((x, y, onda(x, y) + 0.85))
+            tronco = [base + Vector((0.03 * t, 0, 0.13 * t)) for t in range(5)]
+            ramos = []
+            for sgn in (1, -1):
+                q = tronco[2]
+                for t in range(1, 4):
+                    ramos.append(q + Vector((sgn * 0.12 * t, 0.05 * t, 0.07 * t)))
+            q = tronco[4]
+            ramos += [q + Vector((-0.11 * t, -0.06 * t, 0.06 * t)) for t in range(1, 3)]
+            acucar_prot += _contas(tronco + ramos, 0.065)
+    # Proteína em hélices: 7 bastões inclinados em roda, o jeito como os
+    # livros desenham as α-hélices que cruzam a membrana.
+    for i in range(7):
+        a = i * 2 * math.pi / 7
+        c = Vector((helices[0] + 0.24 * math.cos(a), helices[1] + 0.24 * math.sin(a), onda(*helices)))
+        inc = Vector((0.12 * math.cos(a + 1.2), 0.12 * math.sin(a + 1.2), 0))
+        integ.append(_bastao(c - inc - Vector((0, 0, 0.72)), c + inc + Vector((0, 0, 0.72)), 0.085, 10))
+    novo("proteina_integral", juntar(integ), mat("ProteinaIntegral", "#4a90d9", rough=0.4, sss=0.2, coat=0.25), "proteina_integral")
+    novo("glicoproteina", juntar(acucar_prot), mat("Glicoproteina", "#f0a33a", rough=0.45), "glicoproteina")
+
+    # Proteína canal: um anel de subunidades com um poro no meio, e
+    # partículas (água/íons) passando por ele.
+    can = []
+    cx, cy, _ = canal
+    for i in range(6):
+        a = i * 2 * math.pi / 6
+        b = esfera(1.0, 3)
+        escalar(b, (0.14, 0.14, 0.78))
+        ondular(b, 0.02, 4, (i, 0, 0), 2)
+        mover(b, (cx + 0.24 * math.cos(a), cy + 0.24 * math.sin(a), onda(cx, cy)))
+        can.append(b)
+    ions = _contas([Vector((cx, cy, onda(cx, cy) + z)) for z in (-1.0, -0.35, 0.3, 0.95)], 0.07, 2)
+    novo("proteina_canal", juntar(can), mat("ProteinaCanal", "#2bb3a3", rough=0.4, sss=0.2, coat=0.25), "proteina_canal")
+    novo("proteina_canal_ions", juntar(ions), mat("Ions", "#e8f4ff", rough=0.2, coat=0.5), "proteina_canal")
+
+    # Periféricas: encostadas na face de DENTRO, sem atravessar.
+    per = []
+    for k, (x, y) in enumerate(perifericas):
+        b = esfera(1.0, 3)
+        escalar(b, (0.3, 0.24, 0.17))
+        ondular(b, 0.04, 3, (k, 5, 1), 2)
+        mover(b, (x + 0.15, y - 0.1, onda(x, y) - H - 0.3 - (0.25 if k == 0 else 0)))
+        per.append(b)
+    novo("proteina_periferica", juntar(per), mat("ProteinaPeriferica", "#9b6fd1", rough=0.4, sss=0.2, coat=0.25), "proteina_periferica")
+
+    # Citoesqueleto logo abaixo: filamentos de actina.
+    fil = []
+    for k, y in enumerate((-1.3, 0.2, 1.4)):
+        pts = [Vector((x, y + 0.15 * math.sin(x * 1.3 + k), onda(x, y) - H - 0.75 - 0.05 * k))
+               for x in [-LX + 0.2 + t * 0.6 for t in range(12)]]
+        fil.append(tubo(pts, 0.05, 8, 6))
+    novo("filamentos", juntar(fil), mat("Filamento", "#7fb38f", rough=0.5), "filamentos")
+
+    return _fim_da_lupa((6.0, -7.5, 4.2), (0, 0, -0.1))
+
+
+def lupa_mitocondria(semente=9):
+    """Uma mitocôndria grande, EM PÉ (eixo maior em z). O visualizador gira
+    o modelo em torno da vertical e o corte em cunha também é vertical: em
+    pé, a abertura pega sempre o comprimento inteiro (deitada, ficava de
+    ponta para a câmera a cada meia volta).
+
+    De fora para dentro: membrana externa (lisa, com porinas) → espaço
+    intermembranas → membrana interna, dobrada em cristas cobertas de ATP
+    sintases → matriz, com DNA circular, ribossomos e grânulos."""
+    _limpar_colecao()
+    rnd = random.Random(semente)
+    R, L = 1.25, 2.6            # raio e meio-comprimento da membrana externa
+    RI, LI = 1.08, 2.42         # membrana interna
+    raio_em = lambda z, r, l: r * math.sqrt(max(0.0, 1 - (z / l) ** 2))
+
+    def capsula(r, l, seg=48, aneis=32):
+        b = uvesfera(1.0, seg, aneis)
+        escalar(b, (r, r, l))
+        return b
+
+    ext = capsula(R, L)
+    ondular(ext, 0.03, 1.2, (1, 2, 3), 2)
+    casca_dupla(ext, 0.07)
+    novo("membrana_externa", ext, mat("MitoExterna", "#dc6a4c", rough=0.42, sss=0.3, coat=0.3), "membrana_externa")
+
+    # Porinas: canais que furam a membrana externa (deixam passar moléculas
+    # pequenas — por isso o espaço intermembranas parece com o citosol).
+    por = []
+    for _ in range(70):
+        d = Vector([rnd.uniform(-1, 1) for _ in range(3)])
+        if d.length < 0.2:
+            continue
+        d.normalize()
+        p = Vector((d.x * R, d.y * R, d.z * L))
+        n = Vector((d.x / R, d.y / R, d.z / L)).normalized()
+        b = bmesh.new()
+        bmesh.ops.create_cone(b, cap_ends=False, segments=10, radius1=0.07, radius2=0.07, depth=0.14)
+        casca_dupla(b, 0.03)
+        mover(b, p - n * 0.03, Vector((0, 0, 1)).rotation_difference(n))
+        por.append(b)
+    novo("porina", juntar(por), mat("Porina", "#8e2f1f", rough=0.4, coat=0.2), "porina")
+
+    ims = capsula((R + RI) / 2 - 0.02, (L + LI) / 2 - 0.02, 32, 20)
+    novo("espaco_intermembranas", ims, mat("Intermembranas", "#fbe3d6", rough=0.3, alpha=0.18), "espaco_intermembranas")
+
+    inn = capsula(RI, LI)
+    casca_dupla(inn, 0.06)
+    novo("membrana_interna", inn, mat("MitoInterna", "#e8875a", rough=0.42, sss=0.3, coat=0.3), "membrana_interna")
+
+    # Cristas: lâminas que saem da membrana interna, alternando os lados, e
+    # passam do meio. Cada uma acompanha a largura da cápsula na sua altura.
+    cristas, atp, zs = [], [], []
+    n = 11
+    for k in range(n):
+        z = -LI * 0.82 + k * (2 * LI * 0.82) / (n - 1)
+        zs.append(z)
+        lado = 1 if k % 2 else -1
+        rz = raio_em(z, RI, LI) - 0.04
+        comp = rz * 1.45                     # da parede até além do meio
+        larg = rz * 0.92
+        b = uvesfera(1.0, 32, 12)
+        escalar(b, (comp / 2, larg, 0.07))
+        ondular(b, 0.02, 3, (k, 0, 0), 2)
+        cx = lado * (rz - comp / 2)
+        mover(b, (cx, 0, z))
+        cristas.append(b)
+        # ATP sintases nas duas faces da crista, viradas para a matriz:
+        # o "pirulito" (pedúnculo + cabeça).
+        for _ in range(26):
+            u, v = rnd.uniform(-0.85, 0.85), rnd.uniform(-0.85, 0.85)
+            if u * u + v * v > 0.72:
+                continue
+            x, y = cx + u * comp / 2, v * larg
+            for f in (1, -1):
+                z0 = z + f * 0.06
+                atp.append(_bastao((x, y, z0), (x, y, z0 + f * 0.09), 0.018, 5))
+                s = esfera(0.05, 1)
+                mover(s, (x, y, z0 + f * 0.13))
+                atp.append(s)
+    novo("cristas", juntar(cristas), mat("Cristas", "#f2a582", rough=0.45, sss=0.25, coat=0.2), "cristas")
+    novo("atp_sintase", juntar(atp), mat("ATPsintase", "#8e5bd0", rough=0.4, coat=0.25), "atp_sintase")
+
+    mz = capsula(RI - 0.07, LI - 0.07, 32, 20)
+    novo("matriz", mz, mat("Matriz", "#f6c3a6", rough=0.4, alpha=0.28), "matriz")
+
+    # No meio do caminho entre duas cristas: DNA circular, ribossomos e
+    # grânulos. Assim nada atravessa as lâminas.
+    meios = [(zs[i] + zs[i + 1]) / 2 for i in range(len(zs) - 1)]
+    dna, ribo, gran = [], [], []
+    for i, z in enumerate(meios):
+        rz = raio_em(z, RI, LI) - 0.25
+        if i % 3 == 1:
+            c = Vector((rnd.uniform(-0.3, 0.3), rnd.uniform(-0.3, 0.3), z))
+            anel = [c + Vector((0.32 * math.cos(a) + 0.05 * math.sin(5 * a), 0.24 * math.sin(a), 0.035 * math.sin(4 * a)))
+                    for a in (t * 2 * math.pi / 14 for t in range(14))]
+            dna.append(tubo(anel, 0.022, 6, 6, ciclico=True))
+        for _ in range(7):
+            a, r = rnd.uniform(0, 2 * math.pi), rnd.uniform(0.1, rz)
+            ribo += _contas([Vector((r * math.cos(a), r * math.sin(a), z + rnd.uniform(-0.03, 0.03)))], 0.055, 1)
+        if i % 2 == 0:
+            a, r = rnd.uniform(0, 2 * math.pi), rnd.uniform(0.1, rz)
+            gran += _contas([Vector((r * math.cos(a), r * math.sin(a), z))], 0.09, 2)
+    novo("dna_mito", juntar(dna), mat("DNAMito", "#1f6f8b", rough=0.45, coat=0.2), "dna_mito")
+    novo("ribossomo_mito", juntar(ribo), mat("RibossomoMito", "#2c5d8f", rough=0.5), "ribossomo_mito")
+    novo("granulos", juntar(gran), mat("Granulo", "#4a2f24", rough=0.35, coat=0.3), "granulos")
+
+    return _fim_da_lupa((6.5, -6.5, 2.5), (0, 0, 0))
+
+
+# ----------------------------------------------------------------- exportar
+
+def exportar(caminho):
+    """Exporta a coleção Celula como .glb (Draco), com `parte` em extras."""
+    previa_corte(False)
+    # Só a coleção Celula: com `use_selection`, o cubo padrão do arquivo
+    # novo do Blender entrava junto em todo .glb.
+    vl = bpy.context.view_layer
+    vl.active_layer_collection = vl.layer_collection.children["Celula"]
+    bpy.ops.export_scene.gltf(
+        filepath=caminho, export_format="GLB", use_active_collection=True, use_active_scene=True,
+        export_extras=True, export_yup=True, export_apply=True,
+        export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7,
+        export_draco_position_quantization=13, export_draco_normal_quantization=9,
+        export_texcoords=False, export_cameras=False, export_lights=False,
+    )
+
+
+def exportar_tudo(pasta):
+    """As quatro vistas do visualizador: celula-<id>.glb."""
+    feitos = {}
+    for nome, fazer in (
+        ("animal", lambda: construir("animal")),
+        ("vegetal", lambda: construir("vegetal")),
+        ("lupa_membrana", lupa_membrana),
+        ("lupa_mitocondria", lupa_mitocondria),
+    ):
+        fazer()
+        exportar(f"{pasta}/celula-{nome}.glb")
+        feitos[nome] = sum(len(o.data.polygons) for o in colecao().objects)
+    return feitos
