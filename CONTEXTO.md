@@ -535,6 +535,30 @@ tabela que não existe devolve erro com `data` nulo: a aba abre vazia e o resto
 do editor funciona. Aplicar a migration primeiro continua sendo o certo, porque
 até lá o botão Salvar falha — mas o intervalo não derruba o editor.
 
+**8f. Toda fórmula tem 22px, e o autor ajusta uma a uma no editor.** (12/11/2026)
+
+Pedido do autor: um tamanho padrão de 22 para todas as fórmulas, regulável
+fácil pelo editor. Antes a fórmula era `1.05em` do texto em volta — 17,85px no
+corpo do resumo, e maior dentro de um título.
+
+- **O padrão mora no CSS (`--t-formula: 22px`), não no nó.** É em px de
+  propósito: a fórmula deixa de acompanhar o texto em volta (num título ela
+  NÃO cresce mais) — preço declarado ao autor antes de aplicar. Nenhum resumo
+  do acervo foi regravado, e trocar o padrão é trocar um número.
+- **O ajuste é `data-tamanho` no próprio nó**, gravado só quando sai do padrão.
+  A barra de equação tem − / campo / + (passo 2px, faixa 10–64) e "padrão";
+  escolher exatamente 22 grava "sem tamanho", para a fórmula acompanhar uma
+  mudança futura do padrão. `lib/formula-tamanho.ts` repete o 22 só para a
+  barra mostrar de onde parte.
+- **Como chega ao aluno:** `lib/matematica.ts` lê o atributo e pendura
+  `--formula-tam` no elemento de fora do KaTeX; no editor quem pendura é
+  `formulaComTamanho.ts`, que estende os nós do TipTap. As duas pontas
+  alimentam a MESMA regra de CSS, e é isso que mantém o WYSIWYG.
+- **`insertContentAt` no lugar de `insertInlineMath`/`insertBlockMath`:** os
+  comandos da extensão só passam o `latex`, e o tamanho se perderia ao editar.
+- **"Minhas fórmulas" (8e) não guarda o tamanho.** Guardar pediria coluna e
+  migration; ficou de fora até alguém pedir.
+
 **9. A hierarquia é escrita à mão (`pai_id`), nunca deduzida dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda
