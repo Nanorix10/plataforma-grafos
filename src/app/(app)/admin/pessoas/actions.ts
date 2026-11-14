@@ -23,13 +23,19 @@ const PLANOS_VALIDOS = new Set(Object.keys(PLANO_PROCESSOS))
  * que agora esse alguém não precisa abrir o SQL Editor do Supabase.
  */
 export async function definirPlano(formData: FormData) {
-  const { supabase } = await exigirAdmin()
+  const { supabase, userId: meuId } = await exigirAdmin()
 
   const userId = String(formData.get('user_id') ?? '')
   const plano = String(formData.get('plano') ?? '')
   const ativo = formData.get('ativo') === 'true'
 
   if (!userId) throw new Error('Usuário não informado.')
+  // Admin bloqueado vira plano `nenhum` e passa a ver cadeado nos resumos que
+  // ele mesmo edita. A tela já esconde o botão; esta linha cobre quem chama a
+  // action por outro caminho.
+  if (userId === meuId && (!ativo || plano === 'nenhum')) {
+    throw new Error('Você não pode bloquear o próprio acesso — peça a outro admin.')
+  }
   if (!PLANOS_VALIDOS.has(plano)) throw new Error(`Plano desconhecido: ${plano}`)
 
   const { error } = await supabase

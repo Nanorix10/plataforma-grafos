@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { MATERIAS } from '@/lib/materias'
 import { getSessao } from '@/lib/sessao'
+import ListaEditor from './ListaEditor'
 
 export default async function AdminEditorPage() {
   const { supabase, userId, isAdmin } = await getSessao()
@@ -25,26 +25,7 @@ export default async function AdminEditorPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col divide-y divide-[var(--line)] border border-[var(--line)] rounded-md">
-        {(resumos ?? []).map((r) => (
-          <Link
-            key={r.slug}
-            href={`/admin/editor/${r.slug}`}
-            className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--panel)]"
-          >
-            <span
-              className="w-[10px] h-[10px] rounded-sm shrink-0"
-              style={{ background: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor ?? '#999' }}
-            />
-            <span
-              className="text-sm font-medium"
-              style={{ color: MATERIAS[r.materia_slug as keyof typeof MATERIAS]?.cor }}
-            >
-              {r.titulo}
-            </span>
-          </Link>
-        ))}
-      </div>
+      <ListaEditor resumos={resumos ?? []} />
 
       {(resumos ?? []).length === 0 && (
         <p className="text-[var(--ink-dim)] text-sm mt-4">Nenhum resumo cadastrado ainda.</p>

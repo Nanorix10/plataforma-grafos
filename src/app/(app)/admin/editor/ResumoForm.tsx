@@ -122,6 +122,7 @@ export default function ResumoForm({
   topicosEdital = [],
   topicosMarcados = [],
   formulas = [],
+  citadoPor = 0,
 }: {
   resumo?: ResumoExistente
   titulos?: string[]
@@ -130,6 +131,8 @@ export default function ResumoForm({
   topicosMarcados?: string[]
   /* Só passa adiante, para o EditorCorpo (decisão 8e). */
   formulas?: FormulaSalva[]
+  /** Quantos resumos escrevem `[[este título]]` hoje (tabela `conexoes`). */
+  citadoPor?: number
 }) {
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
@@ -175,6 +178,18 @@ export default function ResumoForm({
           }}
           className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
         />
+        {/* Renomear quebra em silêncio os [[links]] que apontam para cá: o
+            wikilink é o TÍTULO escrito por extenso (decisão 1), e os outros
+            resumos continuam com o nome antigo, que deixa de virar link. Só
+            avisa — nada é reescrito nos outros resumos. */}
+        {resumo && citadoPor > 0 && titulo.trim() !== resumo.titulo ? (
+          <p role="status" className="text-[12px] text-[var(--ink-dim)] mt-1.5 border-l-2 border-[var(--acento)] pl-2.5">
+            {citadoPor === 1 ? '1 resumo cita' : `${citadoPor} resumos citam`} este resumo como{' '}
+            <span className="font-medium">[[{resumo.titulo}]]</span>. Com o título novo,{' '}
+            {citadoPor === 1 ? 'esse link deixa' : 'esses links deixam'} de funcionar até
+            você trocar o nome lá também.
+          </p>
+        ) : null}
       </div>
 
       <div>

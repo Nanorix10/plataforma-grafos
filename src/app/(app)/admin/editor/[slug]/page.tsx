@@ -7,10 +7,12 @@ import ResumoForm from '../ResumoForm'
 
 export default async function EditarResumoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ salvo?: string }>
 }) {
-  const { slug } = await params
+  const [{ slug }, { salvo }] = await Promise.all([params, searchParams])
   const { supabase, userId, isAdmin } = await getSessao()
   if (!userId) redirect('/login')
   if (!isAdmin) redirect('/resumos')
@@ -33,7 +35,7 @@ export default async function EditarResumoPage({
   /* Os tópicos do edital que este resumo pode cobrir (decisão 9i). A lista vem
      inteira e o formulário filtra pela matéria escolhida — buscar de novo a
      cada troca de <select> custaria uma ida ao servidor por clique. */
-  const [{ data: topicos }, formulas] = await Promise.all([
+  const [{ data: topicos }, formulas, { count: citadoPor }] = await Promise.all([
     supabase
       .from('edital_topicos')
       .select('id, texto, etapa, processo_slug, materia_slug, resumo_id')
@@ -42,6 +44,11 @@ export default async function EditarResumoPage({
       .order('ordem'),
     // as fórmulas guardadas do autor (decisão 8e)
     getFormulasSalvas(),
+    // quantos resumos escrevem [[este título]] — o aviso de renomear (ResumoForm)
+    supabase
+      .from('conexoes')
+      .select('origem_id', { count: 'exact', head: true })
+      .eq('destino_id', resumo.id),
   ])
 
   const topicosEdital = (topicos ?? []).map((x) => ({
@@ -68,6 +75,13 @@ export default async function EditarResumoPage({
         >
           ver publicado
         </Link>
+        {/* Depois de "Salvar" a action volta para cá com `?salvo=1`, em vez
+            de despejar o autor na lista inteira. */}
+        {salvo ? (
+          <span role="status" className="ml-auto text-[12px] text-[var(--ok)]">
+            ✓ Salvo
+          </span>
+        ) : null}
       </div>
       <ResumoForm
         resumo={resumo}
@@ -76,6 +90,7 @@ export default async function EditarResumoPage({
         topicosEdital={topicosEdital}
         topicosMarcados={topicosMarcados}
         formulas={formulas}
+        citadoPor={citadoPor ?? 0}
       />
     </div>
   )

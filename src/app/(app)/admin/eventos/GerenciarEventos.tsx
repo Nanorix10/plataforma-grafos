@@ -419,6 +419,13 @@ export default function GerenciarEventos({
                     <button
                       type="submit"
                       aria-label={`Excluir ${e.titulo}`}
+                      /* Mesma trava do "Excluir" de resumo: o botão mora
+                         colado no "Editar", e apagar não tem volta. */
+                      onClick={(ev) => {
+                        if (!confirm(`Excluir o evento "${e.titulo}"? Não dá para desfazer.`)) {
+                          ev.preventDefault()
+                        }
+                      }}
                       className="text-[12px] text-[var(--ink-faint)] hover:text-[var(--erro)] rounded px-1.5 py-0.5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)]"
                     >
                       Excluir
