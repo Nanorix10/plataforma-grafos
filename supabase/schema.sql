@@ -50,7 +50,11 @@ create table resumos (
   -- é "cita" (extraído dos [[wikilinks]]). Ver a migration de hierarquia.
   pai_id uuid references resumos(id) on delete set null,
   criado_em timestamptz default now(),
-  atualizado_em timestamptz default now()
+  -- mantido pelo trigger `trg_subir_versao_resumo` desde 14/11/2026
+  atualizado_em timestamptz default now(),
+  -- sobe +1 a cada update (mesmo trigger). O editor só grava `where versao =
+  -- <a que abriu>`, então duas abas não se apagam (migration 20261114040608).
+  versao bigint not null default 1
 );
 
 -- Conexões entre resumos (extraídas dos [[wikilinks]] ao salvar)

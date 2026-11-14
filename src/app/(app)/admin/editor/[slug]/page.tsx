@@ -21,7 +21,7 @@ export default async function EditarResumoPage({
     supabase
       .from('resumos')
       .select(
-        'id, slug, titulo, materia_slug, processo_slug, corpo, definicao, pai_id, margem_esq, margem_dir'
+        'id, slug, titulo, materia_slug, processo_slug, corpo, definicao, pai_id, margem_esq, margem_dir, versao'
       )
       .eq('slug', slug)
       .single(),

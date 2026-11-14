@@ -1,10 +1,10 @@
 'use client'
 
-import { startTransition, useActionState, useMemo, useState } from 'react'
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { salvarResumo, excluirResumo } from './actions'
 import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
-import EditorCorpo from './EditorCorpo'
+import EditorCorpo, { type ControleAutosave } from './EditorCorpo'
 // `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
 import type { FormulaSalva } from '@/lib/formulas'
 import { MARGEM_PADRAO } from '@/lib/pagina'
@@ -29,6 +29,8 @@ type ResumoExistente = {
   pai_id: string | null
   margem_esq: number
   margem_dir: number
+  /** Sobe a cada gravação (decisão 31). */
+  versao?: number
 }
 
 /** Resumo já existente, como candidato a receber este dentro dele. */
@@ -162,6 +164,78 @@ export default function ResumoForm({
   const [paiId, setPaiId] = useState(resumo?.pai_id ?? '')
   const [cobrado, setCobrado] = useState<Set<string>>(() => new Set(topicosMarcados))
 
+  /* A versão que esta tela tem do resumo (decisão 31), dividida com o
+     autosave do `EditorCorpo`. Depois de um "Salvar" a página volta com a
+     versão nova do servidor; `Math.max` porque o autosave pode já ter subido
+     o número por conta própria. */
+  const versao = useRef<number | undefined>(resumo?.versao)
+  const esvaziarAutosave = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    if (resumo?.versao) versao.current = Math.max(versao.current ?? 0, resumo.versao)
+  }, [resumo?.versao])
+  const controle = useMemo<ControleAutosave>(
+    () => ({
+      versao: () => versao.current,
+      aoGravar: (nova) => {
+        versao.current = nova
+      },
+      registrarEsvaziar: (fn) => {
+        esvaziarAutosave.current = fn
+      },
+    }),
+    []
+  )
+
+  /* O que mudou nos CAMPOS e ainda não foi gravado. O autosave só cuida do
+     corpo (decisão 3), e o rodapé dizia "Tudo salvo" com título, matéria ou
+     tópicos ainda pendentes — quem confiava na frase e saía perdia a mudança.
+     Comparado com o `resumo` que veio do servidor: depois de um "Salvar" a
+     página volta com os valores novos, e a lista esvazia sozinha. */
+  const pendentes: string[] = []
+  if (resumo) {
+    const marcadosAntes = new Set(topicosMarcados)
+    if (titulo.trim() !== resumo.titulo) pendentes.push('título')
+    if (slug.trim() !== resumo.slug) pendentes.push('slug')
+    if (definicao.trim() !== (resumo.definicao ?? '').trim()) pendentes.push('definição')
+    if (materia !== resumo.materia_slug) pendentes.push('matéria')
+    if (processo !== resumo.processo_slug) pendentes.push('processo seletivo')
+    if (paiId !== (resumo.pai_id ?? '')) pendentes.push('"Está dentro de"')
+    if (
+      cobrado.size !== marcadosAntes.size ||
+      [...cobrado].some((t) => !marcadosAntes.has(t))
+    ) {
+      pendentes.push('tópicos do edital')
+    }
+    if (margens.esq !== resumo.margem_esq || margens.dir !== resumo.margem_dir) {
+      pendentes.push('margens da régua')
+    }
+  }
+  const temPendente = pendentes.length > 0
+
+  // fechar a aba com campo pendente avisa, como o texto pendente já avisa
+  useEffect(() => {
+    if (!temPendente) return
+    function aoSair(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', aoSair)
+    return () => window.removeEventListener('beforeunload', aoSair)
+  }, [temPendente])
+
+  /* Título igual ao de outro resumo quebra os [[links]] em silêncio: o trigger
+     resolve o destino por título, e com dois iguais fica indeterminado
+     (decisão 1c). Sem caixa nem espaço nas pontas, que é como o autor lê. */
+  const tituloRepetido =
+    titulo.trim() !== '' &&
+    titulos.some((t) => t.trim().toLowerCase() === titulo.trim().toLowerCase())
+
+  /* Para o aviso de "tirar o tópico de outro resumo": o nome de quem cobre. */
+  const tituloPorId = useMemo(
+    () => new Map(candidatosPai.map((c) => [c.id, c.titulo])),
+    [candidatosPai]
+  )
+
   /* Filtra pela matéria do ESTADO, e não pela que está salva: trocar o
      <select> de matéria tem de trocar a lista de tópicos junto, senão o autor
      marcaria um tópico de Biologia num resumo que acabou de virar de Química. */
@@ -188,7 +262,14 @@ export default function ResumoForm({
         if (quem?.dataset.acao === 'excluir') return
         e.preventDefault()
         const dados = new FormData(e.currentTarget, quem)
-        startTransition(() => salvar(dados))
+        /* Antes de enviar, o autosave grava o que estiver pendente e a fila
+           esvazia: o "Salvar" tem de partir da versão mais nova, senão seria
+           recusado como conflito pelo próprio autosave desta aba. */
+        void (async () => {
+          await esvaziarAutosave.current?.()
+          if (versao.current) dados.set('versao', String(versao.current))
+          startTransition(() => salvar(dados))
+        })()
       }}
       className="flex flex-col gap-4"
     >
@@ -208,6 +289,12 @@ export default function ResumoForm({
           }}
           className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
         />
+        {tituloRepetido ? (
+          <p role="alert" className="text-[12px] text-[var(--erro)] mt-1.5 border-l-2 border-[var(--erro)] pl-2.5">
+            Já existe outro resumo com este título. Dois títulos iguais fazem os
+            [[links]] apontarem para qualquer um dos dois — escolha outro nome.
+          </p>
+        ) : null}
         {/* Renomear quebra em silêncio os [[links]] que apontam para cá: o
             wikilink é o TÍTULO escrito por extenso (decisão 1), e os outros
             resumos continuam com o nome antigo, que deixa de virar link. Só
@@ -363,14 +450,27 @@ export default function ResumoForm({
                     name="topicos_edital"
                     value={t.id}
                     checked={marcado}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      /* Um tópico aponta para UM resumo (`edital_topicos.resumo_id`):
+                         marcar um que já é de outro TIRA dele. O apagado na tela
+                         avisava, mas o clique levava sem perguntar. */
+                      if (e.target.checked && deOutro) {
+                        const dono = tituloPorId.get(t.resumo_id!) ?? 'outro resumo'
+                        if (
+                          !confirm(
+                            `Este tópico hoje é coberto por "${dono}". Marcar aqui passa o tópico para este resumo, e "${dono}" deixa de cobri-lo. Continuar?`
+                          )
+                        ) {
+                          return
+                        }
+                      }
                       setCobrado((atual) => {
                         const novo = new Set(atual)
                         if (e.target.checked) novo.add(t.id)
                         else novo.delete(t.id)
                         return novo
                       })
-                    }
+                    }}
                     className="mt-[3px] shrink-0"
                   />
                   <span>
@@ -410,6 +510,7 @@ export default function ResumoForm({
           margemEsq={margens.esq}
           margemDir={margens.dir}
           aoMudarMargens={(esq, dir) => setMargens({ esq, dir })}
+          controle={controle}
         />
         {/* As margens viajam no formulário como qualquer outro campo. Não entram
             no autosave: ele grava só o `corpo` (decisão 3), e a régua é ajuste
@@ -418,6 +519,15 @@ export default function ResumoForm({
         <input type="hidden" name="margem_esq" value={margens.esq} />
         <input type="hidden" name="margem_dir" value={margens.dir} />
       </div>
+
+      {/* Os campos acima não têm autosave (decisão 3). A frase diz QUAIS
+          mudaram, para "Texto salvo" no rodapé da folha não ser lido como
+          "está tudo gravado". */}
+      {temPendente ? (
+        <p role="status" className="text-[12.5px] text-[var(--ink-dim)] border-l-2 border-[var(--acento)] pl-2.5 m-0">
+          Ainda não salvo: {pendentes.join(', ')}. Esses campos só gravam no botão Salvar.
+        </p>
+      ) : null}
 
       {estado?.erro ? (
         <p

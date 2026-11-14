@@ -3355,6 +3355,40 @@ gravar ganha — precisa de coluna de versão), "Tudo salvo" que só vale para o
 corpo, tópico "já coberto por outro resumo" que ainda pode ser roubado e título
 repetido aceito sem aviso.
 
+## 31. O resumo tem versão, e o editor não grava por cima de quem gravou antes
+
+**14/11/2026.** As quatro falhas médias da auditoria do editor (a decisão 30
+fechou as graves).
+
+- **Versão do resumo** (migration `20261114040608`, só acrescenta). Coluna
+  `versao`, que o trigger `trg_subir_versao_resumo` sobe +1 a cada update — e
+  que agora também mantém `atualizado_em`, parado desde o insert. O editor
+  guarda a versão que abriu e grava `where versao = <a que abriu>`; nenhuma
+  linha casando = outro lugar gravou antes, e a tela avisa em vez de apagar.
+  Há 4 admins, e duas abas do mesmo autor já bastavam para o problema.
+  Quem não manda versão (aba aberta antes do deploy, migration de conteúdo)
+  grava como antes.
+  - **O autosave virou FILA**, uma gravação de cada vez. Com versão, uma
+    segunda gravação em voo levaria o número velho e seria recusada — o editor
+    brigaria consigo. A fila também acaba com resposta fora de ordem.
+  - **O "Salvar" esvazia a fila antes de enviar** e parte da versão mais nova.
+    Formulário e editor dividem a versão por três funções
+    (`ControleAutosave`), não por um objeto que o editor altera: o React
+    Compiler trata prop como imutável e recusa a mutação.
+  - **Depois de um conflito o autosave para** e guarda o texto como pendente,
+    para o aviso de saída continuar valendo.
+  - **Armadilha de deploy:** a página do editor passa a pedir `versao`. Se o
+    código chegar antes da migration, a consulta falha e o editor dá 404 em
+    todo resumo. Migration primeiro, merge depois.
+- **"Tudo salvo" virou "Texto salvo"**, e acima do botão aparece "Ainda não
+  salvo: título, matéria…" quando um campo mudou. O autosave só grava o corpo
+  (decisão 3); fechar a aba com campo pendente também avisa.
+- **Marcar tópico "já coberto por outro resumo" pergunta antes**, dizendo qual
+  resumo deixa de cobri-lo (`edital_topicos.resumo_id` é um só).
+- **Título repetido é recusado** pelo `salvarResumo` (comparação sem caixa,
+  sobre o catálogo) e avisado no campo. O banco não tem `unique` em `titulo`;
+  a regra vem da decisão 1c.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:

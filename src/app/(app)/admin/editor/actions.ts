@@ -18,6 +18,10 @@ type SupabaseDoServidor = Awaited<ReturnType<typeof exigirAdmin>>
 /** O que o formulário recebe de volta quando NÃO deu para salvar. */
 export type EstadoSalvar = { erro: string } | null
 
+/** Frase única para "outro lugar gravou antes" — usada pelo Salvar e pelo autosave. */
+const AVISO_CONFLITO =
+  'Este resumo foi alterado em outro lugar (outra aba ou outro admin) depois que você o abriu. Para não apagar aquela versão, nada foi gravado: copie o que escreveu, recarregue a página e cole de novo.'
+
 /**
  * Salva título, matéria, corpo e vínculos — e, se der errado, DEVOLVE o erro.
  *
@@ -35,6 +39,9 @@ export async function salvarResumo(
   const supabase = await exigirAdmin()
 
   const id = String(formData.get('id') ?? '')
+  /* A versão que esta tela abriu (decisão 31). Vazia = aba de antes do deploy
+     ou resumo novo: grava sem conferir, como sempre foi. */
+  const versao = Number(formData.get('versao')) || null
   const margens = ajustarMargens(
     Number(formData.get('margem_esq')) || MARGEM_PADRAO,
     Number(formData.get('margem_dir')) || MARGEM_PADRAO
@@ -67,6 +74,24 @@ export async function salvarResumo(
     return { erro: 'Um resumo não pode estar dentro de si mesmo.' }
   }
 
+  /* Título repetido é recusado: o trigger de conexões resolve `[[Título]]`
+     por título, e com dois iguais o destino fica indeterminado (decisão 1c).
+     O banco não tem `unique` em `titulo`; quem barra é esta linha, e o
+     formulário avisa antes. `ilike` sem curinga não serve — `_` e `%` são
+     curingas —, então a comparação sem caixa é feita aqui. */
+  const { data: mesmosTitulos } = await supabase
+    .from('resumos_catalogo')
+    .select('id, titulo')
+    .neq('id', id || '00000000-0000-0000-0000-000000000000')
+  const repetido = (mesmosTitulos ?? []).find(
+    (r) => r.titulo.trim().toLowerCase() === dados.titulo.toLowerCase()
+  )
+  if (repetido) {
+    return {
+      erro: `Já existe um resumo chamado "${repetido.titulo}". Dois títulos iguais fazem os [[links]] apontarem para qualquer um dos dois — escolha outro nome.`,
+    }
+  }
+
   /* O slug é UNIQUE no banco. Perguntar antes dá uma frase que diz QUEM já
      usa o endereço; o erro cru do Postgres ("duplicate key value…") não diz. */
   const { data: dono } = await supabase
@@ -80,8 +105,13 @@ export async function salvarResumo(
     }
   }
 
-  const { data: salvo, error } = id
-    ? await supabase.from('resumos').update(dados).eq('id', id).select('id').single()
+  /* No update, `versao` entra no filtro: se outro lugar gravou depois que esta
+     tela abriu, o número subiu, a linha não casa e nada é gravado por cima.
+     `maybeSingle` porque "nenhuma linha" aqui é o conflito, não um erro. */
+  let consulta = id ? supabase.from('resumos').update(dados).eq('id', id) : null
+  if (consulta && versao) consulta = consulta.eq('versao', versao)
+  const { data: salvo, error } = consulta
+    ? await consulta.select('id').maybeSingle()
     : await supabase.from('resumos').insert(dados).select('id').single()
 
   if (error) {
@@ -92,6 +122,7 @@ export async function salvarResumo(
           : `Não deu para salvar: ${error.message}. O texto continua aqui; tente de novo.`,
     }
   }
+  if (id && !salvo) return { erro: AVISO_CONFLITO }
 
   /* O quarto eixo (decisão 9i): que tópicos do edital este resumo cobre.
      Mora em `edital_topicos.resumo_id`, e não numa coluna daqui, porque a
@@ -140,14 +171,21 @@ export async function salvarResumo(
 // formulário, pra um autosave nunca sobrescrever esses campos com valor velho.
 // Não faz redirect nem revalidate — quem está digitando não pode ter a página
 // recarregada embaixo do cursor.
-export async function salvarCorpoAuto(id: string, corpo: string) {
+//
+// `versao` (decisão 31): grava só se ninguém mais gravou desde a versão que a
+// tela tem, e devolve a nova para a próxima gravação usar. Sem `versao` (aba
+// aberta antes do deploy) grava como sempre.
+export async function salvarCorpoAuto(id: string, corpo: string, versao?: number) {
   const supabase = await exigirAdmin()
-  if (!id) return { ok: false, erro: 'id ausente' }
+  if (!id) return { ok: false as const, erro: 'id ausente' }
 
-  const { error } = await supabase.from('resumos').update({ corpo }).eq('id', id)
-  if (error) return { ok: false, erro: error.message }
+  let consulta = supabase.from('resumos').update({ corpo }).eq('id', id)
+  if (versao) consulta = consulta.eq('versao', versao)
+  const { data, error } = await consulta.select('versao').maybeSingle()
+  if (error) return { ok: false as const, erro: error.message }
+  if (!data) return { ok: false as const, conflito: true, erro: AVISO_CONFLITO }
 
-  return { ok: true }
+  return { ok: true as const, versao: data.versao as number }
 }
 
 /** O que o bucket aceita. Repetido aqui para a mensagem de erro ser em português. */
