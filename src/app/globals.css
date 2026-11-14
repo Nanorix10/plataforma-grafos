@@ -1872,6 +1872,11 @@ h3 {
   overflow-y: hidden;
   padding-bottom: 2px;
 }
+/* No editor o `.katex-display` mora DENTRO do nó do TipTap, que já leva a
+   margem acima; somar as duas daria o dobro de ar que o aluno vê. */
+.conteudo-resumo [data-type='block-math'] .katex-display {
+  margin: 0;
+}
 
 .conteudo-resumo .katex,
 .previa-formula .katex {
@@ -1909,6 +1914,42 @@ h3 {
 .conteudo-resumo [data-type='block-math'].ProseMirror-selectednode {
   background: var(--acento-fraco);
   outline: 1px solid var(--acento);
+}
+
+/* ---- fórmula destacada (decisão 8g) ----
+   Plano na cor da matéria, filete à esquerda, título opcional em cima e
+   legenda opcional embaixo. É a "opção A" escolhida pelo autor entre três
+   testadas no CSS real: a mesma linguagem do filete da frase de abertura e do
+   fundo da fórmula solta, então destaca sem disputar com os títulos de seção.
+
+   Uma regra só para os dois lados: o servidor escreve
+   `div.formula-destaque > span.formula-destaque-titulo + .katex-display +
+   span.formula-destaque-legenda`, e o NodeView do editor pendura as mesmas
+   classes no elemento do TipTap (`formulaComTamanho.ts`). Vem DEPOIS das
+   regras de clique do editor para o raio 0 ganhar delas — filete de um lado
+   só não leva canto arredondado. */
+.conteudo-resumo .formula-destaque {
+  margin: 1.2em 0;
+  padding: 0.75em 1em;
+  background: color-mix(in srgb, var(--cor-materia, var(--ink-faint)) 9%, transparent);
+  border-left: 3px solid var(--cor-materia, var(--line-forte));
+  border-radius: 0;
+}
+.conteudo-resumo .formula-destaque .katex-display {
+  margin: 0.35em 0;
+}
+.conteudo-resumo .formula-destaque-titulo,
+.conteudo-resumo .formula-destaque-legenda {
+  display: block;
+  font-size: 0.8em;
+}
+.conteudo-resumo .formula-destaque-titulo {
+  font-weight: 700;
+  color: var(--cor-materia, var(--ink));
+}
+.conteudo-resumo .formula-destaque-legenda {
+  text-align: center;
+  color: var(--ink-dim);
 }
 
 /* texto de exemplo do editor vazio (extensão Placeholder) */

@@ -559,6 +559,34 @@ corpo do resumo, e maior dentro de um título.
 - **"Minhas fórmulas" (8e) não guarda o tamanho.** Guardar pediria coluna e
   migration; ficou de fora até alguém pedir.
 
+**8g. O autor destaca a fórmula que quiser: plano na cor da matéria, título e
+legenda.** (14/11/2026)
+
+Pedido do autor: "marcar as fórmulas que eu quiser com um plano da cor da
+matéria junto com o título ou legenda". Três desenhos foram testados no CSS
+publicado, em três matérias e nos dois temas (plano com filete, cartão com
+faixa de título, moldura com etiqueta); ele escolheu o **plano com filete**,
+que repete a linguagem do filete da frase de abertura e do fundo da fórmula
+solta e não disputa com os títulos de seção. (A faixa também passava no
+contraste — 4,9 a 7,2 —; o que pesou foi a página, não a acessibilidade.)
+
+- **Mora no nó, como o tamanho (8f):** `data-destaque="sim"`, `data-titulo`,
+  `data-legenda`. Sem migration, nada do acervo regravado. Na barra de
+  equação: caixa **Destacar** e, ligada, os campos Título e Legenda.
+- **Só em linha própria.** Plano no meio de uma frase partiria a leitura, então
+  Destacar liga "Linha própria" e desligar "Linha própria" desliga o destaque.
+- **`<div class="formula-destaque">`, nunca `<figure>`:** `.conteudo-resumo
+  figure` é das imagens (11c) e traria float, largura e moldura junto.
+- **Título e legenda viram texto de verdade na página** (grifável, lido pelo
+  leitor de tela). O atributo é decodificado e escapado de novo no servidor —
+  o navegador nem sempre escapa `<` em atributo, e título é texto, não HTML.
+- **A busca (decisão 15) não acha o título:** ele mora em atributo, e o índice
+  lê o texto do `corpo`. Preço aceito; a saída seria o título virar parágrafo
+  dentro de um nó contêiner, que se desmonta fácil ao editar.
+- **De carona, o editor passou a desenhar a fórmula de linha própria em
+  `displayMode`**, como o servidor sempre fez. Antes ela aparecia encostada à
+  esquerda e com índices miúdos — o autor via outra coisa que o aluno.
+
 **9. A hierarquia é escrita à mão (`pai_id`), nunca deduzida dos `[[wikilinks]]`.**
 Wikilinks formam um grafo sem raiz: tudo liga com tudo. Forçar uma árvore neles
 (por exemplo, escolhendo o nó mais conectado como raiz) daria um desenho que muda

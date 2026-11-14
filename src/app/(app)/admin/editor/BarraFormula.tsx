@@ -16,6 +16,7 @@ import {
 // pacote do navegador. Como tipo, ele é apagado na compilação.
 import type { FormulaSalva } from '@/lib/formulas'
 import { TAMANHO_PADRAO, TAMANHO_MIN, TAMANHO_MAX, lerTamanho } from '@/lib/formula-tamanho'
+import { TEXTO_DESTAQUE_MAX } from '@/lib/formula-destaque'
 
 /** Quanto cada clique em − / + muda o tamanho, em px. */
 const PASSO_TAMANHO = 2
@@ -47,9 +48,19 @@ const PASSO_TAMANHO = 2
  * fixa de 200px e cortava fórmula longa em silêncio — 231px de conteúdo.)
  */
 
+/** O plano na cor da matéria (decisão 8g). `null` = fórmula sem destaque. */
+export type Destaque = { titulo: string; legenda: string }
+
 export type Alvo =
   | { modo: 'novo'; emBloco: boolean }
-  | { modo: 'editar'; pos: number; emBloco: boolean; latex: string; tamanho: number | null }
+  | {
+      modo: 'editar'
+      pos: number
+      emBloco: boolean
+      latex: string
+      tamanho: number | null
+      destaque: Destaque | null
+    }
 
 /** A aba do autor. Não sai de `PALETAS` porque o conteúdo dela vem do banco. */
 const ABA_MINHAS = 'minhas'
@@ -183,7 +194,12 @@ export default function BarraFormula({
 }: {
   alvo: Alvo
   formulas: FormulaSalva[]
-  aoConfirmar: (latex: string, emBloco: boolean, tamanho: number | null) => void
+  aoConfirmar: (
+    latex: string,
+    emBloco: boolean,
+    tamanho: number | null,
+    destaque: Destaque | null,
+  ) => void
   aoRemover: () => void
   aoCancelar: () => void
   aoSalvarFormula: (nome: string, latex: string, emBloco: boolean) => Promise<void>
@@ -191,6 +207,12 @@ export default function BarraFormula({
 }) {
   const [latex, setLatex] = useState(alvo.modo === 'editar' ? alvo.latex : '')
   const [emBloco, setEmBloco] = useState(alvo.emBloco)
+  // Destaque (decisão 8g). Os textos ficam guardados mesmo com a caixa
+  // desligada, para religar não apagar o que o autor já tinha escrito.
+  const destaqueInicial = alvo.modo === 'editar' ? alvo.destaque : null
+  const [destacar, setDestacar] = useState(destaqueInicial !== null)
+  const [titulo, setTitulo] = useState(destaqueInicial?.titulo ?? '')
+  const [legenda, setLegenda] = useState(destaqueInicial?.legenda ?? '')
   // o número que o campo MOSTRA; fórmula sem tamanho próprio abre no padrão
   const [tamanho, setTamanho] = useState(
     (alvo.modo === 'editar' ? alvo.tamanho : null) ?? TAMANHO_PADRAO,
@@ -250,7 +272,13 @@ export default function BarraFormula({
     if (!latex.trim()) return aoCancelar()
     // escolher exatamente o padrão grava "sem tamanho": assim a fórmula
     // acompanha o padrão se ele mudar um dia (ver `lib/formula-tamanho.ts`)
-    aoConfirmar(latex.trim(), emBloco, tamanho === TAMANHO_PADRAO ? null : tamanho)
+    aoConfirmar(
+      latex.trim(),
+      emBloco,
+      tamanho === TAMANHO_PADRAO ? null : tamanho,
+      // destaque só existe em linha própria — a caixa liga as duas juntas
+      destacar && emBloco ? { titulo, legenda } : null,
+    )
   }
 
   const procurando = busca.trim().length > 0
@@ -428,13 +456,57 @@ export default function BarraFormula({
             <input
               type="checkbox"
               checked={emBloco}
-              onChange={(e) => setEmBloco(e.target.checked)}
+              onChange={(e) => {
+                setEmBloco(e.target.checked)
+                // fórmula no meio da frase não leva o plano: desligar uma
+                // desliga a outra
+                if (!e.target.checked) setDestacar(false)
+              }}
               className="accent-[var(--stamp)]"
             />
             Linha própria
           </label>
+          <label
+            className="flex items-center gap-1.5 text-[12px] text-[var(--ink-dim)] cursor-pointer"
+            title="Põe a fórmula num plano na cor da matéria, com título e legenda opcionais"
+          >
+            <input
+              type="checkbox"
+              checked={destacar}
+              onChange={(e) => {
+                setDestacar(e.target.checked)
+                if (e.target.checked) setEmBloco(true)
+              }}
+              className="accent-[var(--stamp)]"
+            />
+            Destacar
+          </label>
         </div>
       </div>
+
+      {/* título e legenda do destaque — só aparecem com a caixa ligada */}
+      {destacar ? (
+        <div className="px-3 pt-2 flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            maxLength={TEXTO_DESTAQUE_MAX}
+            placeholder="Título (opcional), em cima — ex.: Função horária da velocidade"
+            aria-label="Título da fórmula destacada"
+            className="flex-1 min-w-[220px] h-[28px] text-[12px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-2.5 outline-none focus:border-[var(--stamp)]"
+          />
+          <input
+            type="text"
+            value={legenda}
+            onChange={(e) => setLegenda(e.target.value)}
+            maxLength={TEXTO_DESTAQUE_MAX}
+            placeholder="Legenda (opcional), embaixo — ex.: vale só para o MUV"
+            aria-label="Legenda da fórmula destacada"
+            className="flex-1 min-w-[220px] h-[28px] text-[12px] bg-[var(--raised)] text-[var(--ink)] border border-[var(--line)] rounded px-2.5 outline-none focus:border-[var(--stamp)]"
+          />
+        </div>
+      ) : null}
 
       {/* busca — varre as doze paletas de uma vez */}
       <div className="px-3 pt-2 flex items-center gap-2">
