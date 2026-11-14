@@ -1,13 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { startTransition, useActionState, useMemo, useState } from 'react'
 import { salvarResumo, excluirResumo } from './actions'
 import { MATERIAS } from '@/lib/materias'
 import { PROCESSOS } from '@/lib/processos'
 import EditorCorpo from './EditorCorpo'
 // `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
 import type { FormulaSalva } from '@/lib/formulas'
-import BotaoEnviar from '@/components/BotaoEnviar'
 import { MARGEM_PADRAO } from '@/lib/pagina'
 
 function slugify(texto: string) {
@@ -123,6 +122,7 @@ export default function ResumoForm({
   topicosMarcados = [],
   formulas = [],
   citadoPor = 0,
+  vaiJunto,
 }: {
   resumo?: ResumoExistente
   titulos?: string[]
@@ -133,7 +133,21 @@ export default function ResumoForm({
   formulas?: FormulaSalva[]
   /** Quantos resumos escrevem `[[este título]]` hoje (tabela `conexoes`). */
   citadoPor?: number
+  /** O que o "Excluir" leva junto e o admin consegue contar (ver o botão). */
+  vaiJunto?: { conexoes: number; topicos: number; eventos: number }
 }) {
+  /* O erro do "Salvar" volta para cá em vez de trocar a tela pela página de
+     erro (ver `salvarResumo`).
+
+     **O envio é feito à mão, no `onSubmit`, e não por `<form action>`.** Com
+     `action`, o React 19 dá `form.reset()` depois de cada envio — e o reset
+     devolve os `<select>` ao "Selecione…" mesmo sendo controlados, porque o
+     estado do React não muda e ninguém reescreve o DOM. Medido em 13/11: depois
+     de um erro, Matéria e Processo apareciam vazios enquanto o estado seguia
+     "biologia"; o próximo "Salvar" sairia sem matéria. Sem `action` não há
+     reset, e o `useActionState` continua guardando o recado. */
+  const [estado, salvar, salvando] = useActionState(salvarResumo, null)
+  const [processo, setProcesso] = useState(resumo?.processo_slug ?? '')
   const [titulo, setTitulo] = useState(resumo?.titulo ?? '')
   const [slug, setSlug] = useState(resumo?.slug ?? '')
   const [slugEditadoManualmente, setSlugEditadoManualmente] = useState(!!resumo)
@@ -151,7 +165,12 @@ export default function ResumoForm({
   /* Filtra pela matéria do ESTADO, e não pela que está salva: trocar o
      <select> de matéria tem de trocar a lista de tópicos junto, senão o autor
      marcaria um tópico de Biologia num resumo que acabou de virar de Química. */
-  const topicosDaMateria = topicosEdital.filter((t) => t.materia_slug === materia)
+  const topicosDaMateria = topicosEdital.filter(
+    /* Os que JÁ estão ligados a este resumo aparecem sempre, mesmo de outra
+       matéria: um vínculo que o autor não vê é um vínculo que ele não sabe
+       que tem — e é só o que está na tela que o "Salvar" pode soltar. */
+    (t) => t.materia_slug === materia || topicosMarcados.includes(t.id)
+  )
 
   // não depende da matéria escolhida: um assunto pode segurar tópicos de
   // disciplinas diferentes
@@ -161,7 +180,18 @@ export default function ResumoForm({
   )
 
   return (
-    <form action={salvarResumo} className="flex flex-col gap-4">
+    <form
+      onSubmit={(e) => {
+        const quem = (e.nativeEvent as SubmitEvent).submitter
+        /* O "Excluir" segue pelo `formAction` dele, que o React trata
+           sozinho; só o "Salvar" passa por aqui. */
+        if (quem?.dataset.acao === 'excluir') return
+        e.preventDefault()
+        const dados = new FormData(e.currentTarget, quem)
+        startTransition(() => salvar(dados))
+      }}
+      className="flex flex-col gap-4"
+    >
       {resumo && <input type="hidden" name="id" value={resumo.id} />}
 
       {/* metadados ficam numa coluna estreita; o editor usa a largura toda */}
@@ -261,7 +291,8 @@ export default function ResumoForm({
           <select
             name="processo_slug"
             required
-            defaultValue={resumo?.processo_slug ?? ''}
+            value={processo}
+            onChange={(e) => setProcesso(e.target.value)}
             className="w-full border border-[var(--line)] rounded-md px-3.5 py-2.5 text-sm outline-none focus:border-[var(--stamp)]"
           >
             <option value="" disabled>Selecione…</option>
@@ -324,6 +355,9 @@ export default function ResumoForm({
                     deOutro && !marcado ? 'opacity-55' : ''
                   }`}
                 >
+                  {/* Diz ao servidor que este tópico ESTAVA na tela: só os
+                      mostrados e desmarcados são soltos (ver `salvarResumo`). */}
+                  <input type="hidden" name="topicos_mostrados" value={t.id} />
                   <input
                     type="checkbox"
                     name="topicos_edital"
@@ -343,6 +377,9 @@ export default function ResumoForm({
                     {t.texto}
                     <span className="ml-2 text-[11px] text-[var(--ink-faint)]">
                       {t.processo_nome} · {t.etapa}ª etapa
+                      {t.materia_slug !== materia
+                        ? ` · ${MATERIAS[t.materia_slug as keyof typeof MATERIAS]?.nome ?? t.materia_slug}`
+                        : ''}
                       {deOutro && !marcado ? ' · já coberto por outro resumo' : ''}
                     </span>
                   </span>
@@ -353,7 +390,8 @@ export default function ResumoForm({
           <span className="block text-[11.5px] text-[var(--ink-dim)] mt-1">
             Um resumo pode cobrir tópicos de mais de uma prova — é o caso do
             conteúdo comum, que cai nos dois editais. A lista mostra só os
-            tópicos da matéria escolhida acima.
+            tópicos da matéria escolhida acima, mais os que este resumo já
+            cobre em outra matéria.
           </span>
         </div>
       ) : null}
@@ -381,18 +419,56 @@ export default function ResumoForm({
         <input type="hidden" name="margem_dir" value={margens.dir} />
       </div>
 
+      {estado?.erro ? (
+        <p
+          role="alert"
+          className="text-[13px] text-[var(--erro)] border-l-2 border-[var(--erro)] pl-2.5 m-0"
+        >
+          {estado.erro}
+        </p>
+      ) : null}
+
       <div className="flex gap-3 mt-2">
-        <BotaoEnviar className="botao botao-primario !rounded-lg py-2.5 px-6 text-sm">
-          Salvar
-        </BotaoEnviar>
+        {/* Botão próprio, e não o `BotaoEnviar`: aquele lê `useFormStatus`, que
+            só enxerga `<form action>` — e este formulário envia à mão. */}
+        <button
+          type="submit"
+          disabled={salvando}
+          aria-busy={salvando}
+          className="botao botao-primario !rounded-lg py-2.5 px-6 text-sm disabled:opacity-60"
+        >
+          {salvando ? (
+            <>
+              <span className="girando" aria-hidden="true" />
+              Salvando…
+            </>
+          ) : (
+            'Salvar'
+          )}
+        </button>
         {resumo && (
           <button
             type="submit"
+            data-acao="excluir"
             formAction={excluirResumo}
+            disabled={salvando}
+            /* A confirmação diz o que vai JUNTO. O banco apaga em cascata os
+               grifos, anotações, respostas e marcas dos alunos neste resumo, e
+               solta tópicos do edital e eventos — a frase antiga falava só em
+               "conexões". O que é de aluno vai sem número: as policies não
+               deixam nem o admin ler o grifo dos outros, e contar pediria uma
+               função nova no banco. */
             onClick={(e) => {
-              if (!confirm(`Excluir "${resumo.titulo}"? Isso também remove as conexões dele.`)) {
-                e.preventDefault()
-              }
+              const linhas = [
+                `Excluir "${resumo.titulo}"? Não dá para desfazer.`,
+                '',
+                'Vai junto:',
+                '• os grifos, anotações, respostas e favoritos que os alunos fizeram neste resumo;',
+              ]
+              if (vaiJunto?.conexoes) linhas.push(`• ${vaiJunto.conexoes} ${vaiJunto.conexoes === 1 ? 'conexão' : 'conexões'} [[…]] com outros resumos;`)
+              if (vaiJunto?.topicos) linhas.push(`• o vínculo com ${vaiJunto.topicos} ${vaiJunto.topicos === 1 ? 'tópico' : 'tópicos'} do edital (o tópico fica sem resumo);`)
+              if (vaiJunto?.eventos) linhas.push(`• o vínculo com ${vaiJunto.eventos} ${vaiJunto.eventos === 1 ? 'evento' : 'eventos'} da linha do tempo (o evento fica).`)
+              if (!confirm(linhas.join('\n'))) e.preventDefault()
             }}
             className="border border-[var(--line)] text-sm font-semibold py-2.5 px-6 rounded-md"
           >

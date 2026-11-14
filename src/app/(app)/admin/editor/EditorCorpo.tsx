@@ -1088,27 +1088,72 @@ export default function EditorCorpo({
     setIndice((atual) => mover(atual, 0))
   }, [])
 
+  /* O texto que ainda não foi gravado, e quantas gravações estão em voo.
+     Refs, e não estado: quem lê são o desmontar e o `beforeunload`, que não
+     esperam render nenhum. */
+  const pendente = useRef<string | null>(null)
+  const emVoo = useRef(0)
+  /* Resumo NOVO não tem autosave (ainda não existe linha para gravar): o texto
+     só existe nesta aba até o primeiro "Salvar". */
+  const novoComTexto = useRef(false)
+
+  const gravarPendente = useCallback(async () => {
+    const corpo = pendente.current
+    if (!resumoId || corpo === null) return
+    pendente.current = null
+    emVoo.current += 1
+    try {
+      const r = await salvarCorpoAuto(resumoId, corpo)
+      setStatus(r?.ok ? 'salvo' : 'erro')
+    } catch {
+      setStatus('erro')
+    } finally {
+      emVoo.current -= 1
+    }
+  }, [resumoId])
+
   // agendado a cada digitação (não num efeito): espera 1,2s de silêncio antes
   // de gravar, pra não bater no banco a cada tecla.
   const agendarAutosave = useCallback(
     (novoHtml: string) => {
-      if (!resumoId) return
+      if (!resumoId) {
+        novoComTexto.current = true
+        return
+      }
       setStatus('salvando')
+      pendente.current = novoHtml
       if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(async () => {
-        const r = await salvarCorpoAuto(resumoId, novoHtml)
-        setStatus(r?.ok ? 'salvo' : 'erro')
-      }, 1200)
+      timer.current = setTimeout(gravarPendente, 1200)
     },
-    [resumoId]
+    [resumoId, gravarPendente]
   )
 
-  // limpa o timer pendente se sair da página no meio da digitação
+  /* Sair da página no meio da espera GRAVA o pendente, em vez de jogá-lo fora.
+     Até 13/11 este efeito só limpava o timer: quem digitava e clicava na barra
+     lateral (ou em "ver publicado") antes de 1,2s perdia o último trecho, em
+     silêncio. Navegar dentro do site não descarrega a página, então a gravação
+     disparada aqui chega ao servidor.
+
+     Fechar a aba ou recarregar é outro caso: aí a página morre, e o que resta é
+     o aviso do navegador de "alterações não salvas" enquanto houver texto
+     pendente ou uma gravação em voo. */
   useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current)
+    function aoSair(e: BeforeUnloadEvent) {
+      if (pendente.current === null && emVoo.current === 0 && !novoComTexto.current) return
+      e.preventDefault()
+      // navegadores mais velhos só mostram o aviso com `returnValue` preenchido
+      e.returnValue = ''
     }
-  }, [])
+    window.addEventListener('beforeunload', aoSair)
+    return () => {
+      window.removeEventListener('beforeunload', aoSair)
+      if (timer.current) clearTimeout(timer.current)
+      if (resumoId && pendente.current !== null) {
+        void salvarCorpoAuto(resumoId, pendente.current)
+        pendente.current = null
+      }
+    }
+  }, [resumoId])
 
   // Esc sai da janela completa, e enquanto ela está aberta a página de trás não
   // rola — senão o fundo desliza junto quando se rola o texto
