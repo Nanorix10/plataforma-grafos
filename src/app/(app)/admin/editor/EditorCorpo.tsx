@@ -979,6 +979,17 @@ function AvisosEstilo({ editor }: { editor: Editor }) {
   )
 }
 
+/**
+ * O que o formulário e o autosave dividem (ver `ResumoForm`). Funções, e não
+ * um objeto que o editor altera: prop é imutável para o React Compiler, e o
+ * dono da versão continua sendo o formulário.
+ */
+export type ControleAutosave = {
+  versao: () => number | undefined
+  aoGravar: (versao: number) => void
+  registrarEsvaziar: (esvaziar: () => Promise<void>) => void
+}
+
 export default function EditorCorpo({
   conteudoInicial,
   titulos,
@@ -987,6 +998,7 @@ export default function EditorCorpo({
   margemEsq,
   margemDir,
   aoMudarMargens,
+  controle,
   formulasIniciais = [],
 }: {
   conteudoInicial: string
@@ -1007,11 +1019,16 @@ export default function EditorCorpo({
   margemEsq: number
   margemDir: number
   aoMudarMargens: (esq: number, dir: number) => void
+  /* A versão do resumo (decisão 31) e o "esvaziar" do autosave, divididos com
+     o formulário: os dois gravam a mesma linha e precisam da mesma versão. */
+  controle?: ControleAutosave
 }) {
   const [html, setHtml] = useState(conteudoInicial)
   const [sugestao, setSugestao] = useState<EstadoSugestao | null>(null)
   const [indice, setIndice] = useState(0)
-  const [status, setStatus] = useState<'parado' | 'salvando' | 'salvo' | 'erro'>('parado')
+  const [status, setStatus] = useState<'parado' | 'salvando' | 'salvo' | 'erro' | 'conflito'>(
+    'parado'
+  )
   const [palavras, setPalavras] = useState(0)
   const [telaCheia, setTelaCheia] = useState(false)
   const [alvoFormula, setAlvoFormula] = useState<Alvo | null>(null)
@@ -1097,20 +1114,53 @@ export default function EditorCorpo({
      só existe nesta aba até o primeiro "Salvar". */
   const novoComTexto = useRef(false)
 
-  const gravarPendente = useCallback(async () => {
+  /* As gravações vão em FILA, uma de cada vez. Com a versão (decisão 31) isto
+     deixou de ser só ordem: uma segunda gravação disparada com a primeira
+     ainda em voo levaria a versão velha e seria recusada como conflito — o
+     editor brigaria consigo mesmo. A fila também acaba com a resposta fora de
+     ordem gravando texto mais velho por cima do novo. */
+  const fila = useRef<Promise<void>>(Promise.resolve())
+  /* Depois de um conflito o autosave PARA: insistir só repetiria a recusa, e o
+     texto fica em `pendente` para o aviso de saída continuar valendo. */
+  const emConflito = useRef(false)
+
+  const gravarUm = useCallback(async () => {
     const corpo = pendente.current
-    if (!resumoId || corpo === null) return
+    if (!resumoId || corpo === null || emConflito.current) return
     pendente.current = null
     emVoo.current += 1
     try {
-      const r = await salvarCorpoAuto(resumoId, corpo)
-      setStatus(r?.ok ? 'salvo' : 'erro')
+      const r = await salvarCorpoAuto(resumoId, corpo, controle?.versao())
+      if (r.ok) {
+        controle?.aoGravar(r.versao)
+        setStatus('salvo')
+      } else if ('conflito' in r && r.conflito) {
+        emConflito.current = true
+        pendente.current = corpo
+        setStatus('conflito')
+      } else {
+        setStatus('erro')
+      }
     } catch {
       setStatus('erro')
     } finally {
       emVoo.current -= 1
     }
-  }, [resumoId])
+  }, [resumoId, controle])
+
+  const gravarPendente = useCallback(() => {
+    fila.current = fila.current.then(gravarUm)
+    return fila.current
+  }, [gravarUm])
+
+  /* O "Salvar" do formulário chama isto antes de enviar: grava o que estiver
+     pendente AGORA e espera a fila, para ele partir da versão mais nova. */
+  useEffect(() => {
+    controle?.registrarEsvaziar(async () => {
+      if (timer.current) clearTimeout(timer.current)
+      await gravarPendente()
+    })
+  }, [controle, gravarPendente])
 
   // agendado a cada digitação (não num efeito): espera 1,2s de silêncio antes
   // de gravar, pra não bater no banco a cada tecla.
@@ -1148,12 +1198,11 @@ export default function EditorCorpo({
     return () => {
       window.removeEventListener('beforeunload', aoSair)
       if (timer.current) clearTimeout(timer.current)
-      if (resumoId && pendente.current !== null) {
-        void salvarCorpoAuto(resumoId, pendente.current)
-        pendente.current = null
+      if (resumoId && pendente.current !== null && !emConflito.current) {
+        void gravarPendente()
       }
     }
-  }, [resumoId])
+  }, [resumoId, gravarPendente])
 
   // Esc sai da janela completa, e enquanto ela está aberta a página de trás não
   // rola — senão o fundo desliza junto quando se rola o texto
@@ -1338,10 +1387,14 @@ export default function EditorCorpo({
   }
 
   const rotuloStatus = {
-    parado: resumoId ? 'Salvamento automático ligado' : 'Salve uma vez pra ligar o automático',
+    /* "Texto", e não "Tudo": o autosave grava só o corpo (decisão 3). Título,
+       matéria e tópicos têm o próprio aviso, acima do botão Salvar. */
+    parado: resumoId ? 'Texto com salvamento automático' : 'Salve uma vez pra ligar o automático',
     salvando: 'Salvando…',
-    salvo: 'Tudo salvo',
+    salvo: 'Texto salvo',
     erro: 'Falha ao salvar — use o botão Salvar',
+    conflito:
+      'Outra aba ou outro admin mudou este resumo — nada foi gravado. Copie seu texto e recarregue.',
   }[status]
 
   /**
@@ -1509,7 +1562,12 @@ export default function EditorCorpo({
       <div className="flex items-center gap-3 px-3 py-1.5 border-t border-[var(--line)] bg-[var(--panel)] text-[11px] text-[var(--ink-dim)]">
         <span>{palavras} palavras</span>
         <span className="opacity-40">·</span>
-        <span className={status === 'erro' ? 'text-[var(--stamp)]' : undefined}>{rotuloStatus}</span>
+        <span
+          role={status === 'conflito' ? 'alert' : undefined}
+          className={status === 'erro' || status === 'conflito' ? 'text-[var(--stamp)]' : undefined}
+        >
+          {rotuloStatus}
+        </span>
         {editor ? (
           <>
             <span className="opacity-40">·</span>
