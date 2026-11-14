@@ -3285,6 +3285,38 @@ seletor esperando. O que a versão atual faz:
 - **A prancha de referência tinha rótulos errados** ("válvula pulmonar" duas
   vezes). O modelo copiou o visual, não os nomes — mesma regra da 9c.
 
+## 29. As telas de admin perguntam antes do que não tem volta, e o botão diz o que faz
+
+**13/11/2026.** Saiu de uma auditoria de "botões sem sentido" pedida pelo autor.
+Cinco ajustes, todos de interface — nenhuma tabela, policy ou migration mudou.
+
+- **Excluir evento e Tornar/Tirar admin pedem confirmação.** Os dois moravam
+  colados em outro botão (Editar; Liberar) e agiam no primeiro clique. O
+  "Excluir" de resumo já perguntava; agora a regra é uma só.
+- **Pessoas: um botão principal, que muda com o estado** (`LinhaPessoa.tsx`).
+  "Liberar" aparecia destacado até para quem já estava liberado e era, sem
+  dizer, o único jeito de salvar troca de plano. Agora: sem acesso → *Liberar*
+  (desligado enquanto o plano for "Sem acesso"); liberado com plano trocado →
+  *Salvar plano*; liberado sem mudança → nenhum. O seletor mostra o NOME do
+  plano, e a linha mostra a data do cadastro, que é a pista para casar a conta
+  com o Pix.
+- **O admin não bloqueia a si mesmo.** Bloqueado, ele vira plano `nenhum` e
+  `resumos/[slug]` mostra a ele a tela de cadeado — continuaria editando o que
+  não consegue ler. O botão some na própria linha e `definirPlano` recusa o
+  caso, porque a tela não é a única porta (mesmo princípio da decisão 1b).
+- **Editor: busca e filtro na lista, e "Salvar" fica no resumo.** A lista tinha
+  ~250 títulos e nada mais, e salvar despejava o autor nela. Agora a action
+  volta para `/admin/editor/<slug>?salvo=1`, e o `?salvo` vira o recado "✓
+  Salvo". A busca ignora acento e roda no navegador: a lista já vem inteira, só
+  com título e matéria.
+- **Renomear avisa quantos resumos citam o título antigo.** O wikilink é o
+  título por extenso (decisão 1); renomear faz os `[[Nome antigo]]` dos outros
+  resumos deixarem de virar link. O aviso conta as linhas de `conexoes` — e só
+  avisa: nada é reescrito nos outros resumos.
+
+No menu, as três telas de admin ganharam o rótulo "Admin", e "Editor" virou
+"Editor de resumos": logo abaixo de "Edital", eram dois nomes quase iguais.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:

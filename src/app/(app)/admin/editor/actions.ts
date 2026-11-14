@@ -83,7 +83,9 @@ export async function salvarResumo(formData: FormData) {
   revalidatePath('/mapa')
   revalidatePath('/edital')
   revalidatePath(`/resumos/${dados.slug}`)
-  redirect('/admin/editor')
+  /* Fica no próprio resumo. Voltar para a lista de ~250 títulos obrigava a
+     procurar de novo o que se acabava de editar; `?salvo=1` é o recado. */
+  redirect(`/admin/editor/${encodeURIComponent(dados.slug)}?salvo=1`)
 }
 
 // Salvamento automático do corpo enquanto o Ronny escreve (estilo Google Docs).

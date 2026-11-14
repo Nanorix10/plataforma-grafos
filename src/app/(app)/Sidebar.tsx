@@ -611,10 +611,14 @@ export default function Sidebar({
         <ItemNav href="/edital" ativo={pathname === '/edital'}>
           Edital
         </ItemNav>
+        {/* As telas de admin ganham um rótulo próprio: "Editor" logo abaixo de
+            "Edital" eram dois nomes quase iguais, um do aluno e outro do autor,
+            na mesma coluna e sem nada separando. */}
         {isAdmin ? (
           <>
+            <div className="rotulo-secao text-[10px] px-2.5 pt-2.5 pb-1">Admin</div>
             <ItemNav href="/admin/editor" ativo={pathname.startsWith('/admin/editor')}>
-              Editor
+              Editor de resumos
             </ItemNav>
             <ItemNav href="/admin/eventos" ativo={pathname.startsWith('/admin/eventos')}>
               Eventos

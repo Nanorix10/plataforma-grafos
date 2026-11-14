@@ -1,4 +1,4 @@
-import { PLANO_PROCESSOS } from '@/lib/planos'
+import { PLANO_PROCESSOS, PLANOS as PLANOS_DO_SITE } from '@/lib/planos'
 import { PROCESSOS } from '@/lib/processos'
 
 /**
@@ -28,6 +28,9 @@ export type Pessoa = {
  */
 export const PLANOS = Object.keys(PLANO_PROCESSOS).map((slug) => ({
   slug,
+  /* O nome que o aluno vê na conta e em /planos. O slug cru ("completo") é
+     nome de coluna, e a tela de quem libera deve falar a língua do aluno. */
+  nome: PLANOS_DO_SITE[slug]?.nome ?? slug,
   processos: (PLANO_PROCESSOS[slug] ?? [])
     .filter((p) => !PROCESSOS[p]?.universal)
     .map((p) => PROCESSOS[p]?.nome ?? p)
