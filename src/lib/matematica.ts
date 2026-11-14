@@ -3,6 +3,7 @@ import katex from 'katex'
 // É import por efeito colateral: ele se registra dentro do próprio KaTeX.
 import 'katex/dist/contrib/mhchem.mjs'
 import { lerTamanho, estiloTamanho } from './formula-tamanho'
+import { lerTextoDestaque, escaparHtml } from './formula-destaque'
 
 /**
  * Transforma as fórmulas gravadas no corpo em HTML já renderizado.
@@ -74,6 +75,36 @@ function comTamanho(html: string, tamanho: number | null) {
   return html.replace(/^<(span|code)\b/, `<$1 style="${estilo}"`)
 }
 
+const ATRIBUTO_DESTAQUE = /\bdata-destaque="sim"/i
+const ATRIBUTO_TITULO = /\bdata-titulo="([^"]*)"/i
+const ATRIBUTO_LEGENDA = /\bdata-legenda="([^"]*)"/i
+
+/**
+ * Fórmula destacada (ver `lib/formula-destaque.ts`): o plano é um `<div>`, e
+ * não `<figure>`, porque `.conteudo-resumo figure` é inteiro das imagens
+ * (decisão 11c) e herdaria float, largura e moldura delas.
+ *
+ * Título e legenda viram TEXTO de verdade aqui — o aluno grifa, o leitor de
+ * tela lê. O atributo chega escapado do jeito do navegador (que não escapa
+ * `<` em atributo), então é decodificado e escapado de novo, por inteiro.
+ */
+function comDestaque(desenho: string, atributos: string) {
+  const ler = (re: RegExp) => {
+    const bruto = re.exec(atributos)?.[1]
+    const texto = lerTextoDestaque(bruto === undefined ? null : decodificarEntidades(bruto))
+    return texto === null ? null : escaparHtml(texto)
+  }
+  const titulo = ler(ATRIBUTO_TITULO)
+  const legenda = ler(ATRIBUTO_LEGENDA)
+  return (
+    '<div class="formula-destaque">' +
+    (titulo ? `<span class="formula-destaque-titulo">${titulo}</span>` : '') +
+    desenho +
+    (legenda ? `<span class="formula-destaque-legenda">${legenda}</span>` : '') +
+    '</div>'
+  )
+}
+
 export function renderizarMatematica(html: string): string {
   if (!html) return html
 
@@ -81,7 +112,9 @@ export function renderizarMatematica(html: string): string {
     const tex = ATRIBUTO_LATEX.exec(atributos)?.[1]
     if (tex === undefined) return original
     const tamanho = lerTamanho(ATRIBUTO_TAMANHO.exec(atributos)?.[1])
-    return comTamanho(renderizar(tex, tipo.toLowerCase() === 'block'), tamanho)
+    const emBloco = tipo.toLowerCase() === 'block'
+    const desenho = comTamanho(renderizar(tex, emBloco), tamanho)
+    return emBloco && ATRIBUTO_DESTAQUE.test(atributos) ? comDestaque(desenho, atributos) : desenho
   })
 
   return comNos.includes('$') ? renderizarDelimitadores(comNos) : comNos

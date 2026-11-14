@@ -14,6 +14,7 @@ import { CharacterCount } from '@tiptap/extension-character-count'
 // as fórmulas do TipTap com o atributo `tamanho` (ver o cabeçalho de lá)
 import { FormulaEmLinha as InlineMath, FormulaEmBloco as BlockMath } from './formulaComTamanho'
 import { lerTamanho } from '@/lib/formula-tamanho'
+import { lerTextoDestaque } from '@/lib/formula-destaque'
 import { TableKit } from '@tiptap/extension-table'
 import { Subscript } from '@tiptap/extension-subscript'
 import { Superscript } from '@tiptap/extension-superscript'
@@ -26,7 +27,7 @@ import { TermoNegrito } from './termoNegrito'
 import { Questao, Resolucao } from './questaoResolvida'
 import { DOMSerializer, type Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { analisarQuestao } from '@/lib/questoes'
-import BarraFormula, { type Alvo } from './BarraFormula'
+import BarraFormula, { type Alvo, type Destaque } from './BarraFormula'
 import { salvarFormula, excluirFormula } from './actions'
 // `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
 import type { FormulaSalva } from '@/lib/formulas'
@@ -1282,10 +1283,20 @@ export default function EditorCorpo({
             latex: String(node.attrs.latex ?? ''),
             emBloco: false,
             tamanho: lerTamanho(node.attrs.tamanho),
+            destaque: null,
           }),
       }),
       BlockMath.configure({
-        katexOptions: { throwOnError: false, errorColor: 'var(--erro)', strict: false },
+        // `displayMode: true` é o que o servidor usa para a de linha própria
+        // (`lib/matematica.ts`). Sem ele o editor desenhava a fórmula em
+        // bloco no modo de linha — encostada à esquerda e menor nos índices —,
+        // e o autor via outra coisa que o aluno (decisão 4).
+        katexOptions: {
+          throwOnError: false,
+          errorColor: 'var(--erro)',
+          strict: false,
+          displayMode: true,
+        },
         onClick: (node, pos) =>
           setAlvoFormula({
             modo: 'editar',
@@ -1293,6 +1304,12 @@ export default function EditorCorpo({
             latex: String(node.attrs.latex ?? ''),
             emBloco: true,
             tamanho: lerTamanho(node.attrs.tamanho),
+            destaque: node.attrs.destaque
+              ? {
+                  titulo: lerTextoDestaque(node.attrs.titulo) ?? '',
+                  legenda: lerTextoDestaque(node.attrs.legenda) ?? '',
+                }
+              : null,
           }),
       }),
       WikilinkSuggestion.configure({
@@ -1363,18 +1380,33 @@ export default function EditorCorpo({
    * porque os comandos da extensão só sabem passar o `latex`, e o `tamanho`
    * se perderia. É a mesma posição que eles usavam: o início da seleção.
    * `tamanho` nulo = segue o padrão do CSS (ver `lib/formula-tamanho.ts`).
+   * `destaque` só vale para a de linha própria (ver `lib/formula-destaque.ts`).
    */
-  function confirmarFormula(latex: string, emBloco: boolean, tamanho: number | null) {
+  function confirmarFormula(
+    latex: string,
+    emBloco: boolean,
+    tamanho: number | null,
+    destaque: Destaque | null,
+  ) {
     if (!editor) return
     if (alvoFormula?.modo === 'editar') {
       editor.chain().focus().setNodeSelection(alvoFormula.pos).deleteSelection().run()
     }
+    const attrs = emBloco
+      ? {
+          latex,
+          tamanho,
+          destaque: destaque !== null,
+          titulo: destaque ? lerTextoDestaque(destaque.titulo) : null,
+          legenda: destaque ? lerTextoDestaque(destaque.legenda) : null,
+        }
+      : { latex, tamanho }
     editor
       .chain()
       .focus()
       .insertContentAt(editor.state.selection.from, {
         type: emBloco ? 'blockMath' : 'inlineMath',
-        attrs: { latex, tamanho },
+        attrs,
       })
       .run()
     setAlvoFormula(null)
