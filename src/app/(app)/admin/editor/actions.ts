@@ -15,7 +15,23 @@ async function exigirAdmin() {
 /** O cliente que `exigirAdmin` devolve, sem ter de nomear o genérico do supabase-js. */
 type SupabaseDoServidor = Awaited<ReturnType<typeof exigirAdmin>>
 
-export async function salvarResumo(formData: FormData) {
+/** O que o formulário recebe de volta quando NÃO deu para salvar. */
+export type EstadoSalvar = { erro: string } | null
+
+/**
+ * Salva título, matéria, corpo e vínculos — e, se der errado, DEVOLVE o erro.
+ *
+ * Até 13/11 os erros eram `throw`, e o projeto não tem `error.tsx`: o Next
+ * trocava a tela inteira pela página de erro. Num resumo NOVO isso apagava o
+ * texto todo, porque ele ainda não tem autosave (não existe linha para gravar).
+ * O caso que acontece de verdade é o slug repetido — "Bactérias" vira
+ * `bacterias`, que já é de "Bacterias". Agora o `useActionState` do
+ * `ResumoForm` recebe o recado e o formulário continua com tudo o que estava.
+ */
+export async function salvarResumo(
+  _anterior: EstadoSalvar,
+  formData: FormData
+): Promise<EstadoSalvar> {
   const supabase = await exigirAdmin()
 
   const id = String(formData.get('id') ?? '')
@@ -41,40 +57,71 @@ export async function salvarResumo(formData: FormData) {
   }
 
   if (!dados.slug || !dados.titulo) {
-    throw new Error('Slug e título são obrigatórios.')
+    return { erro: 'Slug e título são obrigatórios.' }
   }
 
   // O trigger `trg_checar_ciclo_resumo` é quem realmente barra ciclos; o
   // <select> do formulário já esconde o próprio resumo e seus descendentes,
   // mas isso é conveniência de interface e pode ser burlado.
   if (id && dados.pai_id === id) {
-    throw new Error('Um resumo não pode estar dentro de si mesmo.')
+    return { erro: 'Um resumo não pode estar dentro de si mesmo.' }
+  }
+
+  /* O slug é UNIQUE no banco. Perguntar antes dá uma frase que diz QUEM já
+     usa o endereço; o erro cru do Postgres ("duplicate key value…") não diz. */
+  const { data: dono } = await supabase
+    .from('resumos')
+    .select('id, titulo')
+    .eq('slug', dados.slug)
+    .maybeSingle()
+  if (dono && dono.id !== id) {
+    return {
+      erro: `O endereço "${dados.slug}" já é do resumo "${dono.titulo}". Mude o campo Slug (por exemplo, "${dados.slug}-2") e salve de novo — o texto continua aqui.`,
+    }
   }
 
   const { data: salvo, error } = id
     ? await supabase.from('resumos').update(dados).eq('id', id).select('id').single()
     : await supabase.from('resumos').insert(dados).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    return {
+      erro:
+        error.code === '23505'
+          ? 'Já existe um resumo com esse endereço. Mude o campo Slug e salve de novo — o texto continua aqui.'
+          : `Não deu para salvar: ${error.message}. O texto continua aqui; tente de novo.`,
+    }
+  }
 
   /* O quarto eixo (decisão 9i): que tópicos do edital este resumo cobre.
      Mora em `edital_topicos.resumo_id`, e não numa coluna daqui, porque a
      relação é N-para-N — o mesmo resumo cai em mais de uma prova.
 
-     São DUAS escritas, e a ordem importa: primeiro solta tudo o que apontava
-     para este resumo, depois marca o que veio do formulário. Sem a primeira,
-     desmarcar uma caixa não desfazia nada — o vínculo velho continuaria lá, e
-     a tela do edital mostraria o tópico como escrito para sempre.
+     **Só se solta o que o autor VIU e desmarcou.** Até 13/11 a primeira escrita
+     soltava TODOS os tópicos deste resumo e religava só os enviados — mas o
+     formulário mostra apenas os tópicos da matéria escolhida. Um vínculo fora
+     dela (Macromoléculas, de Biologia, cobre um tópico de Química) sumia no
+     primeiro "Salvar", e trocar a matéria soltava todos. Agora o formulário
+     manda `topicos_mostrados`, e o que não estava na tela não é tocado: a
+     regra do projeto é não desligar vínculo de edital sem o autor pedir.
 
      `.select('id').single()` acima existe por isto: num resumo NOVO o id só
      nasce depois do insert, e sem ele não há o que marcar. */
   const idFinal = salvo?.id ?? id
   if (idFinal) {
-    const topicos = formData.getAll('topicos_edital').map(String).filter(Boolean)
+    const marcados = formData.getAll('topicos_edital').map(String).filter(Boolean)
+    const mostrados = formData.getAll('topicos_mostrados').map(String).filter(Boolean)
+    const desmarcados = mostrados.filter((t) => !marcados.includes(t))
 
-    await supabase.from('edital_topicos').update({ resumo_id: null }).eq('resumo_id', idFinal)
-    if (topicos.length > 0) {
-      await supabase.from('edital_topicos').update({ resumo_id: idFinal }).in('id', topicos)
+    if (desmarcados.length > 0) {
+      await supabase
+        .from('edital_topicos')
+        .update({ resumo_id: null })
+        .eq('resumo_id', idFinal)
+        .in('id', desmarcados)
+    }
+    if (marcados.length > 0) {
+      await supabase.from('edital_topicos').update({ resumo_id: idFinal }).in('id', marcados)
     }
   }
 

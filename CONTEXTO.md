@@ -3317,6 +3317,44 @@ Cinco ajustes, todos de interface — nenhuma tabela, policy ou migration mudou.
 No menu, as três telas de admin ganharam o rótulo "Admin", e "Editor" virou
 "Editor de resumos": logo abaixo de "Edital", eram dois nomes quase iguais.
 
+## 30. O editor não perde texto, não solta vínculo escondido e diz o que o "Excluir" leva
+
+**13/11/2026.** Quatro falhas graves achadas numa auditoria do editor feita
+"como admin". Todas de código; nenhuma tabela ou policy mudou.
+
+- **Sair no meio da espera do autosave gravava nada.** O efeito de desmontar só
+  LIMPAVA o timer de 1,2s: digitar e clicar na barra lateral antes disso perdia
+  o último trecho. Agora o desmontar grava o pendente (navegar dentro do site
+  não descarrega a página, então a gravação chega), e o `beforeunload` avisa ao
+  fechar/recarregar com texto pendente, gravação em voo ou resumo NOVO com texto
+  ainda não salvo.
+- **Erro no "Salvar" virava a página de erro do Next** (não há `error.tsx`), e
+  num resumo novo — que não tem autosave — o texto inteiro sumia. O caso real é
+  o slug repetido: "Bactérias" vira `bacterias`, que é de "Bacterias".
+  `salvarResumo` agora DEVOLVE `{ erro }`, confere o slug antes de gravar e diz
+  quem já o usa; o `useActionState` mostra a frase acima do botão.
+  **Armadilha:** o envio é à mão, no `onSubmit`, e não `<form action>`. Com
+  `action` o React 19 dá `form.reset()` depois do envio, e o reset devolve os
+  `<select>` ao "Selecione…" mesmo controlados — o estado continua "biologia",
+  ninguém reescreve o DOM, e o próximo "Salvar" sairia sem matéria. Foi pego
+  testando, não lendo. O "Excluir" continua por `formAction` e passa direto.
+- **"Salvar" soltava vínculo de edital que não estava na tela.** A ação soltava
+  todos os tópicos do resumo e religava só os enviados, e a tela mostra só os
+  da matéria escolhida: Macromoléculas (Biologia) perderia o tópico de Química
+  que cobre, e trocar a matéria soltaria todos. Agora a tela também mostra os
+  tópicos JÁ ligados de outra matéria, manda `topicos_mostrados`, e a ação solta
+  só o que foi mostrado e desmarcado.
+- **"Excluir" dizia "remove as conexões"** e o banco apaga em cascata grifos,
+  anotações, respostas e marcas dos alunos (`on delete cascade`), além de soltar
+  tópicos do edital e eventos. A confirmação lista tudo; o que é de aluno vai
+  sem número, porque as policies não deixam o admin ler o grifo alheio e contar
+  pediria uma função `security definer` nova.
+
+Ficaram para depois, médias: duas abas/dois admins no mesmo resumo (último a
+gravar ganha — precisa de coluna de versão), "Tudo salvo" que só vale para o
+corpo, tópico "já coberto por outro resumo" que ainda pode ser roubado e título
+repetido aceito sem aviso.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:

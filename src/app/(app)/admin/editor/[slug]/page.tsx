@@ -35,7 +35,13 @@ export default async function EditarResumoPage({
   /* Os tópicos do edital que este resumo pode cobrir (decisão 9i). A lista vem
      inteira e o formulário filtra pela matéria escolhida — buscar de novo a
      cada troca de <select> custaria uma ida ao servidor por clique. */
-  const [{ data: topicos }, formulas, { count: citadoPor }] = await Promise.all([
+  const [
+    { data: topicos },
+    formulas,
+    { count: citadoPor },
+    { count: cita },
+    { count: eventos },
+  ] = await Promise.all([
     supabase
       .from('edital_topicos')
       .select('id, texto, etapa, processo_slug, materia_slug, resumo_id')
@@ -49,6 +55,15 @@ export default async function EditarResumoPage({
       .from('conexoes')
       .select('origem_id', { count: 'exact', head: true })
       .eq('destino_id', resumo.id),
+    // as outras duas contas servem à confirmação do "Excluir" (o que vai junto)
+    supabase
+      .from('conexoes')
+      .select('destino_id', { count: 'exact', head: true })
+      .eq('origem_id', resumo.id),
+    supabase
+      .from('eventos')
+      .select('id', { count: 'exact', head: true })
+      .eq('resumo_id', resumo.id),
   ])
 
   const topicosEdital = (topicos ?? []).map((x) => ({
@@ -91,6 +106,11 @@ export default async function EditarResumoPage({
         topicosMarcados={topicosMarcados}
         formulas={formulas}
         citadoPor={citadoPor ?? 0}
+        vaiJunto={{
+          conexoes: (citadoPor ?? 0) + (cita ?? 0),
+          topicos: topicosMarcados.length,
+          eventos: eventos ?? 0,
+        }}
       />
     </div>
   )
