@@ -32,7 +32,9 @@ import { salvarFormula, excluirFormula } from './actions'
 // `import type`: `lib/formulas.ts` é só-servidor (ver o cabeçalho de lá)
 import type { FormulaSalva } from '@/lib/formulas'
 import Regua from './Regua'
-import { Imagem, TabelaLivre } from './imagem'
+import { Imagem, TabelaLivre, TAMANHOS as TAMANHOS_FIGURA } from './imagem'
+import type { EditorState } from '@tiptap/pm/state'
+import NovaFigura, { type RespostaFigura } from './NovaFigura'
 import { TituloCorrido } from './tituloCorrido'
 import { ItemComFigura } from './itemComFigura'
 import { BLOCOS } from './blocos'
@@ -144,6 +146,24 @@ async function medirArquivo(f: File): Promise<{ l: number; a: number } | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * Onde a figura entra quando o cursor está dentro de uma lista: logo depois da
+ * lista de FORA, a mais externa. `null` quando o cursor não está em lista —
+ * aí ela entra onde ele está, como sempre entrou.
+ *
+ * A mais externa, e não a mais próxima, porque a lista aninhada é um pedaço
+ * da de fora: sair só do subnível deixaria a figura entre dois itens do nível
+ * de cima, partindo a enumeração do mesmo jeito.
+ */
+function posicaoForaDeLista(estado: EditorState): number | null {
+  const { $from } = estado.selection
+  for (let d = 1; d <= $from.depth; d++) {
+    const nome = $from.node(d).type.name
+    if (nome === 'bulletList' || nome === 'orderedList') return $from.after(d)
+  }
+  return null
 }
 
 /** O mesmo, para uma imagem que já está no bucket. */
@@ -1051,44 +1071,89 @@ export default function EditorCorpo({
      nenhum vigiando. */
   const [recortePos, setRecortePos] = useState<number | null>(null)
   const [erroImagem, setErroImagem] = useState<string | null>(null)
+  /* A figura esperando legenda (decisão 32). A resposta volta por uma promessa
+     guardada em ref: `subirEInserir` é um laço assíncrono e precisa PARAR em
+     cada arquivo até o autor responder, sem virar uma máquina de estados. */
+  const [pedidoFigura, setPedidoFigura] = useState<{ previa: string } | null>(null)
+  const respostaFigura = useRef<((r: RespostaFigura | null) => void) | null>(null)
 
+  function perguntarFigura(previa: string) {
+    return new Promise<RespostaFigura | null>((ok) => {
+      respostaFigura.current = ok
+      setPedidoFigura({ previa })
+    })
+  }
+
+  function responderFigura(r: RespostaFigura | null) {
+    const ok = respostaFigura.current
+    respostaFigura.current = null
+    setPedidoFigura(null)
+    ok?.(r)
+  }
 
   /**
-   * Sobe as imagens e insere cada uma onde o cursor está.
+   * Sobe as imagens e insere cada uma, depois de o autor dar a legenda.
    *
    * Em série, e não em paralelo: soltar cinco arquivos de uma vez dispararia
    * cinco uploads simultâneos competindo pela banda de subida, que costuma ser
    * a metade lenta da conexão — e ainda inseriria as imagens fora da ordem em
-   * que foram soltas.
+   * que foram soltas. Dentro de cada arquivo, o upload e a pergunta correm
+   * JUNTOS: o autor escreve a legenda enquanto o arquivo sobe.
+   *
+   * **A figura nunca entra no meio de uma lista** (decisão 32): se o cursor
+   * está num item, ela vai logo depois da lista inteira, para não partir a
+   * enumeração. As figuras que JÁ moram dentro de listas continuam lá — o
+   * `ItemComFigura` segue aceitando, porque o acervo tem sete resumos assim.
    */
   async function subirEInserir(arquivos: File[]) {
     setErroImagem(null)
     for (const bruto of arquivos) {
+      const ed = editorRef.current
+      if (!ed) return
+      // decidida ANTES da pergunta: é onde o autor estava quando colou
+      const depoisDaLista = posicaoForaDeLista(ed.state)
       setEnviando((n) => n + 1)
-      try {
+      const envio = (async () => {
         // WebP e no máximo 1840px de lado — ver `otimizarImagem.ts`
         const arquivo = await otimizarImagem(bruto)
         const fd = new FormData()
         fd.append('arquivo', arquivo)
         const r = await enviarImagem(fd)
-        if (!r.ok) {
-          setErroImagem(r.erro)
-          continue
-        }
         /* O tamanho do arquivo é lido AQUI, do próprio `File`, e não depois pela
            rede: é o que torna o recorte possível (sem a proporção original não
            dá para saber a altura do que sobrou) e o que faz o navegador
            reservar o espaço certo antes de a imagem chegar. */
-        const medida = await medirArquivo(arquivo)
-        editorRef.current
-          ?.chain()
-          .focus()
-          .insertContent({
-            type: 'image',
-            attrs: { src: r.url, alt: '', natural: medida ? `${medida.l} ${medida.a}` : '' },
-          })
-          .createParagraphNear()
-          .run()
+        const medida = r.ok ? await medirArquivo(arquivo) : null
+        return { r, medida }
+      })()
+      // sem isto, uma falha durante a pergunta viraria rejeição não tratada
+      envio.catch(() => {})
+
+      const previa = URL.createObjectURL(bruto)
+      const escolha = await perguntarFigura(previa)
+      URL.revokeObjectURL(previa)
+
+      try {
+        const { r, medida } = await envio
+        if (!r.ok) {
+          setErroImagem(r.erro)
+          continue
+        }
+        if (!escolha) continue
+        const t = TAMANHOS_FIGURA.find((x) => x.id === escolha.tamanho) ?? TAMANHOS_FIGURA[1]
+        const figura = {
+          type: 'image',
+          attrs: {
+            src: r.url,
+            alt: escolha.legenda,
+            natural: medida ? `${medida.l} ${medida.a}` : '',
+            ...t.attrs,
+          },
+        }
+        const cadeia = editorRef.current?.chain().focus()
+        if (!cadeia) continue
+        if (depoisDaLista !== null) cadeia.insertContentAt(depoisDaLista, figura).run()
+        else cadeia.insertContent(figura).createParagraphNear().run()
       } catch {
         setErroImagem('Não deu para enviar a imagem. Tente de novo.')
       } finally {
@@ -1513,6 +1578,11 @@ export default function EditorCorpo({
           e.target.value = ''
         }}
       />
+      {/* Um diálogo novo por figura (`key`): o estado nasce limpo, sem efeito
+          zerando campo. */}
+      {pedidoFigura ? (
+        <NovaFigura key={pedidoFigura.previa} previa={pedidoFigura.previa} aoResponder={responderFigura} />
+      ) : null}
 
       {alvoFormula ? (
         <BarraFormula

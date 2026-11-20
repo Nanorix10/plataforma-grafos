@@ -42,10 +42,14 @@ Símbolo nomeado com unidade, como sub-item: `<li><p><span data-type="inline-mat
 
 **Exemplo resolvido:** `<ol>` com um passo por item.
 
-**Figura:** a legenda sai do `alt` (decisão 24). Para uma figura estreita, use `width:70%` e `data-largura="70%"`.
+**Figura** (decisão 32): a legenda sai do `alt` (decisão 24) e ganha o número da figura sozinha. São três larguras e só três: **coluna** (`100%`, o padrão), **estreita** (`60%`) e **larga** (`100%` com `data-escapa="sim"` na `<figure>`). Nunca largura em pixel.
+
+**A figura nunca fica dentro de lista:** vai logo depois do `</ul>`/`</ol>` de fora do trecho que ela ilustra.
+
+**Grave sempre as medidas do arquivo**, `width`, `height` e `data-natural="L A"` (as mesmas, em px, lidas do WebP já convertido). Sem elas a página salta quando a imagem chega: 82% do acervo estava assim em 19/11/2026.
 
 ```html
-<figure class="figura" data-quebra="bloco" data-alinhamento="centro"><img src="/img/resumos/<matéria>/<nome>.webp" alt="O que a figura mostra." style="width:100%" data-largura="100%"></figure>
+<figure class="figura" data-quebra="bloco" data-alinhamento="centro"><img src="/img/resumos/<matéria>/<nome>.webp" alt="O que a figura mostra." style="width:100%" data-largura="100%" data-natural="890 620" width="890" height="620"></figure>
 ```
 
 **Tabela comparativa:** a primeira linha leva `<th>`, e cada célula tem um `<p>`.

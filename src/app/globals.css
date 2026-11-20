@@ -844,7 +844,9 @@ h3 {
    conteúdo gerado por CSS não entra no HTML gravado, então os grifos (decisão
    21) continuam se ancorando no mesmo texto de sempre. */
 .conteudo-resumo {
-  counter-reset: secao questao;
+  /* `figura` é a numeração das figuras (decisão 32). As três vivem na mesma
+     declaração porque `counter-reset` substitui em vez de somar. */
+  counter-reset: secao questao figura;
 }
 .conteudo-resumo > h2 {
   counter-increment: secao;
@@ -1269,6 +1271,14 @@ h3 {
   width: fit-content;
 }
 
+/* Estreita (decisão 32): 60% da COLUNA, com a imagem enchendo a figura. Vem
+   depois das três regras de alinhamento, que têm a mesma especificidade e
+   davam `fit-content` — com ele, a porcentagem da imagem se resolvia contra o
+   tamanho do arquivo, e não da coluna. */
+.conteudo-resumo .figura[data-quebra='bloco'][data-tamanho='estreita'] {
+  width: 60%;
+}
+
 /* Em linha: a figura anda no meio da frase, como se fosse uma letra grande. */
 .conteudo-resumo .figura[data-quebra='emLinha'] {
   display: inline-block;
@@ -1296,6 +1306,30 @@ h3 {
     float: none;
     max-width: 100%;
     margin: 1.2em auto;
+    width: fit-content;
+  }
+
+  /* Piso de largura no celular (decisão 32). A porcentagem é da coluna, e numa
+     coluna de 327px uma figura de 40% sai com 131px — um diagrama que deixa de
+     se ler. Aqui a porcentagem é IGNORADA e a imagem volta ao tamanho do
+     próprio arquivo, com o teto da coluna (`max-width: 100%` já vem de
+     `.conteudo-resumo img`). `auto` e não `100%`, e isto foi medido: com
+     `100%` a imagem esticava até a largura da LEGENDA — um ícone de 106px
+     saía com 187px, borrado. O `!important` vence o `style` embutido que o
+     editor grava.
+
+     Com recorte a largura mora na `.moldura`, que não tem tamanho natural:
+     ali o piso é a coluna inteira. */
+  .conteudo-resumo .figura:is([data-quebra='bloco'], [data-quebra^='aoRedor']) > img,
+  .conteudo-resumo .figura:is([data-quebra='bloco'], [data-quebra^='aoRedor']) > a > img {
+    width: auto !important;
+  }
+  .conteudo-resumo .figura:is([data-quebra='bloco'], [data-quebra^='aoRedor']) > .moldura {
+    width: 100% !important;
+  }
+  /* A estreita sai dos 60% e volta a abraçar a imagem, como as outras. */
+  .conteudo-resumo .figura[data-quebra='bloco'][data-tamanho='estreita'] {
+    width: fit-content;
   }
 }
 
@@ -1667,6 +1701,9 @@ h3 {
 .conteudo-resumo .figura figcaption[data-de-alt='sim'],
 .conteudo-resumo .figura[data-legenda-alt]::after {
   text-align: left;
+  /* 15px, e não os 13px do rótulo (decisão 32): é uma frase média de 140
+     letras feita para ser lida, e a 13px ela ficava em 72% do corpo. */
+  font-size: var(--t-base);
   color: var(--ink-dim);
   border-left: 2px solid var(--line-forte);
   padding-left: 0.7em;
@@ -1678,12 +1715,35 @@ h3 {
    texto é desenhado aqui. Repete a fonte e o tamanho do `figcaption` acima,
    e herda o resto da regra `[data-de-alt]` — o autor vê o que o aluno vê. */
 .conteudo-resumo .figura[data-legenda-alt]::after {
-  content: attr(data-legenda-alt);
+  content: 'Figura ' counter(figura) ' · ' attr(data-legenda-alt);
   display: block;
   font-family: var(--fonte-texto), sans-serif;
-  font-size: var(--t-peq);
   line-height: 1.45;
   text-wrap: pretty;
+}
+
+/* ---- numeração das figuras (decisão 32) ----
+   Contador de CSS, e não texto gravado: o número nasce na leitura, então
+   inserir uma figura no meio renumera as de baixo sozinho, nenhum resumo é
+   regravado e nenhum grifo perde a âncora (decisão 21 — contador não é texto
+   do documento). Só conta quem tem legenda: figura sem legenda não tem onde
+   mostrar o número, e contá-la abriria um buraco na sequência.
+
+   O editor e a página usam a mesma conta. Na página o número vai no
+   `figcaption::before`; no editor, onde a legenda do `alt` é o `::after` da
+   própria figura, ele entra no mesmo `content` — por isso o número não tem
+   peso nem cor próprios nos dois lugares: um pseudo-elemento só não pinta
+   metade do texto de outro jeito, e o autor tem de ver o que o aluno vê.
+
+   O `counter-reset: figura` mora JUNTO do `secao questao`, na regra de
+   `.conteudo-resumo` lá em cima: `counter-reset` não soma, substitui — uma
+   segunda declaração aqui zeraria a numeração das seções e das questões. */
+.conteudo-resumo .figura:has(> figcaption),
+.conteudo-resumo .figura[data-legenda-alt] {
+  counter-increment: figura;
+}
+.conteudo-resumo .figura figcaption::before {
+  content: 'Figura ' counter(figura) ' · ';
 }
 
 /* O último bloco do resumo não pode ficar ao lado de uma figura flutuante:

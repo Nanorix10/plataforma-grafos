@@ -10,6 +10,8 @@ import {
   MARGEM_LATERAL_CONFORTAVEL,
   naFaixa,
   naMargem,
+  TAMANHOS,
+  tamanhoDe,
   VAO_LATERAL,
 } from './imagem'
 import { COLUNA_MINIMA, LARGURA_PAGINA } from '@/lib/pagina'
@@ -210,8 +212,16 @@ export default function PainelImagem({
   /* Algum ajuste fora do padrão já aplicado? Então a seção abre sozinha e o
      botão ganha um ponto: esconder um giro ou uma borda que estão valendo
      faria o autor achar que a figura "veio assim". */
+  /* Desde a decisão 32 o caminho principal são os três tamanhos e a legenda.
+     Posição, larguras livres, recorte e rótulo moram em "Mais opções" — e
+     também abrem sozinhos quando a figura já usa algum deles. */
+  const tamanho = tamanhoDe(a)
   const temAjuste = Boolean(
-    a.altura ||
+    tamanho === null ||
+      (a.alinhamento ?? 'centro') !== 'centro' ||
+      lerRecorte(a.recorte) !== null ||
+      a.legenda ||
+      a.altura ||
       a.rotacao ||
       a.margem ||
       a.bordaLargura ||
@@ -238,6 +248,7 @@ export default function PainelImagem({
   function redefinir() {
     set({
       largura: '100%',
+      tamanho: '',
       altura: '',
       rotacao: 0,
       quebra: 'bloco',
@@ -288,6 +299,39 @@ export default function PainelImagem({
         Imagem
       </span>
 
+      {/* ---- o caminho principal (decisão 32) ----
+          A legenda e os três tamanhos. A legenda vem primeiro e larga porque é
+          o que o aluno LÊ, e fica marcada enquanto estiver vazia. */}
+      <Grupo>
+        <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--ink-dim)]">
+          legenda
+          <input
+            value={a.alt ?? ''}
+            onChange={(e) => set({ alt: e.target.value })}
+            placeholder="obrigatória: o que a figura mostra"
+            aria-invalid={!String(a.alt ?? '').trim() && !a.legenda}
+            title="Sai sob a imagem na página do aluno, com o número da figura, e é lida pelo leitor de tela."
+            className={`campo h-[30px] w-[min(380px,60vw)] !py-0 !px-2 text-[13px] ${
+              !String(a.alt ?? '').trim() && !a.legenda ? '!border-[var(--erro)]' : ''
+            }`}
+          />
+        </label>
+      </Grupo>
+      <Grupo>
+        {TAMANHOS.map((t) => (
+          <Opcao
+            key={t.id}
+            ativo={tamanho === t.id}
+            onClick={() => set({ quebra: 'bloco', alinhamento: 'centro', altura: '', ...t.attrs })}
+            title={t.dica}
+          >
+            {t.rotulo}
+          </Opcao>
+        ))}
+      </Grupo>
+
+      {verAjustes ? (
+        <>
       {/* ---- quebra de texto ----
           É a decisão que mais muda o desenho, então vem primeiro.
           "Atrás do texto" e "à frente do texto" do Docs NÃO existem aqui, e não
@@ -381,14 +425,14 @@ export default function PainelImagem({
       {/* ---- tamanho ---- */}
       <Grupo>
         {LARGURAS.map((l) => (
-          <Opcao key={l} ativo={a.largura === `${l}%`} onClick={() => set({ largura: `${l}%`, altura: '' })} title={`${l}% da coluna`}>
+          <Opcao key={l} ativo={a.largura === `${l}%` && !a.tamanho} onClick={() => set({ largura: `${l}%`, altura: '', tamanho: '' })} title={`${l}% da coluna`}>
             {l}%
           </Opcao>
         ))}
         <Campo rotulo="larg.">
           <input
             value={a.largura ?? ''}
-            onChange={(e) => set({ largura: e.target.value })}
+            onChange={(e) => set({ largura: e.target.value, tamanho: '' })}
             title="Largura em qualquer medida CSS: 340px, 60%, 20rem"
             className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px]"
           />
@@ -441,20 +485,10 @@ export default function PainelImagem({
 
       {/* ---- texto ---- */}
       <Grupo>
-        {/* O campo que importa é o `alt`: na página do aluno ele VIRA a
-            legenda (decisão 24), e é o que o leitor de tela lê. Por isso ele
-            vem primeiro e se chama "legenda". O `<figcaption>` escrito à mão
-            continua existindo como "rótulo" — curto e centralizado — e, quando
-            preenchido, ganha do `alt` na página. */}
-        <Campo rotulo="legenda">
-          <input
-            value={a.alt ?? ''}
-            onChange={(e) => set({ alt: e.target.value })}
-            placeholder="o que a figura mostra"
-            title="Sai sob a imagem na página do aluno e é lida pelo leitor de tela. Descreva o que a figura mostra."
-            className="campo h-[26px] w-[260px] !py-0 !px-1.5 text-[11.5px]"
-          />
-        </Campo>
+        {/* A legenda (o `alt`, que a página do aluno vira `<figcaption>`,
+            decisão 24) subiu para o caminho principal. O `<figcaption>` escrito
+            à mão continua existindo como "rótulo" — curto e centralizado — e,
+            quando preenchido, ganha do `alt` na página. */}
         <Campo rotulo="rótulo">
           <input
             value={a.legenda ?? ''}
@@ -558,15 +592,17 @@ export default function PainelImagem({
           </Grupo>
         </>
       ) : null}
+        </>
+      ) : null}
 
       {/* ---- arquivo ---- */}
       <Grupo>
         <Opcao
           ativo={verAjustes}
           onClick={() => setAjustes(!verAjustes)}
-          title="Altura, giro, espaço, link, borda e ajustes de cor"
+          title="Posição, outras larguras, recorte, rótulo, giro, borda, link e ajustes de cor"
         >
-          ⚙ Ajustes{temAjuste ? ' •' : ''}
+          ⚙ Mais opções{temAjuste ? ' •' : ''}
         </Opcao>
         <Opcao ativo={false} onClick={() => trocaRef.current?.click()} title="Trocar o arquivo mantendo tamanho, borda e ajustes">
           ⇄ Substituir
