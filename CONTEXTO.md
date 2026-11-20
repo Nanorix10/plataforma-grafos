@@ -3481,8 +3481,25 @@ O que mediu a necessidade, no banco e no navegador:
   aceitas e intactas — só a inserção nova mudou.
 - **A skill `rascunhar-resumo` passou a gravar `width`, `height` e
   `data-natural`**, porque era ela a fonte de 282 das 304 figuras, e por isso
-  82% do acervo saltava ao carregar. O acervo antigo segue esperando a
-  migração (etapa seguinte), que só acrescenta atributos.
+  82% do acervo saltava ao carregar.
+
+**Onda 1 da migração, feita em 20/11/2026** (`20261120225512_medidas_das_figuras`):
+as 249 figuras sem medida, em 83 resumos, ganharam `data-natural`, `width` e
+`height`, lidos dos próprios arquivos por `ferramentas/gera-medidas-das-figuras.js`
+(os WebP do repositório e os 13 PNG do bucket). Agora são **304 de 304**.
+
+- **Só acrescenta.** A migration se prova sozinha antes de terminar: o texto
+  de cada resumo, sem as tags, tem de sair idêntico, e nenhuma `<img>` pode
+  ficar sem medida — senão ela inteira volta.
+- **Cópia de segurança em `backup.corpo_antes_medidas`**, num schema que a API
+  não expõe (conferido: `anon` e `authenticated` sem `USAGE`). Ela guarda
+  `corpo`, então deixá-la em `public` furaria a decisão 14. O comando de
+  desfazer está no cabeçalho da migration.
+- **Medido depois**, em `ciclo-celular` (13 figuras): salto de layout 0,006. A
+  mesma figura sem o arquivo carregado ocupa 595×473 com a medida e 595×0 sem
+  ela — os 473px eram o salto.
+- As ondas 2 (36 larguras em pixel) e 3 (figuras dentro de listas) seguem
+  pendentes; a 3 vai junto com a sequência, resumo a resumo.
 
 **O que ficou para depois, declarado:** as alças de arrastar ainda gravam
 qualquer porcentagem (os três tamanhos são o caminho principal, não uma
