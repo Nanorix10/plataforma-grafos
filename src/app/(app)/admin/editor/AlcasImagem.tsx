@@ -152,7 +152,8 @@ export default function AlcasImagem({
       const pct = Math.round((nova / a.referencia) * 100)
       editor
         .chain()
-        .updateAttributes('image', { largura: `${Math.min(100, Math.max(5, pct))}%`, altura: '' })
+        // arrastar sai dos três tamanhos: a "estreita" (decisão 32) é desligada
+        .updateAttributes('image', { largura: `${Math.min(100, Math.max(5, pct))}%`, altura: '', tamanho: '' })
         .run()
     }
     function aoSoltar() {

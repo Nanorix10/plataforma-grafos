@@ -252,6 +252,17 @@ export const Imagem = Node.create({
        */
       topo: { default: 0, parseHTML: (el) => numero(pegar(el, 'data-topo'), 0) },
 
+      /**
+       * `"estreita"` ou vazio (decisão 32). Mora na `<figure>` como
+       * `data-tamanho`, e não na `largura`, por causa de um defeito antigo:
+       * numa figura em bloco a porcentagem da `<img>` se resolve contra a
+       * própria figura, que é `fit-content` — ou seja, contra o tamanho do
+       * ARQUIVO, não da coluna (medido: 42% de uma imagem de 392px deu
+       * 165px, e não os 260 da coluna). Consertar a regra geral mudaria as
+       * figuras publicadas; a marca nova dá 60% da COLUNA só a quem a usa.
+       */
+      tamanho: { default: '', parseHTML: (el) => el.getAttribute('data-tamanho') ?? '' },
+
       /** `"t r b l"` em % da imagem original; vazio = imagem inteira. */
       recorte: { default: '', parseHTML: (el) => pegar(el, 'data-recorte') ?? '' },
       /**
@@ -384,6 +395,7 @@ export const Imagem = Node.create({
            e ser trocado para lateral — então o atributo morre aqui também. */
         'data-escapa': a.escapa && !naMargem(a.quebra) && !naFaixa(a.quebra) ? 'sim' : null,
         'data-margem': a.margem || null,
+        'data-tamanho': a.tamanho === 'estreita' && a.quebra === 'bloco' && !a.escapa ? 'estreita' : null,
         'data-topo': naFaixa(a.quebra) ? Math.max(0, Number(a.topo) || 0) : null,
         style: estiloFigura.join(';'),
       },
@@ -430,6 +442,53 @@ export const Imagem = Node.create({
 
 /** As larguras de atalho do painel, em porcentagem da coluna. */
 export const LARGURAS = [25, 50, 75, 100] as const
+
+/* ============================================================
+   OS TRÊS TAMANHOS (decisão 32)
+   ============================================================
+   A figura numerada tem três larguras, e só três: é o que faz figuras da
+   mesma série saírem iguais (o acervo tinha 41 larguras diferentes, 36 delas
+   em pixel). Coluna e larga são combinações de `largura` e `escapa`, que o
+   HTML já sabia gravar; estreita ganhou o `data-tamanho` (ver o atributo
+   `tamanho` acima para o porquê). Nenhuma figura publicada muda de forma.
+
+   No celular, `estreita` volta ao tamanho do arquivo, até a coluna inteira
+   (piso no `globals.css`). */
+export type Tamanho = 'estreita' | 'coluna' | 'larga'
+
+export const TAMANHOS: {
+  id: Tamanho
+  rotulo: string
+  dica: string
+  /** Os atributos do nó que este tamanho grava. */
+  attrs: { largura: string; escapa: boolean; tamanho: string }
+}[] = [
+  {
+    id: 'estreita',
+    rotulo: 'Estreita',
+    dica: '60% da coluna. No celular ela volta ao tamanho do arquivo, até a coluna inteira.',
+    attrs: { largura: '100%', escapa: false, tamanho: 'estreita' },
+  },
+  {
+    id: 'coluna',
+    rotulo: 'Coluna',
+    dica: 'A largura do texto.',
+    attrs: { largura: '100%', escapa: false, tamanho: '' },
+  },
+  {
+    id: 'larga',
+    rotulo: 'Larga',
+    dica: 'Passa das margens e ocupa a folha inteira.',
+    attrs: { largura: '100%', escapa: true, tamanho: '' },
+  },
+]
+
+/** Qual dos três tamanhos a figura tem — `null` se ela está fora deles. */
+export function tamanhoDe(a: Record<string, unknown>): Tamanho | null {
+  if ((a.quebra ?? 'bloco') !== 'bloco' || a.largura !== '100%') return null
+  if (a.escapa) return 'larga'
+  return a.tamanho === 'estreita' ? 'estreita' : 'coluna'
+}
 
 /**
  * A tabela ganha o MESMO `escapa` da imagem.

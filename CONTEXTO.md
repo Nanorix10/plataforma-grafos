@@ -3417,6 +3417,78 @@ fechou as graves).
   sobre o catálogo) e avisado no campo. O banco não tem `unique` em `titulo`;
   a regra vem da decisão 1c.
 
+## 32. A figura é numerada, tem três larguras e só entra com legenda
+
+**19/11/2026.** Escolha do autor entre quatro jeitos de dispor as figuras,
+montados com o trecho real da mitose (`Ciclo celular`) e avaliados por
+legibilidade, organização, dinâmica de leitura, estética e esforço do autor.
+Ele escolheu os **três tipos** — figura numerada, lado a lado e sequência — e
+esta é a primeira etapa: **a figura numerada**, que atende 299 das 304 figuras
+do acervo (todas `bloco`). Lado a lado, sequência e o modelo 3D como "cartaz
+que vira modelo" vêm depois, nessa ordem.
+
+O que mediu a necessidade, no banco e no navegador:
+
+| o que estava acontecendo | medido |
+|---|---|
+| figuras enviadas pelo editor sem legenda | **22 de 22** |
+| larguras diferentes no acervo | **41**, 36 delas em pixel |
+| figura de 40% no celular (375px) | **131px** de largura |
+| legenda explicativa (média de 140 letras) | **13px**, 72% do corpo |
+
+**O que mudou:**
+
+- **Legenda obrigatória ao inserir** (`NovaFigura.tsx`). Colar, arrastar ou o
+  botão abrem um diálogo com a prévia, a legenda e a largura; "Inserir" só
+  libera com legenda. O upload corre enquanto o autor escreve. A legenda vai
+  para o `alt`, que a página já transforma em `<figcaption>` (decisão 24).
+  Cancelar descarta a figura; o arquivo já enviado fica no bucket, sem dono,
+  como no "Remover".
+- **Três larguras: estreita (60% da coluna), coluna (100%) e larga (100% +
+  `escapa`).** Coluna e larga são combinações do que o HTML já gravava; a
+  estreita ganhou `data-tamanho="estreita"` na `<figure>`, por causa de um
+  **defeito antigo achado medindo**: numa figura em bloco, a porcentagem da
+  `<img>` se resolve contra a própria figura, que é `fit-content` — ou seja,
+  contra o tamanho do ARQUIVO, não da coluna. 42% de uma imagem de 392px saía
+  com 165px, e não os 260 que 42% da coluna dariam. É a mesma família do
+  defeito da moldura na 11c-quater, e vale para as ~44 figuras do acervo com
+  porcentagem abaixo de 100. **Não foi consertado na regra geral de
+  propósito:** o autor ajustou essas figuras olhando o editor, que tem o
+  mesmo CSS, então o que está publicado é o que ele viu; mudar a regra
+  mudaria as 44. A marca nova dá 60% da coluna só a quem a usa. No painel, as três e a legenda ficam na frente; posição,
+  larguras livres, recorte, rótulo, giro, borda, link e cor foram para "⚙ Mais
+  opções", que abre sozinho quando a figura já usa algum deles. **Nada foi
+  removido** — a faixa e a margem (11c-bis a -sexies) continuam funcionando
+  para as figuras que as usam.
+- **Número automático, por contador de CSS.** "Figura 2 · legenda", no editor
+  e na página. Contador e não texto gravado: renumera sozinho, não regrava
+  resumo e não mexe na âncora dos grifos (decisão 21). Só conta figura com
+  legenda. O número tem o mesmo peso da legenda porque, no editor, a legenda é
+  o `::after` da própria figura e um pseudo-elemento não pinta metade de si
+  de outro jeito — e o autor tem de ver o que o aluno vê. **Citar "(fig. 2)" no
+  texto continua manual**, e não renumera.
+- **Piso de largura no celular** (≤640px): figura em bloco ou "texto ao
+  redor" ignora a porcentagem e volta ao tamanho do arquivo, com o teto da
+  coluna (`width: auto`). **Não `100%`, e foi a medição que pegou:** com
+  `100%` a imagem esticava até a largura da legenda — um ícone de 106px saía
+  com 187px.
+  Isto **completa** a 11b (porcentagem da coluna) em vez de desfazê-la: lá o
+  problema era estourar, aqui era encolher demais.
+- **Legenda do `alt` a 15px** (`--t-base`); o rótulo escrito à mão segue a 13px.
+- **A figura nova nunca entra no meio de uma lista**: com o cursor num item,
+  ela vai logo depois da lista mais externa. Isto **não** desfaz o
+  `ItemComFigura`: as figuras que já moram em `<li>` (sete resumos) seguem
+  aceitas e intactas — só a inserção nova mudou.
+- **A skill `rascunhar-resumo` passou a gravar `width`, `height` e
+  `data-natural`**, porque era ela a fonte de 282 das 304 figuras, e por isso
+  82% do acervo saltava ao carregar. O acervo antigo segue esperando a
+  migração (etapa seguinte), que só acrescenta atributos.
+
+**O que ficou para depois, declarado:** as alças de arrastar ainda gravam
+qualquer porcentagem (os três tamanhos são o caminho principal, não uma
+trava); a migração das 249 figuras sem medida e das 36 em pixel; e tirar de
+dentro das listas as figuras antigas.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:
