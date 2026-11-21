@@ -6,14 +6,12 @@ import {
   escreverRecorte,
   lerRecorte,
   naFaixa,
-  naMargem,
   RECORTE_MINIMO_VISIVEL,
-  VAO_LATERAL,
   type Recorte,
 } from './imagem'
 
 /**
- * As alças de redimensionar da imagem selecionada — o gesto do Google Docs.
+ * A moldura da imagem selecionada, com as alças de recorte e o arrasto na faixa.
  *
  * ============================================================
  * Por que sobreposição, e não um NodeView
@@ -33,15 +31,10 @@ type Caixa = { topo: number; esq: number; larg: number; alt: number }
 export default function AlcasImagem({
   editor,
   containerRef,
-  margemEsq,
-  margemDir,
   recortando,
 }: {
   editor: Editor
   containerRef: React.RefObject<HTMLDivElement | null>
-  /* Só para o modo lateral: lá a porcentagem é da margem, não da coluna. */
-  margemEsq: number
-  margemDir: number
   /* Ligado, as alças trocam de função: puxam as bordas do recorte para dentro
      em vez de mudar o tamanho da figura. */
   recortando: boolean
@@ -54,21 +47,6 @@ export default function AlcasImagem({
      o autor não vê — foi o que aconteceu na primeira prova do gesto. */
   const [caixa, setCaixa] = useState<Caixa | null>(null)
   const [caixaVisivel, setCaixaVisivel] = useState<Caixa | null>(null)
-  const arrasto = useRef<{
-    x0: number
-    larg0: number
-    alt0: number
-    /* O denominador da porcentagem gravada: a coluna quando a figura está no
-       texto, a margem quando está na lateral. Uma frase só, sem exceção — ver
-       a spec `2026-09-06-imagem-na-margem-design.md`. */
-    referencia: number
-    /* +1 quando arrastar para a DIREITA aumenta a figura, −1 quando é o
-       contrário. Em `margemDir` a borda de fora é a presa e quem cresce é a de
-       dentro, que fica à esquerda: sem inverter, o gesto puxa ao contrário. */
-    sinal: 1 | -1
-  } | null>(null)
-  const [arrastando, setArrastando] = useState(false)
-
   /* O arrasto que MOVE a figura na faixa. Separado do de redimensionar porque
      grava outro atributo — `topo`, em pixels crus — e porque é o gesto que dá
      sentido à palavra "livremente": na faixa não há âncora a parágrafo nenhum,
@@ -78,7 +56,6 @@ export default function AlcasImagem({
 
   const atributos = editor.getAttributes('image')
   const quebra = atributos.quebra
-  const lateral = naMargem(quebra)
   const emFaixa = naFaixa(quebra)
   /* Recorte ausente é o mesmo que "nada cortado ainda" para esta tela: as alças
      começam nas bordas da foto e só o primeiro arrasto grava alguma coisa. */
@@ -138,37 +115,6 @@ export default function AlcasImagem({
       container?.removeEventListener('scroll', medir)
     }
   }, [editor, medir, containerRef])
-
-  useEffect(() => {
-    if (!arrastando) return
-    function aoMover(e: PointerEvent) {
-      const a = arrasto.current
-      if (!a) return
-      e.preventDefault()
-      const nova = Math.max(24, a.larg0 + (e.clientX - a.x0) * a.sinal)
-      /* Grava em PORCENTAGEM do espaço onde a figura mora, não nos pixels
-         arrastados: pixel amarraria a imagem à largura da folha do dia em que
-         foi arrastada, e bastaria mexer na régua para ela estourar. */
-      const pct = Math.round((nova / a.referencia) * 100)
-      editor
-        .chain()
-        // arrastar sai dos três tamanhos: a "estreita" (decisão 32) é desligada
-        .updateAttributes('image', { largura: `${Math.min(100, Math.max(5, pct))}%`, altura: '', tamanho: '' })
-        .run()
-    }
-    function aoSoltar() {
-      setArrastando(false)
-      arrasto.current = null
-    }
-    window.addEventListener('pointermove', aoMover)
-    window.addEventListener('pointerup', aoSoltar)
-    window.addEventListener('pointercancel', aoSoltar)
-    return () => {
-      window.removeEventListener('pointermove', aoMover)
-      window.removeEventListener('pointerup', aoSoltar)
-      window.removeEventListener('pointercancel', aoSoltar)
-    }
-  }, [arrastando, editor])
 
   useEffect(() => {
     if (!movendo) return
@@ -237,36 +183,6 @@ export default function AlcasImagem({
   }, [recortandoLado, editor])
 
   if (!caixa) return null
-
-  function comecar(e: React.PointerEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    const c = caixaVisivel ?? caixa
-    if (!c) return
-    // a coluna de texto é o pai da figura: é dela que a porcentagem sai
-    const pos = editor.state.selection.from
-    const dom = editor.view.nodeDOM(pos)
-    const pai =
-      dom instanceof HTMLElement ? (dom.closest('.conteudo-resumo') as HTMLElement | null) : null
-    arrasto.current = {
-      x0: e.clientX,
-      larg0: c.larg,
-      alt0: c.alt,
-      /* O denominador da porcentagem: a coluna no texto, a margem na lateral, a
-         própria faixa quando a figura está nela. A largura da faixa é decidida
-         por media query no CSS, então quem sabe o número é o DOM, não o TS. */
-      referencia: emFaixa
-        ? Math.max(24, parseFloat(
-            getComputedStyle(pai?.closest('.leitura') ?? document.documentElement)
-              .getPropertyValue('--faixa')
-          ) || c.larg)
-        : lateral
-          ? Math.max(24, (quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL)
-          : pai?.clientWidth || c.larg,
-      sinal: quebra === 'margemDir' ? -1 : 1,
-    }
-    setArrastando(true)
-  }
 
   function comecarTopo(e: React.PointerEvent) {
     e.preventDefault()
@@ -386,36 +302,9 @@ export default function AlcasImagem({
         />
       ) : null}
 
-      {/* Puxa sempre a alça de DENTRO — a que aponta para o texto —, porque a
-          de fora fica na borda presa e arrastá-la não teria para onde crescer.
-          No fluxo normal e em `margemEsq` a de dentro é a direita, que é a de
-          sempre; em `margemDir` a borda presa é a direita (ela encosta na beira
-          da folha), então quem puxa é a esquerda.
-
-          A regra da 11c continua valendo onde ela foi escrita: numa figura
-          CENTRALIZADA, alça da esquerda faz o desenho fugir do ponteiro. Na
-          lateral não há esse problema — a figura está ancorada numa borda, e o
-          lado oposto é o único que se move. */}
-      {(lateral && quebra === 'margemDir'
-        ? ['left-[-6px] top-[-6px] cursor-nwse-resize', 'left-[-6px] bottom-[-6px] cursor-nesw-resize', 'left-[-6px] top-1/2 -translate-y-1/2 cursor-ew-resize']
-        : ['right-[-6px] top-[-6px] cursor-nesw-resize', 'right-[-6px] bottom-[-6px] cursor-nwse-resize', 'right-[-6px] top-1/2 -translate-y-1/2 cursor-ew-resize']
-      ).map((posicao) => (
-        <button
-          key={posicao}
-          type="button"
-          tabIndex={-1}
-          onPointerDown={comecar}
-          title="Arraste para redimensionar"
-          className={`${alca} ${posicao}`}
-        />
-      ))}
-
-      {/* o tamanho aparece enquanto arrasta, como na régua */}
-      {arrastando ? (
-        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10.5px] tabular-nums px-1.5 py-0.5 rounded bg-[var(--acento)] text-[var(--page)] whitespace-nowrap">
-          {Math.round(caixa.larg)} × {Math.round(caixa.alt)}
-        </span>
-      ) : null}
+      {/* Sem alça de redimensionar desde a decisão 33: o tamanho é um dos três
+          botões do painel. A alça gravava larguras soltas (437px, 42%), as
+          mesmas que as ondas 1 e 2 da decisão 32 tiveram de limpar. */}
       {movendo ? (
         <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10.5px] tabular-nums px-1.5 py-0.5 rounded bg-[var(--acento)] text-[var(--page)] whitespace-nowrap">
           {Math.max(0, Number(atributos.topo) || 0)}px do topo

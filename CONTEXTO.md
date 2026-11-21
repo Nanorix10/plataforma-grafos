@@ -3542,6 +3542,43 @@ qualquer porcentagem (os três tamanhos são o caminho principal, não uma
 trava); a migração das 249 figuras sem medida e das 36 em pixel; e tirar de
 dentro das listas as figuras antigas.
 
+## 33. O painel da imagem tem uma linha: legenda, tamanho, recortar, trocar, remover
+
+**O problema, nas palavras do autor:** "está confusa e muito poluída com as
+diferentes opções que não tenho ideia". O painel tinha mais de trinta
+controles: oito modos de quebra de texto, alinhamento, "sair da margem",
+larguras em porcentagem e livres, altura, giro, espaço, link, rótulo, borda
+(largura, cor, estilo), brilho, contraste, saturação, opacidade, P&B e sépia.
+E "Mais opções" abria sozinho em toda figura fora do padrão, que eram 59 das
+304.
+
+**O que o acervo usava (contado em 21/11/2026, 304 figuras):** giro, borda,
+filtros de cor, link, altura, espaço, rótulo e recorte, **zero**. 300 em bloco.
+Os outros sete modos de quebra e o "sair da margem" somavam 5 figuras, uma de
+cada: `faixaEsq` em análise combinatória, `aoRedorDir` em matrizes, `escapa`
+em poliedros, `margemDir` em geometria analítica, `emLinha` na 2ª lei de
+Mendel.
+
+**A decisão:** o painel é uma linha só e não tem seção escondida.
+- **Legenda**, larga e primeiro, vermelha enquanto vazia.
+- **Estreita · Coluna · Larga.** Clicar também padroniza: volta ao bloco
+  centralizado e sem altura fixa.
+- **Recortar**, e "Imagem inteira" quando há recorte. O autor pediu para
+  ficar, apesar de ter zero usos: é o ajuste que ele espera precisar num print.
+- **Trocar** o arquivo e **Remover**.
+- **Figura antiga** (fora dos três tamanhos) ganha uma linha de aviso que diz
+  o que ela tem ("usa a largura 42%", "fica na margem da folha") e a saída
+  (escolher um dos três). Ela não abre mais nenhum painel.
+
+**A alça de redimensionar saiu.** Ela gravava qualquer porcentagem, e foram
+essas larguras soltas que as ondas 1 e 2 da decisão 32 tiveram de limpar. As
+alças do recorte e o arrasto da figura na faixa continuam.
+
+**O que NÃO mudou:** os atributos continuam em `imagem.ts`, com `parseHTML` e
+`renderHTML`. As 5 figuras especiais e as 54 em porcentagem saem na página do
+aluno exatamente como antes. Só não há mais botão para criar esses formatos, e
+trazer um de volta é acrescentar um botão ao `PainelImagem`, sem migração.
+
 ## O que a lista do boletim ainda deve
 
 A crítica de 13/09 na voz de um aluno gerou 20 recomendações. Fechadas:

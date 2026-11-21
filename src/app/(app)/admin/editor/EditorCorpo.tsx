@@ -1550,9 +1550,6 @@ export default function EditorCorpo({
               editor={editor}
               aoEnviarErro={setErroImagem}
               aoMudarEnvio={(d) => setEnviando((n) => n + d)}
-              margemEsq={margemEsq}
-              margemDir={margemDir}
-              aoMudarMargens={aoMudarMargens}
               recortando={recortePos !== null && editor.state.selection.from === recortePos}
               aoRecortar={(ligado) =>
                 setRecortePos(ligado ? editor.state.selection.from : null)
@@ -1618,8 +1615,6 @@ export default function EditorCorpo({
           <AlcasImagem
             editor={editor}
             containerRef={mesaRef}
-            margemEsq={margemEsq}
-            margemDir={margemDir}
             recortando={recortePos !== null && editor.state.selection.from === recortePos}
           />
         ) : null}
