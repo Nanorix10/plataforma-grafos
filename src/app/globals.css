@@ -1279,6 +1279,29 @@ h3 {
   width: 60%;
 }
 
+/* Coluna (decisão 32): a imagem vai até a largura do texto, mas NUNCA além do
+   próprio arquivo. A figura é `fit-content`, e a LEGENDA entra nessa conta:
+   com uma legenda longa a figura alargava até a coluna e a imagem em `100%`
+   esticava junto — medido em 21/11: a pelagem dos cães, de 378px, saía com
+   574px. `auto` devolve o tamanho do arquivo, e o `max-width: 100%` de
+   `.conteudo-resumo img` continua sendo o teto. A imagem fica centrada (ou
+   no lado do alinhamento) dentro da figura, que pode ser mais larga que ela
+   por causa da legenda. A estreita fica de fora: ela é uma fração da coluna,
+   e a imagem enche a fração. */
+.conteudo-resumo .figura[data-quebra='bloco']:not([data-tamanho]) > img[data-largura='100%'],
+.conteudo-resumo .figura[data-quebra='bloco']:not([data-tamanho]) > a > img[data-largura='100%'] {
+  width: auto !important;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='centro'] > img,
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='centro'] > a > img {
+  margin-left: auto;
+  margin-right: auto;
+}
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='direita'] > img,
+.conteudo-resumo .figura[data-quebra='bloco'][data-alinhamento='direita'] > a > img {
+  margin-left: auto;
+}
+
 /* Em linha: a figura anda no meio da frase, como se fosse uma letra grande. */
 .conteudo-resumo .figura[data-quebra='emLinha'] {
   display: inline-block;
