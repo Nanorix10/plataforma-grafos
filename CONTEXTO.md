@@ -3498,8 +3498,34 @@ as 249 figuras sem medida, em 83 resumos, ganharam `data-natural`, `width` e
 - **Medido depois**, em `ciclo-celular` (13 figuras): salto de layout 0,006. A
   mesma figura sem o arquivo carregado ocupa 595×473 com a medida e 595×0 sem
   ela — os 473px eram o salto.
-- As ondas 2 (36 larguras em pixel) e 3 (figuras dentro de listas) seguem
-  pendentes; a 3 vai junto com a sequência, resumo a resumo.
+- A onda 3 (figuras dentro de listas) segue pendente; vai junto com a
+  sequência, resumo a resumo.
+
+**Onda 2, 20–21/11/2026: aplicada, e desfeita pela metade no mesmo dia.**
+`20261121001414_larguras_sem_pixel` levou as 36 figuras em pixel para os três
+tamanhos; `20261121001758_devolve_larguras_em_pixel` devolveu 33 delas ao pixel.
+Ficaram só os 3 bovinos de `codominancia` como Estreita (escolha do autor):
+dentro da questão FGV-SP, que tem 574px por dentro, saem com 344px, os três
+iguais.
+
+> [!bug] O antes/depois mediu com a legenda errada
+> O teste dizia "33 ficam idênticas em qualquer tela", e foi com essa frase que
+> o autor aprovou. Estava errado: as figuras de teste tinham legenda de UMA
+> letra. A `<figure>` em bloco é `fit-content`, e a legenda entra nessa conta —
+> com a legenda real (140 letras em média) a figura alarga até a coluna, e a
+> imagem em `100%` estica junto. Medido depois de aplicar: a prófase de
+> `ciclo-celular` foi de 392px para 569px, maior que o próprio arquivo.
+> Restaurado da cópia de segurança, com trava de versão, em minutos.
+>
+> **A lição:** medir com o conteúdo real, não com um marcador. A legenda não
+> é decoração em volta da figura — ela decide a largura.
+>
+> **O defeito que isso revelou continua aberto:** "Coluna" em figura menor que
+> a coluna estica a imagem até a largura da legenda. Hoje são 9 figuras do
+> acervo em 100% menores que a coluna, ~5 delas com legenda longa o bastante
+> para esticar. O conserto certo é a imagem nunca passar do tamanho do arquivo
+> (`width: auto` com `max-width: 100%` em vez de `100%`), mas ele muda essas
+> figuras publicadas, e por isso espera a decisão do autor.
 
 **O que ficou para depois, declarado:** as alças de arrastar ainda gravam
 qualquer porcentagem (os três tamanhos são o caminho principal, não uma
