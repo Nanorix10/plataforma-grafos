@@ -3531,6 +3531,12 @@ iguais.
 > trocadas para `100%`, saem idênticas a 1440px e a 375px (33 de 33, desta vez
 > medidas com as legendas de verdade).
 
+**Onda 2 refeita em 21/11** (`20261121004206_larguras_sem_pixel_de_novo`): as 33
+figuras saíram do pixel para Coluna. **Nenhuma figura do acervo tem mais
+largura em pixel** (as 40 larguras de `<col>` são das tabelas e ficam). Medido
+depois, sobre o HTML já gravado: 33 de 33 com a mesma largura de antes, a
+1440px e a 375px. Cópia em `backup.corpo_antes_larguras_2`.
+
 **O que ficou para depois, declarado:** as alças de arrastar ainda gravam
 qualquer porcentagem (os três tamanhos são o caminho principal, não uma
 trava); a migração das 249 figuras sem medida e das 36 em pixel; e tirar de
