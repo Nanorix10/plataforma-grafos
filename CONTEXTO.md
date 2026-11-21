@@ -3520,12 +3520,16 @@ iguais.
 > **A lição:** medir com o conteúdo real, não com um marcador. A legenda não
 > é decoração em volta da figura — ela decide a largura.
 >
-> **O defeito que isso revelou continua aberto:** "Coluna" em figura menor que
-> a coluna estica a imagem até a largura da legenda. Hoje são 9 figuras do
-> acervo em 100% menores que a coluna, ~5 delas com legenda longa o bastante
-> para esticar. O conserto certo é a imagem nunca passar do tamanho do arquivo
-> (`width: auto` com `max-width: 100%` em vez de `100%`), mas ele muda essas
-> figuras publicadas, e por isso espera a decisão do autor.
+> **O defeito que isso revelou foi consertado em 21/11, a pedido do autor:**
+> em "Coluna" a imagem passou a ir até a largura do texto, mas nunca além do
+> próprio arquivo (`width: auto` no lugar do `100%`, com o `max-width: 100%`
+> de sempre como teto). Medido nas páginas reais, com as legendas reais, antes
+> e depois: pelagem dos cães 574 → 378px, parafuso telúrico 620 → 439px,
+> glândulas endócrinas 569 → 483px, Lavoisier e Proust 620 → 600px — as quatro
+> estavam ampliadas além do arquivo. Nas figuras maiores que a coluna, nada
+> muda. **E com isso a onda 2 volta a ser possível:** as 33 figuras em pixel,
+> trocadas para `100%`, saem idênticas a 1440px e a 375px (33 de 33, desta vez
+> medidas com as legendas de verdade).
 
 **O que ficou para depois, declarado:** as alças de arrastar ainda gravam
 qualquer porcentagem (os três tamanhos são o caminho principal, não uma
