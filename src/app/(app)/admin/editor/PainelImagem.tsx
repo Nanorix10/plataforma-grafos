@@ -1,99 +1,36 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { Editor } from '@tiptap/react'
-import {
-  LARGURA_MINIMA_LATERAL,
-  LARGURAS,
-  lerNatural,
-  lerRecorte,
-  MARGEM_LATERAL_CONFORTAVEL,
-  naFaixa,
-  naMargem,
-  TAMANHOS,
-  tamanhoDe,
-  VAO_LATERAL,
-} from './imagem'
-import { COLUNA_MINIMA, LARGURA_PAGINA } from '@/lib/pagina'
+import { lerNatural, lerRecorte, naFaixa, naMargem, TAMANHOS, tamanhoDe } from './imagem'
 import { enviarImagem } from './actions'
 import { otimizarImagem } from './otimizarImagem'
 
 /**
- * O painel de opções da imagem — o equivalente ao "Opções da imagem" do Google
- * Docs, que lá abre numa coluna à direita.
+ * O painel da imagem selecionada: uma linha só (decisão 33).
  *
- * Aqui ele abre embaixo da barra de ferramentas, e não numa coluna lateral: a
- * folha do editor já disputa a largura com a barra do site, e uma terceira
- * coluna espremeria justamente o que o autor está tentando enxergar.
+ * Legenda, os três tamanhos, recortar, trocar e remover. Nada mais.
  *
- * Só aparece com uma imagem selecionada. Fora disso seria um painel de
- * controles sem alvo.
+ * Por que tão pouco: o painel anterior tinha mais de trinta controles (oito
+ * modos de quebra de texto, alinhamento, larguras livres, giro, borda, filtros
+ * de cor, link, rótulo...). Contados no acervo em 21/11/2026, das 304 figuras
+ * NENHUMA usava giro, borda, filtro, link, altura ou espaço, e 300 estavam em
+ * bloco. Eram botões que só serviam para o autor errar sem querer.
+ *
+ * Os atributos continuam existindo em `imagem.ts`: o HTML gravado com eles
+ * segue saindo igual na página do aluno. Só não há mais botão para criá-los.
+ * Voltar um deles é acrescentar um botão aqui, sem tocar no que está gravado.
  */
 
-function Campo({
-  rotulo,
-  children,
-}: {
-  rotulo: string
-  children: React.ReactNode
-}) {
-  return (
-    <label className="flex items-center gap-1.5 text-[11px] text-[var(--ink-dim)] shrink-0">
-      {rotulo}
-      {children}
-    </label>
-  )
-}
-
-function Numerico({
-  valor,
-  aoMudar,
-  min,
-  max,
-  sufixo,
-  largura = 52,
-}: {
-  valor: number
-  aoMudar: (n: number) => void
-  min: number
-  max: number
-  sufixo?: string
-  largura?: number
-}) {
-  return (
-    <span className="inline-flex items-center">
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={valor}
-        onChange={(e) => {
-          const n = Number(e.target.value)
-          if (Number.isFinite(n) && n >= min && n <= max) aoMudar(n)
-        }}
-        className="campo h-[26px] !py-0 !px-1.5 text-[11.5px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
-        style={{ width: largura }}
-      />
-      {sufixo ? <span className="ml-0.5 opacity-60">{sufixo}</span> : null}
-    </span>
-  )
-}
-
-function Grupo({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap px-2.5 py-1.5 rounded-md bg-[var(--raised)]">
-      {children}
-    </div>
-  )
-}
-
-function Opcao({
-  ativo,
+function Botao({
+  ativo = false,
+  perigo = false,
   onClick,
   title,
   children,
 }: {
-  ativo: boolean
+  ativo?: boolean
+  perigo?: boolean
   onClick: () => void
   title: string
   children: React.ReactNode
@@ -104,10 +41,12 @@ function Opcao({
       onClick={onClick}
       title={title}
       aria-pressed={ativo}
-      className={`h-[26px] px-2 rounded text-[11.5px] border focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
+      className={`h-[30px] px-2.5 rounded text-[12.5px] border focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--acento)] ${
         ativo
           ? 'border-[var(--acento)] text-[var(--acento)] bg-[var(--acento-fraco)]'
-          : 'border-transparent text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
+          : perigo
+            ? 'border-transparent text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--erro)]'
+            : 'border-transparent text-[var(--ink-dim)] hover:bg-[var(--sel)] hover:text-[var(--ink)]'
       }`}
     >
       {children}
@@ -115,26 +54,26 @@ function Opcao({
   )
 }
 
+/** Em palavras, o que uma figura antiga tem de diferente dos três tamanhos. */
+function formatoAntigo(a: Record<string, unknown>): string {
+  if (naFaixa(a.quebra as string)) return 'fica na faixa ao lado da folha'
+  if (naMargem(a.quebra as string)) return 'fica na margem da folha'
+  if (a.quebra === 'emLinha') return 'anda no meio da frase'
+  if (String(a.quebra ?? '').startsWith('aoRedor')) return 'tem o texto contornando'
+  if (a.largura && a.largura !== '100%') return `usa a largura ${a.largura}`
+  return 'usa um ajuste antigo'
+}
+
 export default function PainelImagem({
   editor,
   aoEnviarErro,
   aoMudarEnvio,
-  margemEsq,
-  margemDir,
-  aoMudarMargens,
   recortando,
   aoRecortar,
 }: {
   editor: Editor
   aoEnviarErro: (erro: string | null) => void
   aoMudarEnvio: (delta: number) => void
-  /* As margens da régua chegam aqui para saber se ainda sobra largura útil
-     quando a figura vai para a lateral — e, desde que o aviso ganhou botão,
-     para poder alargá-la sem mandar o autor procurar a régua. */
-  margemEsq: number
-  margemDir: number
-  /** A mesma função que a régua chama ao ser arrastada. */
-  aoMudarMargens: (esq: number, dir: number) => void
   /* O modo de recorte vive no `EditorCorpo` porque duas telas o leem: este
      painel, que o liga, e a sobreposição de alças, que muda de função. */
   recortando: boolean
@@ -146,124 +85,22 @@ export default function PainelImagem({
   const set = (attrs: Record<string, unknown>) =>
     editor.chain().focus().updateAttributes('image', attrs).run()
 
-  const lateral = naMargem(a.quebra)
-  const emFaixa = naFaixa(a.quebra)
-
-  /* Mandar para a faixa GRAVA a altura atual da figura, em vez de zerar.
-     Zerando, ela saltaria para o topo do resumo no instante do clique e o autor
-     teria que trazê-la de volta arrastando — o gesto começaria desfazendo um
-     estrago. A medição sai do DOM porque é a única fonte que sabe onde a figura
-     está DESENHADA agora; o documento só sabe a ordem dos blocos. */
-  const irParaFaixa = (lado: 'faixaEsq' | 'faixaDir') => {
-    let topo = Number(a.topo) || 0
-    const pos = editor.state.selection.from
-    const dom = editor.view.nodeDOM(pos)
-    const fig = dom instanceof HTMLElement ? (dom.closest('figure') ?? dom) : null
-    const col = fig?.closest('.conteudo-resumo')
-    if (fig && col) {
-      topo = Math.max(0, Math.round(fig.getBoundingClientRect().top - col.getBoundingClientRect().top))
-    }
-    set({ quebra: lado, escapa: false, topo })
-  }
-
-  /** Largura que sobra na margem escolhida, já descontado o vão até o texto. */
-  const larguraDaLateral =
-    (a.quebra === 'margemEsq' ? margemEsq : margemDir) - VAO_LATERAL
-
-  /* ---- alargar a margem sem sair do painel ----
-     O aviso antigo dizia "arraste a régua" e parava aí. Era um diagnóstico
-     mandando o autor executar o remédio à mão, num controle que fica na outra
-     ponta da tela — e a régua é justamente o gesto que ninguém acerta de
-     primeira, porque mover uma margem mexe na coluna inteira.
-
-     O alvo não é `MARGEM_LATERAL_CONFORTAVEL` cru: `ajustarMargens` apararia o
-     excesso dos DOIS lados proporcionalmente, e a margem oposta se mexeria sem
-     ninguém ter pedido. Então o teto é calculado aqui, contra a margem oposta,
-     e o que chega à régua já cabe. */
-  const margemOposta = a.quebra === 'margemEsq' ? margemDir : margemEsq
-  const alvoDaMargem = Math.min(
-    MARGEM_LATERAL_CONFORTAVEL,
-    LARGURA_PAGINA - margemOposta - COLUNA_MINIMA
-  )
-  /** Só oferece o botão quando ele tem o que fazer. */
-  const podeAlargar =
-    lateral && alvoDaMargem > (a.quebra === 'margemEsq' ? margemEsq : margemDir)
-
-  const alargarMargem = () =>
-    a.quebra === 'margemEsq'
-      ? aoMudarMargens(alvoDaMargem, margemDir)
-      : aoMudarMargens(margemEsq, alvoDaMargem)
-
-  /* Houve aqui um aviso de "figura lateral no fim do resumo", de quando a faixa
-     era `position: absolute` e vazava por cima dos backlinks. O `float` voltou e
-     o `clear` do `.conteudo-resumo::after` contém a figura de novo, então o
-     aviso passou a mentir — e aviso que mente é pior que aviso nenhum, porque
-     ensina a ignorar os outros. Ver a decisão 11c-bis. */
-
-  /* Ir para a lateral DESLIGA o `escapa`: um faz a figura comer as duas
-     margens, o outro a faz morar dentro de uma. Deixar os dois ligados daria um
-     desenho que depende da ordem das regras de CSS. O `renderHTML` tem a mesma
-     trava, para o HTML gravado antes desta tela existir. */
-  const irParaMargem = (lado: 'margemEsq' | 'margemDir') =>
-    set({ quebra: lado, escapa: false })
-
+  const tamanho = tamanhoDe(a)
+  const semLegenda = !String(a.alt ?? '').trim() && !a.legenda
   const temRecorte = lerRecorte(a.recorte) !== null
 
-  /* Algum ajuste fora do padrão já aplicado? Então a seção abre sozinha e o
-     botão ganha um ponto: esconder um giro ou uma borda que estão valendo
-     faria o autor achar que a figura "veio assim". */
-  /* Desde a decisão 32 o caminho principal são os três tamanhos e a legenda.
-     Posição, larguras livres, recorte e rótulo moram em "Mais opções" — e
-     também abrem sozinhos quando a figura já usa algum deles. */
-  const tamanho = tamanhoDe(a)
-  const temAjuste = Boolean(
-    tamanho === null ||
-      (a.alinhamento ?? 'centro') !== 'centro' ||
-      lerRecorte(a.recorte) !== null ||
-      a.legenda ||
-      a.altura ||
-      a.rotacao ||
-      a.margem ||
-      a.bordaLargura ||
-      a.link ||
-      (a.brilho ?? 100) !== 100 ||
-      (a.contraste ?? 100) !== 100 ||
-      (a.saturacao ?? 100) !== 100 ||
-      (a.opacidade ?? 100) !== 100 ||
-      (a.recolorir ?? 'nenhum') !== 'nenhum'
-  )
-  // `null` = seguir o `temAjuste`; depois do primeiro clique, manda o autor
-  const [ajustes, setAjustes] = useState<boolean | null>(null)
-  const verAjustes = ajustes ?? temAjuste
   /* Sem a proporção do arquivo não há como saber a altura do que sobrou. O
      editor grava esse dado assim que a imagem carrega, então isto é falso por
      um instante numa imagem antiga — e o botão diz o motivo em vez de sumir. */
   const podeRecortar = lerNatural(a.natural) !== null && !a.rotacao
-
   const motivoSemRecorte = !lerNatural(a.natural)
     ? 'Ainda lendo o tamanho original desta imagem. Um instante e o recorte libera.'
-    : 'Zere o giro para recortar — as alças mediriam a caixa girada, e o corte sairia torto. Girar DEPOIS de recortar funciona.'
+    : 'Esta imagem está girada, e o recorte sairia torto.'
 
-  /** Volta tudo ao estado de imagem recém-inserida, menos o arquivo em si. */
-  function redefinir() {
-    set({
-      largura: '100%',
-      tamanho: '',
-      altura: '',
-      rotacao: 0,
-      quebra: 'bloco',
-      alinhamento: 'centro',
-      escapa: false,
-      margem: 0,
-      bordaLargura: 0,
-      brilho: 100,
-      contraste: 100,
-      saturacao: 100,
-      opacidade: 100,
-      recolorir: 'nenhum',
-      recorte: '',
-    })
-  }
+  /* Escolher um tamanho também PADRONIZA a figura: volta para o bloco
+     centralizado, sem altura fixa. É o caminho de saída das figuras antigas. */
+  const escolherTamanho = (attrs: Record<string, unknown>) =>
+    set({ quebra: 'bloco', alinhamento: 'centro', altura: '', ...attrs })
 
   async function trocarArquivo(arquivo: File) {
     aoEnviarErro(null)
@@ -277,10 +114,9 @@ export default function PainelImagem({
         aoEnviarErro(r.erro)
         return
       }
-      // troca o `src` e a proporção do arquivo novo; tamanho, borda e ajustes
-      // ficam, que é o ponto de "substituir imagem" em vez de apagar e inserir
-      // outra. A proporção TEM de vir junto: com a do arquivo antigo, o
-      // espaço reservado e o recorte sairiam com a forma da imagem anterior.
+      // troca o `src` e a proporção; legenda e tamanho ficam. A proporção TEM
+      // de vir junto: com a do arquivo antigo, o espaço reservado e o recorte
+      // sairiam com a forma da imagem anterior.
       let natural = ''
       try {
         const bmp = await createImageBitmap(otimizado)
@@ -294,329 +130,67 @@ export default function PainelImagem({
   }
 
   return (
-    <div className="flex items-start gap-2 flex-wrap px-3 py-2 border-b border-[var(--line)] bg-[var(--panel)]">
-      <span className="text-[11px] font-medium text-[var(--ink-faint)] uppercase tracking-[0.08em] mt-1.5 shrink-0">
-        Imagem
-      </span>
+    <div className="px-3 py-2 border-b border-[var(--line)] bg-[var(--panel)]">
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* A legenda vem primeiro e larga porque é o que o aluno LÊ (sai sob a
+            imagem, com o número da figura), e fica vermelha enquanto vazia. */}
+        <input
+          value={a.alt ?? ''}
+          onChange={(e) => set({ alt: e.target.value })}
+          placeholder="Legenda: o que a figura mostra"
+          aria-label="Legenda da figura"
+          aria-invalid={semLegenda}
+          title="Sai sob a imagem na página do aluno, com o número da figura, e é lida pelo leitor de tela."
+          className={`campo h-[32px] flex-1 min-w-[220px] !py-0 !px-2.5 text-[13px] ${
+            semLegenda ? '!border-[var(--erro)]' : ''
+          }`}
+        />
 
-      {/* ---- o caminho principal (decisão 32) ----
-          A legenda e os três tamanhos. A legenda vem primeiro e larga porque é
-          o que o aluno LÊ, e fica marcada enquanto estiver vazia. */}
-      <Grupo>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--ink-dim)]">
-          legenda
-          <input
-            value={a.alt ?? ''}
-            onChange={(e) => set({ alt: e.target.value })}
-            placeholder="obrigatória: o que a figura mostra"
-            aria-invalid={!String(a.alt ?? '').trim() && !a.legenda}
-            title="Sai sob a imagem na página do aluno, com o número da figura, e é lida pelo leitor de tela."
-            className={`campo h-[30px] w-[min(380px,60vw)] !py-0 !px-2 text-[13px] ${
-              !String(a.alt ?? '').trim() && !a.legenda ? '!border-[var(--erro)]' : ''
-            }`}
-          />
-        </label>
-      </Grupo>
-      <Grupo>
-        {TAMANHOS.map((t) => (
-          <Opcao
-            key={t.id}
-            ativo={tamanho === t.id}
-            onClick={() => set({ quebra: 'bloco', alinhamento: 'centro', altura: '', ...t.attrs })}
-            title={t.dica}
-          >
-            {t.rotulo}
-          </Opcao>
-        ))}
-      </Grupo>
-
-      {verAjustes ? (
-        <>
-      {/* ---- quebra de texto ----
-          É a decisão que mais muda o desenho, então vem primeiro.
-          "Atrás do texto" e "à frente do texto" do Docs NÃO existem aqui, e não
-          por esquecimento: os dois exigem posição absoluta por cima do texto,
-          que depende de a página ter largura fixa. O resumo é uma coluna que
-          muda de largura com a régua e com o tamanho da tela — a imagem
-          flutuante cairia em cima da frase errada em metade dos aparelhos. */}
-      <Grupo>
-        <Opcao ativo={a.quebra === 'bloco'} onClick={() => set({ quebra: 'bloco' })} title="A imagem ocupa a linha inteira, com o texto acima e abaixo">
-          ▭ Quebrar texto
-        </Opcao>
-        <Opcao ativo={a.quebra === 'emLinha'} onClick={() => set({ quebra: 'emLinha' })} title="A imagem anda no meio da frase, como se fosse uma letra">
-          ⏤ Em linha
-        </Opcao>
-        <Opcao ativo={a.quebra === 'aoRedorEsq'} onClick={() => set({ quebra: 'aoRedorEsq' })} title="O texto contorna a imagem pela direita">
-          ◧ Texto à direita
-        </Opcao>
-        <Opcao ativo={a.quebra === 'aoRedorDir'} onClick={() => set({ quebra: 'aoRedorDir' })} title="O texto contorna a imagem pela esquerda">
-          ◨ Texto à esquerda
-        </Opcao>
-        {/* Os dois modos laterais. **O nome muda de eixo aqui**: os rótulos
-            acima dizem onde fica o TEXTO ("Texto à direita"), porque é ele que
-            se deforma; estes dizem onde fica a FIGURA, porque o texto não se
-            mexe — não há lado de texto a nomear. */}
-        <Opcao ativo={a.quebra === 'margemEsq'} onClick={() => irParaMargem('margemEsq')} title="A imagem sai da coluna e vai para a margem esquerda da folha; o texto não muda de largura">
-          ◐ Margem esquerda
-        </Opcao>
-        <Opcao ativo={a.quebra === 'margemDir'} onClick={() => irParaMargem('margemDir')} title="A imagem sai da coluna e vai para a margem direita da folha; o texto não muda de largura">
-          ◑ Margem direita
-        </Opcao>
-        {/* A FAIXA é outro bicho que a margem, e o rótulo diz isso: aqui a
-            figura sai da FOLHA, não da coluna. Ela não tira nada do texto e não
-            fica presa a parágrafo nenhum — a altura é arrastada à mão. */}
-        <Opcao ativo={a.quebra === 'faixaEsq'} onClick={() => irParaFaixa('faixaEsq')} title="A imagem sai da folha e vai para a faixa livre à esquerda. O texto não muda em nada, e você arrasta a figura para a altura que quiser.">
-          ▤ Faixa esquerda
-        </Opcao>
-        <Opcao ativo={a.quebra === 'faixaDir'} onClick={() => irParaFaixa('faixaDir')} title="A imagem sai da folha e vai para a faixa livre à direita. O texto não muda em nada, e você arrasta a figura para a altura que quiser.">
-          ▥ Faixa direita
-        </Opcao>
-      </Grupo>
-
-      {/* ---- posição ----
-          Some inteiro no modo lateral: `alinhamento` só tem regra de CSS sob
-          `[data-quebra='bloco']`, e "Sair da margem" é o oposto exato de morar
-          dentro dela. Controle inerte na tela é pior que controle ausente —
-          quem clica e não vê nada acontecer conclui que a tela quebrou. */}
-      {lateral || emFaixa ? null : (
-        <Grupo>
-          <Opcao ativo={a.alinhamento === 'esquerda'} onClick={() => set({ alinhamento: 'esquerda' })} title="Alinhar à esquerda">⇤</Opcao>
-          <Opcao ativo={a.alinhamento === 'centro'} onClick={() => set({ alinhamento: 'centro' })} title="Centralizar">⇔</Opcao>
-          <Opcao ativo={a.alinhamento === 'direita'} onClick={() => set({ alinhamento: 'direita' })} title="Alinhar à direita">⇥</Opcao>
-          <Opcao ativo={a.escapa === true} onClick={() => set({ escapa: !a.escapa })} title="A imagem passa das margens e ocupa a folha inteira">
-            ⤢ Sair da margem
-          </Opcao>
-        </Grupo>
-      )}
-
-      {/* O `max-width` do CSS impede a figura de sair da folha e só isso: numa
-          margem estreita ela vira um selo ilegível, e o aluno recebe isso como
-          se fosse intenção. O aviso nomeia o gesto que resolve. */}
-      {lateral && larguraDaLateral < LARGURA_MINIMA_LATERAL ? (
-        <div role="status" className="w-full flex items-center gap-2 flex-wrap text-[11.5px] text-[var(--stamp)] leading-snug">
-          <span>
-            A margem {a.quebra === 'margemEsq' ? 'esquerda' : 'direita'} tem{' '}
-            {Math.max(0, larguraDaLateral)}px úteis — a figura não passa disso, e
-            nesse tamanho um gráfico deixa de se ler.
-          </span>
-          {podeAlargar ? (
-            <Opcao
-              ativo={false}
-              onClick={alargarMargem}
-              title={`Leva a margem para ${alvoDaMargem}px e a figura para ${alvoDaMargem - VAO_LATERAL}px. Mexe na régua da folha inteira, então o texto reflui — a régua desfaz.`}
-            >
-              ⇥ Alargar para {alvoDaMargem - VAO_LATERAL}px
-            </Opcao>
-          ) : null}
-          {/* A outra saída, e às vezes a certa: "texto ao redor" põe a figura
-              DENTRO da coluna, com até 60% dela (372px na régua padrão), ao
-              preço de o parágrafo se deformar em volta. É mais largura do que
-              qualquer margem dá sem estreitar a leitura. */}
-          <Opcao
-            ativo={false}
-            onClick={() => set({ quebra: a.quebra === 'margemEsq' ? 'aoRedorEsq' : 'aoRedorDir' })}
-            title="A figura volta para dentro da coluna e o texto a contorna. Cabe bem mais (até 60% da coluna), mas o parágrafo muda de forma."
-          >
-            {a.quebra === 'margemEsq' ? '◧' : '◨'} Ou deixe o texto contornar
-          </Opcao>
+        <div role="group" aria-label="Tamanho" className="inline-flex gap-0.5 p-0.5 rounded-md bg-[var(--raised)]">
+          {TAMANHOS.map((t) => (
+            <Botao key={t.id} ativo={tamanho === t.id} onClick={() => escolherTamanho(t.attrs)} title={t.dica}>
+              {t.rotulo}
+            </Botao>
+          ))}
         </div>
-      ) : null}
 
-      {/* ---- tamanho ---- */}
-      <Grupo>
-        {LARGURAS.map((l) => (
-          <Opcao key={l} ativo={a.largura === `${l}%` && !a.tamanho} onClick={() => set({ largura: `${l}%`, altura: '', tamanho: '' })} title={`${l}% da coluna`}>
-            {l}%
-          </Opcao>
-        ))}
-        <Campo rotulo="larg.">
-          <input
-            value={a.largura ?? ''}
-            onChange={(e) => set({ largura: e.target.value, tamanho: '' })}
-            title="Largura em qualquer medida CSS: 340px, 60%, 20rem"
-            className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px]"
-          />
-        </Campo>
-        {emFaixa ? (
-          <Campo rotulo="altura na faixa">
-            <Numerico
-              valor={Math.max(0, Number(a.topo) || 0)}
-              aoMudar={(n) => set({ topo: n })}
-              min={0}
-              max={20000}
-              sufixo="px"
-              largura={64}
-            />
-          </Campo>
-        ) : null}
-
-        {/* ---- recorte ----
-            A 11c recusava recorte porque ele "pede interface própria". O
-            argumento não caiu; o custo caiu: a sobreposição de alças já existe,
-            e aqui ela só troca de função. */}
-        <Opcao
-          ativo={recortando}
-          onClick={() => (podeRecortar ? aoRecortar(!recortando) : undefined)}
-          title={
-            podeRecortar
-              ? 'Puxe as bordas para dentro. O que sair fica escondido, não apagado — o arquivo continua inteiro.'
-              : motivoSemRecorte
-          }
-        >
-          <span className={podeRecortar ? undefined : 'opacity-45'}>
-            {recortando ? '⛶ Concluir recorte' : '⛶ Recortar'}
-          </span>
-        </Opcao>
-        {temRecorte ? (
-          <Opcao
-            ativo={false}
-            onClick={() => {
-              set({ recorte: '' })
-              aoRecortar(false)
-            }}
-            title="Desfaz o recorte e volta à imagem inteira. O arquivo nunca foi tocado, então isto funciona a qualquer momento."
+        <div className="inline-flex gap-0.5">
+          <Botao
+            ativo={recortando}
+            onClick={() => (podeRecortar ? aoRecortar(!recortando) : undefined)}
+            title={
+              podeRecortar
+                ? 'Puxe as bordas para dentro. O que sair fica escondido, não apagado: o arquivo continua inteiro.'
+                : motivoSemRecorte
+            }
           >
-            ↺ Imagem inteira
-          </Opcao>
-        ) : null}
-      </Grupo>
-
-
-
-      {/* ---- texto ---- */}
-      <Grupo>
-        {/* A legenda (o `alt`, que a página do aluno vira `<figcaption>`,
-            decisão 24) subiu para o caminho principal. O `<figcaption>` escrito
-            à mão continua existindo como "rótulo" — curto e centralizado — e,
-            quando preenchido, ganha do `alt` na página. */}
-        <Campo rotulo="rótulo">
-          <input
-            value={a.legenda ?? ''}
-            onChange={(e) => set({ legenda: e.target.value })}
-            placeholder="opcional, curto"
-            title="Rótulo curto e centralizado sob a imagem. Preenchido, ele aparece NO LUGAR da legenda — que segue valendo para o leitor de tela."
-            className="campo h-[26px] w-[130px] !py-0 !px-1.5 text-[11.5px]"
-          />
-        </Campo>
-      </Grupo>
-
-      {/* ---- ajustes ----
-          Recolhidos: o estilo do site quase nunca pede giro, borda, filtro de
-          cor ou link na figura, e eram vinte controles disputando a altura que
-          a folha usa. Abrem sozinhos quando a imagem já tem algum deles, para
-          ninguém ajustar às cegas o que não está vendo. */}
-      {verAjustes ? (
-        <>
-          <Grupo>
-            <Campo rotulo="alt.">
-              <input
-                value={a.altura ?? ''}
-                onChange={(e) => set({ altura: e.target.value })}
-                placeholder="auto"
-                disabled={temRecorte}
-                title={
-                  temRecorte
-                    ? 'Desligado porque a imagem está recortada: os dois cortam, e o recorte manda.'
-                    : 'Vazio mantém a proporção original. Com valor, a imagem é cortada para caber (object-fit: cover).'
-                }
-                className="campo h-[26px] w-[66px] !py-0 !px-1.5 text-[11.5px] disabled:opacity-45"
-              />
-            </Campo>
-            <Campo rotulo="giro">
-              <Numerico valor={a.rotacao ?? 0} aoMudar={(n) => set({ rotacao: n })} min={-360} max={360} sufixo="°" />
-            </Campo>
-            <Opcao ativo={false} onClick={() => set({ rotacao: ((a.rotacao ?? 0) + 90) % 360 })} title="Girar 90° à direita">
-              ↻
-            </Opcao>
-            <Campo rotulo="espaço">
-              <Numerico valor={a.margem ?? 0} aoMudar={(n) => set({ margem: n })} min={0} max={80} sufixo="px" />
-            </Campo>
-            <Campo rotulo="link">
-              <input
-                value={a.link ?? ''}
-                onChange={(e) => set({ link: e.target.value })}
-                placeholder="https://…"
-                title="Clicar na imagem abre este endereço"
-                className="campo h-[26px] w-[150px] !py-0 !px-1.5 text-[11.5px]"
-              />
-            </Campo>
-          </Grupo>
-          {/* ---- borda ---- */}
-          <Grupo>
-            <Campo rotulo="borda">
-              <Numerico valor={a.bordaLargura ?? 0} aoMudar={(n) => set({ bordaLargura: n })} min={0} max={20} sufixo="px" largura={46} />
-            </Campo>
-            <input
-              type="color"
-              value={a.bordaCor ?? '#9184D9'}
-              onChange={(e) => set({ bordaCor: e.target.value })}
-              title="Cor da borda"
-              aria-label="Cor da borda"
-              className="w-[26px] h-[26px] rounded border border-[var(--line-forte)] bg-transparent cursor-pointer"
-            />
-            <select
-              value={a.bordaEstilo ?? 'solid'}
-              onChange={(e) => set({ bordaEstilo: e.target.value })}
-              aria-label="Estilo da borda"
-              className="campo h-[26px] !py-0 !px-1 text-[11.5px] !w-auto"
+            <span className={podeRecortar ? undefined : 'opacity-45'}>
+              {recortando ? '⛶ Concluir' : '⛶ Recortar'}
+            </span>
+          </Botao>
+          {temRecorte ? (
+            <Botao
+              onClick={() => {
+                set({ recorte: '' })
+                aoRecortar(false)
+              }}
+              title="Desfaz o recorte e volta à imagem inteira"
             >
-              <option value="solid">sólida</option>
-              <option value="dashed">tracejada</option>
-              <option value="dotted">pontilhada</option>
-            </select>
-          </Grupo>
-          {/* ---- ajustes de cor ----
-              Filtros de CSS, então não tocam no arquivo: dá para voltar atrás
-              sempre, e a mesma imagem serve a dois resumos com ajustes diferentes.
-              O preço é que o aluno baixa a imagem original — o que é justo, já que
-              o contrário exigiria processar e guardar uma cópia por ajuste. */}
-          <Grupo>
-            <Campo rotulo="brilho">
-              <Numerico valor={a.brilho ?? 100} aoMudar={(n) => set({ brilho: n })} min={0} max={300} sufixo="%" largura={50} />
-            </Campo>
-            <Campo rotulo="contraste">
-              <Numerico valor={a.contraste ?? 100} aoMudar={(n) => set({ contraste: n })} min={0} max={300} sufixo="%" largura={50} />
-            </Campo>
-            <Campo rotulo="cor">
-              <Numerico valor={a.saturacao ?? 100} aoMudar={(n) => set({ saturacao: n })} min={0} max={300} sufixo="%" largura={50} />
-            </Campo>
-            <Campo rotulo="opacidade">
-              <Numerico valor={a.opacidade ?? 100} aoMudar={(n) => set({ opacidade: n })} min={10} max={100} sufixo="%" largura={50} />
-            </Campo>
-            <Opcao ativo={a.recolorir === 'cinza'} onClick={() => set({ recolorir: a.recolorir === 'cinza' ? 'nenhum' : 'cinza' })} title="Preto e branco">
-              ◑ P&B
-            </Opcao>
-            <Opcao ativo={a.recolorir === 'sepia'} onClick={() => set({ recolorir: a.recolorir === 'sepia' ? 'nenhum' : 'sepia' })} title="Sépia">
-              ◐ Sépia
-            </Opcao>
-          </Grupo>
-        </>
-      ) : null}
-        </>
-      ) : null}
+              ↺ Imagem inteira
+            </Botao>
+          ) : null}
+          <Botao onClick={() => trocaRef.current?.click()} title="Trocar o arquivo, mantendo a legenda e o tamanho">
+            ⇄ Trocar
+          </Botao>
+          <Botao
+            perigo
+            onClick={() => editor.chain().focus().deleteSelection().run()}
+            title="Tirar a imagem do resumo (Ctrl+Z desfaz)"
+          >
+            ✕ Remover
+          </Botao>
+        </div>
 
-      {/* ---- arquivo ---- */}
-      <Grupo>
-        <Opcao
-          ativo={verAjustes}
-          onClick={() => setAjustes(!verAjustes)}
-          title="Posição, outras larguras, recorte, rótulo, giro, borda, link e ajustes de cor"
-        >
-          ⚙ Mais opções{temAjuste ? ' •' : ''}
-        </Opcao>
-        <Opcao ativo={false} onClick={() => trocaRef.current?.click()} title="Trocar o arquivo mantendo tamanho, borda e ajustes">
-          ⇄ Substituir
-        </Opcao>
-        <Opcao ativo={false} onClick={redefinir} title="Volta tamanho, borda e ajustes ao original — o arquivo continua o mesmo">
-          ↺ Redefinir
-        </Opcao>
-        <Opcao
-          ativo={false}
-          onClick={() => editor.chain().focus().deleteSelection().run()}
-          title="Remover a imagem do resumo (o arquivo continua no armazenamento)"
-        >
-          ✕ Remover
-        </Opcao>
         <input
           ref={trocaRef}
           type="file"
@@ -628,7 +202,15 @@ export default function PainelImagem({
             e.target.value = ''
           }}
         />
-      </Grupo>
+      </div>
+
+      {/* Figura de antes da decisão 33: continua saindo como foi gravada, e o
+          aviso diz o que ela tem e qual é a saída, numa linha. */}
+      {tamanho === null ? (
+        <p role="status" className="mt-1.5 text-[12px] text-[var(--stamp)] leading-snug">
+          Esta figura {formatoAntigo(a)}, um formato antigo. Escolha Estreita, Coluna ou Larga para padronizar.
+        </p>
+      ) : null}
     </div>
   )
 }
