@@ -13,12 +13,30 @@ import type { TopicoEdital } from './edital'
 export async function getEdital(): Promise<TopicoEdital[]> {
   const { supabase, plano } = await getSessao()
 
-  const { data } = await supabase
-    .from('edital_topicos')
-    .select('id, processo_slug, etapa, materia_slug, ordem, texto, resumo:resumos(slug, processo_slug)')
-    .order('processo_slug')
-    .order('etapa')
-    .order('ordem')
+  /* A API do Supabase devolve no MÁXIMO 1000 linhas por pedido e corta o resto
+     calada — sem erro, sem aviso. Com 1114 tópicos, o corte caía no fim da
+     fila alfabética: o PASSE 2ª etapa aparecia com 4 de 118 tópicos. Por isso
+     a busca vem em páginas até a última voltar incompleta.
+
+     O `id` no fim da ordenação é obrigatório, não enfeite: `ordem` se repete
+     entre matérias da mesma etapa, e sem desempate o banco pode entregar os
+     empatados em ordem diferente a cada página — duplicando uns e pulando
+     outros na emenda. A ordem final da tela é refeita no `sort` abaixo. */
+  const PAGINA = 1000
+  const data = []
+  for (let de = 0; ; de += PAGINA) {
+    const { data: pagina, error } = await supabase
+      .from('edital_topicos')
+      .select('id, processo_slug, etapa, materia_slug, ordem, texto, resumo:resumos(slug, processo_slug)')
+      .order('processo_slug')
+      .order('etapa')
+      .order('ordem')
+      .order('id')
+      .range(de, de + PAGINA - 1)
+    if (error) throw error
+    data.push(...(pagina ?? []))
+    if (!pagina || pagina.length < PAGINA) break
+  }
 
   const liberados = PLANO_PROCESSOS[plano] ?? []
 
@@ -28,7 +46,7 @@ export async function getEdital(): Promise<TopicoEdital[]> {
      duas telas do mesmo site. */
   const ordemDaMateria = Object.keys(MATERIAS)
 
-  const linhas = (data ?? []).map((t) => {
+  const linhas = data.map((t) => {
     // O join devolve objeto quando há vínculo e null quando não há; a tipagem
     // gerada não distingue os dois, então a normalização acontece aqui e o
     // resto do app só vê `resumo_slug`. Mesmo tratamento de `getEventos`.
