@@ -10,6 +10,7 @@ import { PROCESSOS } from '@/lib/processos'
 import { PERIODO_DE_ACESSO } from '@/lib/planos'
 import { renderizarWikilinks } from '@/lib/wikilinks'
 import { renderizarMatematica } from '@/lib/matematica'
+import { renderizarGraficos } from '@/lib/graficos'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { reunirQuestoes } from '@/lib/pratique'
 import { legendarFiguras } from '@/lib/figuras'
@@ -20,6 +21,7 @@ import { montarFicha } from '@/lib/ficha-resumo'
 import Trilho from '@/app/(app)/resumos/[slug]/Trilho'
 import SumarioMovel from '@/app/(app)/resumos/[slug]/SumarioMovel'
 import LupaFigura from '@/app/(app)/resumos/[slug]/LupaFigura'
+import Graficos from '@/app/(app)/resumos/[slug]/Graficos'
 import Questoes from '@/app/(app)/resumos/[slug]/Questoes'
 
 /**
@@ -115,7 +117,8 @@ export default async function AmostraPage() {
     const titulo = def ? ` title="${escaparAtributo(`${def} — disponível nos planos`)}"` : ''
     return `<a href="${PREFIXO_LIGA}${slug}"${titulo}`
   })
-  const corpoHtml = renderizarMatematica(comLinks)
+  // os gráficos por último, como na página do aluno (decisão 34)
+  const corpoHtml = renderizarGraficos(renderizarMatematica(comLinks))
 
   const provas = [...contexto.provas].sort(
     (a, b) => a.processo_slug.localeCompare(b.processo_slug) || a.etapa - b.etapa
@@ -242,6 +245,7 @@ export default async function AmostraPage() {
           />
 
           <LupaFigura seletor=".conteudo-resumo" />
+          <Graficos seletor=".conteudo-resumo" />
           <Questoes resumoId={resumo.id} respostas={[]} seletor=".conteudo-resumo" guardar={false} />
 
           {/* As ligações: o grafo desta página, com o que há do outro lado de

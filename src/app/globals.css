@@ -174,6 +174,21 @@
 
   --erro: light-dark(#B3243C, #C9767E);
 
+  /* --- gráfico interativo (decisão 34) ---
+     A primeira cor é a da matéria: o gráfico nasce com a cara do resumo. As
+     outras são os matizes do seletor de cor do editor, que já passam como
+     TEXTO; como traço, a régua é 3:1 (WCAG 1.4.11), e todas ficam acima de
+     5:1 sobre `--paper` nos dois temas — medido. */
+  /* Aqui no `:root` ela vale o acento (não há matéria na raiz); a regra
+     `.grafico` declara de novo, porque `var()` em variável se resolve onde é
+     declarada — sem a segunda declaração, todo gráfico sairia lilás. */
+  --grafico-1: var(--cor-materia, var(--acento));
+  --grafico-2: light-dark(#C2334D, #E08088);
+  --grafico-3: light-dark(#1F5F9E, #7FA8CF);
+  --grafico-4: light-dark(#3F7848, #8FAE94);
+  --grafico-5: light-dark(#A65224, #C98663);
+  --grafico-6: light-dark(#5A564B, #B6B2C0);
+
   /* Apelido de transição. `--stamp` era o vermelho-carimbo e ainda é citado
      por telas que não foram redesenhadas. Apontar pro acento novo mantém o
      site inteiro coerente durante a migração; quando a última referência
@@ -2033,6 +2048,240 @@ h3 {
 .conteudo-resumo .formula-destaque-legenda {
   text-align: center;
   color: var(--ink-dim);
+}
+
+/* ---- gráfico interativo (decisão 34) ----
+   Uma regra só para os três lugares: o servidor (`lib/graficos.ts`), a prévia
+   do editor e o painel montam o mesmo HTML com `lib/grafico/figura.ts`.
+   O SVG dentro do palco é redesenhado pelo navegador na largura real; até lá
+   (e sem JavaScript) ele é o desenho de 640px do servidor, encolhido sem
+   distorcer. */
+.conteudo-resumo .grafico {
+  --grafico-1: var(--cor-materia, var(--acento));
+  /* a legenda e os nomes dos controles não pedem o tamanho de fórmula do texto */
+  --formula-tam: 17px;
+  margin: 1.2em 0;
+  padding: 0.75em;
+  border: 1px solid var(--line);
+  border-radius: var(--raio-peq, 6px);
+  background: var(--paper);
+  clear: both;
+}
+.conteudo-resumo .grafico-titulo {
+  margin: 0 0 0.5em;
+  font-weight: 700;
+  font-size: 0.9em;
+  color: var(--cor-materia, var(--ink));
+}
+.conteudo-resumo .grafico-palco {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--canvas);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.conteudo-resumo .grafico[data-arrastando] .grafico-palco {
+  cursor: grabbing;
+}
+.conteudo-resumo .grafico-palco:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+/* No celular o gráfico não pode ser mais alto que largo em excesso: a altura
+   escolhida pelo autor vale até 85% da largura da tela. */
+@media (max-width: 640px) {
+  .conteudo-resumo .grafico-palco {
+    height: min(var(--grafico-altura, 360px), 85vw) !important;
+  }
+}
+.conteudo-resumo .grafico .g-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-family: var(--fonte-texto, system-ui);
+}
+.conteudo-resumo .grafico .g-grade {
+  stroke: var(--line);
+  stroke-width: 1;
+  fill: none;
+}
+.conteudo-resumo .grafico .g-eixo {
+  stroke: var(--ink-faint);
+  stroke-width: 1.25;
+  fill: none;
+}
+.conteudo-resumo .grafico .g-numeros text {
+  font-size: 11px;
+  fill: var(--ink-faint);
+}
+.conteudo-resumo .grafico .g-nome-eixo text {
+  font-size: 12px;
+  font-style: italic;
+  fill: var(--ink-dim);
+}
+.conteudo-resumo .grafico .g-curva {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.conteudo-resumo .grafico .g-traco {
+  fill: none;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+.conteudo-resumo .grafico .g-ponto {
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+.conteudo-resumo .grafico .g-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--ink);
+  /* contorno na cor do fundo: o rótulo continua legível em cima da curva */
+  paint-order: stroke;
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.conteudo-resumo .grafico-zoom {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 2px;
+}
+.conteudo-resumo .grafico-botao {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line-forte);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.conteudo-resumo .grafico-botao:hover {
+  color: var(--ink);
+  background: var(--raised-hover);
+}
+.conteudo-resumo .grafico-botao:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.conteudo-resumo .grafico-botao[aria-pressed='true'] {
+  color: var(--acento);
+  border-color: var(--acento);
+}
+/* Uma grade só para todos os controles, e cada linha some dentro dela
+   (`display: contents`): assim os deslizantes começam na mesma coluna mesmo
+   quando um nome é `a` e o outro é `s₀`. */
+.conteudo-resumo .grafico-controles {
+  display: grid;
+  grid-template-columns: auto 4em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35em 0.5em;
+  margin-top: 0.6em;
+  font-size: 0.9em;
+}
+.conteudo-resumo .grafico-param {
+  display: contents;
+}
+.conteudo-resumo .grafico-param-nome {
+  white-space: nowrap;
+}
+.conteudo-resumo .grafico-param-valor {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.conteudo-resumo .grafico-param input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--grafico-1);
+  margin: 0;
+}
+/* Sem JavaScript os controles não fazem nada: ficam visíveis (o aluno vê o
+   valor de partida), mas apagados e sem clique. */
+.conteudo-resumo .grafico:not([data-vivo]) .grafico-param input,
+.conteudo-resumo .grafico:not([data-vivo]) .grafico-botao {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.conteudo-resumo ul.grafico-funcoes {
+  list-style: none;
+  padding: 0;
+  margin: 0.6em 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 1.25em;
+  font-size: 0.9em;
+}
+.conteudo-resumo ul.grafico-funcoes li {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0;
+}
+.conteudo-resumo .grafico-chip {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  flex: none;
+}
+.conteudo-resumo .grafico-funcao-rotulo {
+  color: var(--ink-dim);
+  font-size: 0.9em;
+}
+.conteudo-resumo .grafico-legenda {
+  margin: 0.6em 0 0;
+  text-align: center;
+  font-size: 0.85em;
+  color: var(--ink-dim);
+}
+.conteudo-resumo .grafico-invalido {
+  color: var(--ink-faint);
+  font-size: 0.85em;
+  text-align: center;
+}
+
+/* No editor o gráfico mora dentro de um NodeView (`admin/editor/grafico.ts`):
+   a barrinha "Editar" em cima e o contorno quando o bloco está selecionado. */
+.conteudo-resumo .grafico-no {
+  position: relative;
+}
+.conteudo-resumo .grafico-no-barra {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -0.9em;
+  position: relative;
+  z-index: 1;
+}
+.conteudo-resumo .grafico-no-barra button {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-forte);
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.conteudo-resumo .grafico-no-barra button:hover {
+  color: var(--ink);
+}
+.conteudo-resumo .grafico-no.ProseMirror-selectednode .grafico {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+/* A prévia do painel fica fora da folha: o gráfico não precisa da margem. */
+.grafico-previa .grafico {
+  margin: 0;
 }
 
 /* texto de exemplo do editor vazio (extensão Placeholder) */

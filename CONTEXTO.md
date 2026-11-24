@@ -32,6 +32,8 @@ src/lib/
   planos.ts       PLANOS: nome, preço, processos. Espelhado em `plano_processos` no banco
   materias.ts     MATERIAS: nome, cor e ordem de cada matéria
   modelos3d.ts    lista do seletor "🧊 Modelo 3D"; os arquivos moram em public/modelos-3d/ (decisão 28)
+  grafico/        o gráfico interativo, puro: expressões, receita, desenho, figura e vivo.ts (decisão 34)
+  graficos.ts     renderizarGraficos() — desenha os gráficos do corpo no servidor (decisão 34)
   processos.ts    PROCESSOS: PASSE, PAS UEM, PAS UnB
   wikilinks.ts    converte [[Título]] em <a href="/resumos/slug">
   supabase/       clientes browser e server (@supabase/ssr)
@@ -59,6 +61,8 @@ src/app/
       motor3d.ts              cena Three.js, arranjos, rótulos e Teste-se
     admin/editor/             CRUD de resumos (só admin)
       modelo3d.ts             nó que guarda o <iframe> do modelo 3D (decisão 28)
+      grafico.ts              nó do gráfico interativo, com prévia viva (decisão 34)
+      BarraGrafico.tsx        o painel "📈 Gráfico" que monta a receita (decisão 34)
       EditorCorpo.tsx         TipTap com toolbar estilo Google Docs
       wikilinkSuggestion.ts   autocomplete do `[[`
       actions.ts              salvarResumo, excluirResumo, salvarCorpoAuto
@@ -3578,6 +3582,117 @@ alças do recorte e o arrasto da figura na faixa continuam.
 `renderHTML`. As 5 figuras especiais e as 54 em porcentagem saem na página do
 aluno exatamente como antes. Só não há mais botão para criar esses formatos, e
 trazer um de volta é acrescentar um botão ao `PainelImagem`, sem migração.
+
+## 34. O gráfico interativo: a receita mora no resumo, e uma função só desenha nos três lugares
+
+**24/11/2026.** Pedido do Leandro: "recriar o GeoGebra dentro do site" para o
+autor demonstrar exemplos no resumo. O botão **📈 Gráfico** da barra do editor
+abre um painel que monta funções com parâmetros (`ax^2 + bx + c`), pontos,
+segmentos, retas e vetores. O aluno mexe nos controles que o autor criou
+(deslizante e ▶ animar), dá zoom e arrasta o plano; ele não digita funções
+novas. Foram três escolhas dele, nesta ordem.
+
+**Por que construir, e não embutir o GeoGebra.** O GeoGebra só é grátis para
+uso não comercial, e o site é pago. Ele também pesa megabytes, depende de um
+servidor de fora e não segue o tema nem a cor da matéria. O nosso pesa poucos
+KB e desce só para quem abre um resumo que tem gráfico.
+
+**O corpo guarda a RECEITA, nunca o desenho:**
+`<div class="grafico" data-type="grafico" data-config="{…}"></div>`, sem
+filhos. **Sem migration e sem tabela nova.** Mudar como se desenha um eixo
+muda todos os gráficos do acervo sem regravar resumo nenhum.
+
+**Uma função só desenha nos três lugares**, e é isso que mantém o WYSIWYG
+(decisão 4):
+
+| onde | quem chama `montarFigura` / `desenharSvg` |
+|---|---|
+| página do aluno e `/amostra` | `lib/graficos.ts`, no servidor, **por último** na cadeia (depois do KaTeX) |
+| editor | o NodeView de `admin/editor/grafico.ts` e a prévia do `BarraGrafico.tsx` |
+| navegador do aluno, ao mexer | `lib/grafico/vivo.ts`, que redesenha só o `<svg>` na largura real |
+
+O núcleo (`lib/grafico/expressao.ts`, `modelo.ts`, `desenho.ts`, `figura.ts`)
+não importa nada, então roda nos três. O KaTeX da legenda entra como parâmetro
+(`renderLatex`): o servidor passa o dele (decisão 8) e o aluno nunca o baixa
+por causa do gráfico. `Graficos.tsx` faz `import()` do `vivo.ts` só se a
+página tiver gráfico, a mesma regra do Three.js do mapa (decisão 26).
+
+**Aqui TEM NodeView, ao contrário da imagem (11c).** Lá o medo era o editor e
+o aluno divergirem. Aqui as duas pontas chamam a mesma função. O nó também
+protege o gráfico, como o do modelo 3D (decisão 28): sem ele, o TipTap
+descartaria o `<div>` e o autosave gravaria o corpo sem o gráfico.
+
+**`<div role="figure">`, nunca `<figure>`.** `lib/figuras.ts` reescreve toda
+`<figure>` do corpo (as legendas das imagens), e o CSS de `figure` é o das
+imagens. É o mesmo motivo do `div.formula-destaque` (8g).
+
+**A sintaxe é a do caderno, e a regra das letras é o que permite isso.** Toda
+variável tem UMA letra, com um índice opcional colado (`s0`, `v_0`, `v_max`).
+Só nome de função conhecido tem mais de uma (`sen/sin`, `cos`, `tg/tan`,
+`raiz/sqrt`, `abs`, `ln`, `log`, `exp`, e `pi`). Por isso:
+- `ax` é `a·x`;
+- `2,5x` usa vírgula decimal;
+- `x²` colado de fora vira `x^2`;
+- `f(a)` chama a função `f` do próprio gráfico (o ponto preso na curva, a reta
+  tangente);
+- `a(x+1)` é multiplicação.
+
+O preço é que `vel` não é uma variável: é `v·e·l`. **Nunca `eval`:** a
+expressão vira uma árvore e a árvore é calculada à mão.
+
+**`escreverConfig` escapa `< > & $ [ ] '` dentro das strings do JSON**, e cada
+um tem um leitor que o pegaria:
+- `[[`/`]]`: o trigger `sync_conexoes_resumo` lê o corpo CRU (decisão 1), e
+  um rótulo "[[Dinâmica]]" viraria uma conexão fantasma no grafo;
+- `$`: a passada de `$…$` da decisão 8;
+- `<`, `>` e `&`: a serialização do atributo.
+
+A estrutura da receita não tem array dentro de array, então fora das strings
+`[[` nunca aparece. Conferido no editor: o HTML gravado não tem `[[` nem `$`,
+e reabri-lo dá o mesmo HTML.
+
+**`lerConfig` é defensiva**, porque a receita vem de um atributo do HTML cru:
+- lista branca de campos;
+- nomes por regex;
+- números finitos e abaixo de 10⁶;
+- até 12 objetos, 6 controles e 200 caracteres por expressão.
+
+Receita sem conserto vira "Gráfico indisponível" e a página não quebra. O
+painel passa o que grava pela MESMA leitura, então o que se grava é o que a
+página aceita.
+
+Três coisas do desenho que o jeito ingênuo erra:
+
+- **Assíntota.** `1/x` e `tg(x)` sumiriam num lado da tela e voltariam do
+  outro, riscando uma parede vertical. Quando o salto passa da altura da tela,
+  um ponto do MEIO decide: se ele não fica entre os dois, o traço se parte.
+- **Eixo fora da janela.** O eixo encosta na borda e os números continuam lá,
+  senão o aluno perde a escala ao arrastar.
+- **`--grafico-1` é declarada de novo em `.grafico`.** `var()` dentro de uma
+  variável se resolve onde ela é declarada. No `:root` não há matéria, então
+  sem a segunda declaração todo gráfico sairia lilás em vez da cor da matéria.
+  As outras cinco cores são as do seletor do editor, todas acima de 5:1 sobre
+  `--paper` nos dois temas (como traço, a régua é 3:1).
+
+**A rodinha e o dedo só mexem no gráfico depois de um clique nele**, a mesma
+regra do modelo 3D (28): quem rola o texto não fica preso. O arrasto com o
+mouse vale sempre. O teclado também funciona: setas movem, `+` e `−`
+aproximam, `0` volta.
+
+**O que este desenho escolhe pagar, e declara:**
+- **A busca (decisão 15) não acha** o título nem as expressões, porque moram
+  num atributo. É o mesmo preço do título da fórmula destacada (8g).
+- **Os números dos eixos são texto** e mudam quando o aluno arrasta. O grifo
+  (decisão 21) acha o trecho pelo texto e só usa o contexto em volta para
+  desempatar trecho repetido, então o efeito fica restrito a um trecho
+  repetido colado no gráfico. Tirar o gráfico só do `TreeWalker` desalinharia
+  a âncora do `Range.toString()` que cria o grifo, que é pior.
+- **O aluno não digita funções.** Foi a escolha de escopo da v1; o "caderno
+  livre" é outra tarefa.
+
+Ver também os `EXEMPLOS` de `lib/grafico/modelo.ts`, que abrem o "Começar de
+um exemplo…" do painel: parábola, reta, senoide, MRU, reta tangente e soma de
+vetores.
 
 ## O que a lista do boletim ainda deve
 

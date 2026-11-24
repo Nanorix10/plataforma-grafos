@@ -9,6 +9,7 @@ import LupaFigura from './LupaFigura'
 import { renderizarWikilinks } from '@/lib/wikilinks'
 import { PLANO_PROCESSOS } from '@/lib/planos'
 import { renderizarMatematica } from '@/lib/matematica'
+import { renderizarGraficos } from '@/lib/graficos'
 import { renderizarQuestoes } from '@/lib/questoes'
 import { reunirQuestoes } from '@/lib/pratique'
 import { legendarFiguras } from '@/lib/figuras'
@@ -29,6 +30,7 @@ import { getGrifos } from '@/lib/grifos'
 import Grifos from './Grifos'
 import { getRespostasDoResumo } from '@/lib/respostas'
 import Questoes from './Questoes'
+import Graficos from './Graficos'
 
 export default async function ResumoPage({
   params,
@@ -194,10 +196,14 @@ export default async function ResumoPage({
   // única das cinco em que a ordem é obrigatória por si: depois do KaTeX o
   // parágrafo vira dezenas de `<span>` aninhados e a pergunta "só há uma
   // fórmula aqui dentro?" deixaria de ser uma regex curta.
-  const corpoHtml = renderizarMatematica(
-    renderizarWikilinks(
-      renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(corpo)))),
-      tituloParaSlug
+  // Os gráficos (decisão 34) por ÚLTIMO, depois até do KaTeX: o desenho é HTML
+  // grande, e nenhuma das outras passadas tem o que fazer dentro dele.
+  const corpoHtml = renderizarGraficos(
+    renderizarMatematica(
+      renderizarWikilinks(
+        renderizarQuestoes(marcarFormulaSolta(legendarFiguras(ancorarTitulos(corpo)))),
+        tituloParaSlug
+      )
     )
   )
 
@@ -478,6 +484,9 @@ export default async function ResumoPage({
             seletor, e antes dele o `.conteudo-resumo` ainda não existe no DOM
             do cliente na primeira passada. */}
         <LupaFigura seletor=".conteudo-resumo" />
+
+        {/* Depois do corpo, como a lupa: procura os gráficos por seletor. */}
+        <Graficos seletor=".conteudo-resumo" />
 
         {/* Depois do corpo pelo mesmo motivo da lupa. A `key` é obrigatória:
             navegar de um resumo para outro reaproveita a página, e sem ela o
