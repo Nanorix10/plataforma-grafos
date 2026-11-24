@@ -41,6 +41,8 @@ import { BLOCOS } from './blocos'
 import { otimizarImagem } from './otimizarImagem'
 import { avisosDeEstilo } from './avisosEstilo'
 import { Modelo3D } from './modelo3d'
+import { Grafico } from './grafico'
+import BarraGrafico, { type AlvoGrafico } from './BarraGrafico'
 import { MODELOS_3D } from '@/lib/modelos3d'
 import PainelImagem from './PainelImagem'
 import AlcasImagem from './AlcasImagem'
@@ -558,6 +560,8 @@ function Barra({
   aoAlternarTela,
   aoAbrirFormula,
   formulaAberta,
+  aoAbrirGrafico,
+  graficoAberto,
   aoPedirImagem,
 }: {
   editor: Editor
@@ -565,6 +569,8 @@ function Barra({
   aoAlternarTela: () => void
   aoAbrirFormula: () => void
   formulaAberta: boolean
+  aoAbrirGrafico: () => void
+  graficoAberto: boolean
   aoPedirImagem: () => void
 }) {
   const estilo = editor.isActive('heading', { level: 2 })
@@ -754,6 +760,15 @@ function Barra({
           </option>
         ))}
       </select>
+      {/* Gráfico de função com controles que o aluno mexe (decisão 34). */}
+      <Bt
+        title="Inserir gráfico interativo — funções, pontos e vetores com controles que o aluno mexe"
+        largo
+        ativo={graficoAberto}
+        onClick={aoAbrirGrafico}
+      >
+        📈 Gráfico
+      </Bt>
       <Bt title="Link para outro resumo" largo onClick={() => editor.chain().focus().insertContent('[[').run()}>
         [[ ]]
       </Bt>
@@ -1053,6 +1068,7 @@ export default function EditorCorpo({
   const [palavras, setPalavras] = useState(0)
   const [telaCheia, setTelaCheia] = useState(false)
   const [alvoFormula, setAlvoFormula] = useState<Alvo | null>(null)
+  const [alvoGrafico, setAlvoGrafico] = useState<AlvoGrafico | null>(null)
   /* As duas ações devolvem a lista já atualizada, então não há um segundo
      pedido para relê-la — e a lista sobrevive à barra fechar e reabrir. */
   const [formulas, setFormulas] = useState<FormulaSalva[]>(formulasIniciais)
@@ -1326,6 +1342,15 @@ export default function EditorCorpo({
       // Sem este nó o TipTap descartaria o <iframe> do modelo ao abrir o resumo,
       // e o autosave gravaria o corpo já sem ele (ver `modelo3d.ts`).
       Modelo3D,
+      // O gráfico interativo (decisão 34). Clicar em "Editar" no próprio
+      // gráfico abre o painel já preenchido; o setter do useState é estável,
+      // então o closure nunca fica velho (mesmo raciocínio das fórmulas).
+      Grafico.configure({
+        aoEditar: (config, pos) => {
+          setAlvoFormula(null)
+          setAlvoGrafico({ modo: 'editar', pos, config })
+        },
+      }),
       // `resizable` deixa arrastar a divisa entre colunas: uma linha do tempo
       // quer a coluna do ano estreita, e um glossário quer o termo estreito.
       /* `table: false` desliga a tabela que vem no kit, e `TabelaLivre` entra
@@ -1483,6 +1508,24 @@ export default function EditorCorpo({
     setAlvoFormula(null)
   }
 
+  /**
+   * Grava o gráfico. Editar troca só o atributo do nó que já está lá
+   * (`atualizarGrafico`), e o gráfico não sai do lugar; um novo entra no
+   * primeiro nível, como os outros blocos (`inserirNoTopo`).
+   */
+  function confirmarGrafico(config: string) {
+    if (!editor) return
+    if (alvoGrafico?.modo === 'editar') editor.chain().focus().atualizarGrafico(alvoGrafico.pos, config).run()
+    else inserirNoTopo(editor, { type: 'grafico', attrs: { config } })
+    setAlvoGrafico(null)
+  }
+
+  function removerGrafico() {
+    if (!editor || alvoGrafico?.modo !== 'editar') return setAlvoGrafico(null)
+    editor.chain().focus().setNodeSelection(alvoGrafico.pos).deleteSelection().run()
+    setAlvoGrafico(null)
+  }
+
   const rotuloStatus = {
     /* "Texto", e não "Tudo": o autosave grava só o corpo (decisão 3). Título,
        matéria e tópicos têm o próprio aviso, acima do botão Salvar. */
@@ -1536,9 +1579,15 @@ export default function EditorCorpo({
             telaCheia={telaCheia}
             aoAlternarTela={() => setTelaCheia((v) => !v)}
             formulaAberta={alvoFormula !== null}
-            aoAbrirFormula={() =>
+            aoAbrirFormula={() => {
+              setAlvoGrafico(null)
               setAlvoFormula((a) => (a ? null : { modo: 'novo', emBloco: false }))
-            }
+            }}
+            graficoAberto={alvoGrafico !== null}
+            aoAbrirGrafico={() => {
+              setAlvoFormula(null)
+              setAlvoGrafico((a) => (a ? null : { modo: 'novo' }))
+            }}
             aoPedirImagem={() => entradaImagemRef.current?.click()}
           />
           <BarraTabela editor={editor} />
@@ -1596,6 +1645,16 @@ export default function EditorCorpo({
           aoExcluirFormula={async (id) => {
             setFormulas(await excluirFormula(id))
           }}
+        />
+      ) : null}
+
+      {alvoGrafico ? (
+        <BarraGrafico
+          key={alvoGrafico.modo === 'editar' ? `e${alvoGrafico.pos}` : 'novo'}
+          alvo={alvoGrafico}
+          aoConfirmar={confirmarGrafico}
+          aoRemover={removerGrafico}
+          aoCancelar={() => setAlvoGrafico(null)}
         />
       ) : null}
 
